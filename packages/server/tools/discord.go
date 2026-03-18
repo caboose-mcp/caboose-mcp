@@ -1,14 +1,15 @@
 package tools
 
-// discord — Discord Bot API integration (v10).
+// discord — Discord Bot API integration (v10) + Incoming Webhook support.
 //
-// Requires DISCORD_TOKEN set to a Bot token. All requests are authenticated
-// with "Authorization: Bot <token>".
-//
-// Tools:
+// Bot tools (require DISCORD_TOKEN):
 //   discord_post_message  — post a message to a channel by ID
 //   discord_list_channels — list channels in a guild (server) by ID
 //   discord_read_messages — read recent messages from a channel
+//
+// Webhook tools (require DISCORD_WEBHOOK_URL):
+//   discord_webhook_post  — post a message via Incoming Webhook (no bot token needed)
+//                           Also used internally by EmitEvent for notifications.
 
 import (
 	"bytes"
@@ -26,6 +27,25 @@ import (
 
 const discordAPIBase = "https://discord.com/api/v10"
 
+// DiscordWebhookPost sends a message to the configured DISCORD_WEBHOOK_URL.
+// Called by EmitEvent for push notifications and by the discord_webhook_post tool.
+func DiscordWebhookPost(webhookURL, content string) error {
+	if webhookURL == "" {
+		return fmt.Errorf("DISCORD_WEBHOOK_URL is not set")
+	}
+	body, _ := json.Marshal(map[string]string{"content": content})
+	resp, err := http.Post(webhookURL, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("discord webhook returned %d: %s", resp.StatusCode, string(b))
+	}
+	return nil
+}
+
 func RegisterDiscord(s *server.MCPServer, cfg *config.Config) {
 	s.AddTool(mcp.NewTool("discord_post_message",
 		mcp.WithDescription("Post a message to a Discord channel."),
@@ -37,6 +57,21 @@ func RegisterDiscord(s *server.MCPServer, cfg *config.Config) {
 		mcp.WithDescription("List channels in a Discord guild."),
 		mcp.WithString("guild_id", mcp.Required(), mcp.Description("Discord guild (server) ID")),
 	), discordListChannelsHandler(cfg))
+
+	s.AddTool(mcp.NewTool("discord_webhook_post",
+		mcp.WithDescription("Post a message to Discord via Incoming Webhook. "+
+			"No bot token required — uses DISCORD_WEBHOOK_URL. "+
+			"Ideal for notifications, alerts, and tool results."),
+		mcp.WithString("content", mcp.Required(), mcp.Description("Message content (max 2000 chars)")),
+		mcp.WithString("webhook_url", mcp.Description("Override the default DISCORD_WEBHOOK_URL for this call")),
+	), func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		content := req.GetString("content", "")
+		url := req.GetString("webhook_url", cfg.DiscordWebhookURL)
+		if err := DiscordWebhookPost(url, content); err != nil {
+			return mcp.NewToolResultText("error: " + err.Error()), nil
+		}
+		return mcp.NewToolResultText("Message posted via webhook."), nil
+	})
 
 	s.AddTool(mcp.NewTool("discord_read_messages",
 		mcp.WithDescription("Read recent messages from a Discord channel."),

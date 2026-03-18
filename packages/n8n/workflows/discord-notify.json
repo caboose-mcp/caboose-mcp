@@ -1,0 +1,56 @@
+{
+  "id": "caboose-discord-notify-v1",
+  "name": "Caboose Discord Notify",
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "nodes": [
+    {
+      "id": "dn-001",
+      "name": "Caboose Events",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "caboose-discord",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "dn-002",
+      "name": "Format Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [500, 300],
+      "parameters": {
+        "values": {
+          "string": [{
+            "name": "content",
+            "value": "={{ '**[' + $json.type + ']** ' + (($json.data && $json.data.goal) || ($json.data && $json.data.title) || ($json.data && $json.data.tool) || ($json.data && $json.data.source_name) || ($json.data && $json.data.message) || JSON.stringify($json.data || {})) }}"
+          }]
+        }
+      }
+    },
+    {
+      "id": "dn-003",
+      "name": "Post to Discord",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [750, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.DISCORD_WEBHOOK_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [{ "name": "Content-Type", "value": "application/json" }]
+        },
+        "sendBody": true,
+        "body": "={{ JSON.stringify({ content: $json.content }) }}"
+      }
+    }
+  ],
+  "connections": {
+    "Caboose Events": { "main": [[{ "node": "Format Message", "type": "main", "index": 0 }]] },
+    "Format Message": { "main": [[{ "node": "Post to Discord", "type": "main", "index": 0 }]] }
+  }
+}

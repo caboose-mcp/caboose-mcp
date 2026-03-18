@@ -12,7 +12,8 @@ type Config struct {
 	ClaudeDir       string
 	GPGKeyID        string
 	SlackToken      string
-	DiscordToken    string
+	DiscordToken      string
+	DiscordWebhookURL string // DISCORD_WEBHOOK_URL — incoming webhook for outbound notifications
 	BambuIP         string
 	BambuAccessCode string
 	BambuSerial     string
@@ -53,7 +54,7 @@ func Load() *Config {
 
 	greptileRepo := os.Getenv("GREPTILE_REPO")
 	if greptileRepo == "" {
-		greptileRepo = "github/caboose/caboose-mcp"
+		greptileRepo = "github/caboose-mcp/caboose-mcp"
 	}
 
 	// GitHub token: env var first, then fall back to `gh auth token`
@@ -69,7 +70,8 @@ func Load() *Config {
 		GitHubToken:     githubToken,
 		GPGKeyID:        os.Getenv("GPG_KEY_ID"),
 		SlackToken:      os.Getenv("SLACK_TOKEN"),
-		DiscordToken:    os.Getenv("DISCORD_TOKEN"),
+		DiscordToken:      os.Getenv("DISCORD_TOKEN"),
+		DiscordWebhookURL: os.Getenv("DISCORD_WEBHOOK_URL"),
 		BambuIP:         os.Getenv("BAMBU_IP"),
 		BambuAccessCode: os.Getenv("BAMBU_ACCESS_CODE"),
 		BambuSerial:     os.Getenv("BAMBU_SERIAL"),

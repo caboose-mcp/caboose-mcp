@@ -104,6 +104,7 @@ func buildMCPServer(cfg *config.Config) *server.MCPServer {
 	tools.RegisterToolsmith(s, cfg)
 	tools.RegisterSandbox(s, cfg)
 	tools.RegisterAudit(s, cfg)
+	tools.RegisterEnv(s, cfg)
 	return s
 }
 
