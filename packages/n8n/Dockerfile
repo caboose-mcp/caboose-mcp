@@ -8,11 +8,9 @@
 
 FROM docker.n8n.io/n8nio/n8n:latest
 
-# Copy all workflow JSON files
-COPY workflows/ /caboose-workflows/
-
-# Copy the import entrypoint
-COPY docker-entrypoint.sh /caboose-entrypoint.sh
+# Paths are relative to the repo root (build context is always ../)
+COPY packages/n8n/workflows/ /caboose-workflows/
+COPY packages/n8n/docker-entrypoint.sh /caboose-entrypoint.sh
 RUN chmod +x /caboose-entrypoint.sh
 
 ENTRYPOINT ["/caboose-entrypoint.sh"]

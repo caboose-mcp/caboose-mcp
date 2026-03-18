@@ -21,6 +21,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     image: ghcr.io/caboose-mcp/caboose-mcp:latest
+    pull_policy: build   # always build locally; GHCR image used only by CI
     container_name: caboose-mcp
     restart: unless-stopped
 
@@ -65,6 +66,7 @@ services:
       context: ..
       dockerfile: packages/n8n/Dockerfile
     image: caboose-n8n:latest
+    pull_policy: build   # locally built image, never pulled from a registry
     container_name: caboose-n8n
     restart: unless-stopped
 
