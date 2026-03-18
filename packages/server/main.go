@@ -1,18 +1,23 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/caboose-mcp/server/config"
 	"github.com/caboose-mcp/server/tools"
 	"github.com/caboose-mcp/server/tui"
+	"github.com/joho/godotenv"
 	"github.com/mark3labs/mcp-go/server"
 )
 
 func main() {
+	// Load .env from working directory if present (silently ignore if missing)
+	_ = godotenv.Load()
 	cfg := config.Load()
 
 	// --setup flag: interactive config wizard, writes .env file
@@ -28,6 +33,29 @@ func main() {
 		if err := tui.Run(cfg); err != nil {
 			log.Fatal(err)
 		}
+		return
+	}
+
+	// --discord-bot: Discord gateway bot is not available in this build.
+	if len(os.Args) > 1 && os.Args[1] == "--discord-bot" {
+		log.Fatal("Discord bot support is not available in this build; the Discord gateway bot implementation has not been added yet")
+		return
+	}
+
+	// --slack-bot: run the Slack Socket Mode bot (blocks; run as a service).
+
+	// --slack-bot: run the Slack Socket Mode bot (blocks; run as a service).
+	if len(os.Args) > 1 && os.Args[1] == "--slack-bot" {
+		if err := tools.RunSlackBot(cfg); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
+	// --bots: run both Slack and Discord bots concurrently.
+	// If one dies it logs the error and continues; the other keeps running.
+	if len(os.Args) > 1 && os.Args[1] == "--bots" {
+		runBots(cfg)
 		return
 	}
 
@@ -86,6 +114,7 @@ func buildMCPServer(cfg *config.Config) *server.MCPServer {
 	tools.RegisterSystem(s, cfg)
 	tools.RegisterSlack(s, cfg)
 	tools.RegisterDiscord(s, cfg)
+	tools.RegisterEnv(s, cfg)
 	tools.RegisterPrinting(s, cfg)
 	tools.RegisterMermaid(s, cfg)
 	tools.RegisterGreptile(s, cfg)
@@ -104,8 +133,38 @@ func buildMCPServer(cfg *config.Config) *server.MCPServer {
 	tools.RegisterToolsmith(s, cfg)
 	tools.RegisterSandbox(s, cfg)
 	tools.RegisterAudit(s, cfg)
-	tools.RegisterEnv(s, cfg)
 	return s
+}
+
+// runBots starts the Slack and Discord bots concurrently. If either exits with
+// an error it is logged but the other bot continues running. The process blocks
+// until both have exited.
+func runBots(cfg *config.Config) {
+	ctx := context.Background()
+	type botFn struct {
+		name string
+		run  func() error
+	}
+	bots := []botFn{
+		{"slack", func() error { return tools.RunSlackBot(cfg) }},
+		{"discord", func() error { return tools.RunDiscordBot(ctx, cfg) }},
+	}
+
+	var wg sync.WaitGroup
+	for _, b := range bots {
+		b := b
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			log.Printf("starting %s bot", b.name)
+			if err := b.run(); err != nil {
+				log.Printf("%s bot exited with error: %v", b.name, err)
+			} else {
+				log.Printf("%s bot exited", b.name)
+			}
+		}()
+	}
+	wg.Wait()
 }
 
 // bearerAuthMiddleware rejects requests without the correct Authorization header.
