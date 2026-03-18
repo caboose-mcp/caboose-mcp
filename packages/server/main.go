@@ -113,6 +113,7 @@ func buildMCPServer(cfg *config.Config) *server.MCPServer {
 	tools.RegisterSystem(s, cfg)
 	tools.RegisterSlack(s, cfg)
 	tools.RegisterDiscord(s, cfg)
+	tools.RegisterEnv(s, cfg)
 	tools.RegisterPrinting(s, cfg)
 	tools.RegisterMermaid(s, cfg)
 	tools.RegisterGreptile(s, cfg)

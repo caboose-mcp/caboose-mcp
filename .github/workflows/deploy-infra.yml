@@ -1,0 +1,55 @@
+# deploy-infra.yml — apply Terraform changes to AWS
+#
+# Triggers:
+#   - manual (workflow_dispatch)
+#   - push to main that touches terraform/aws/**
+#
+# Required GitHub secrets:
+#   AWS_ACCESS_KEY_ID      — IAM user with Terraform permissions
+#   AWS_SECRET_ACCESS_KEY
+#   TF_VAR_cloudsync_bucket_name  — globally unique S3 bucket name
+#   TF_VAR_route53_zone_id        — Route53 zone ID (leave empty if not using Route53)
+
+name: Deploy Infra
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "terraform/aws/**"
+
+jobs:
+  terraform:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform/aws
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "~> 1.6"
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan
+        env:
+          TF_VAR_cloudsync_bucket_name: ${{ secrets.TF_VAR_CLOUDSYNC_BUCKET_NAME }}
+          TF_VAR_route53_zone_id: ${{ secrets.TF_VAR_ROUTE53_ZONE_ID }}
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan

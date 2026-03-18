@@ -29,7 +29,7 @@ type Config struct {
 	N8nAPIKey     string // N8N_API_KEY (optional, for header auth)
 	// Chat bot
 	AnthropicAPIKey    string // ANTHROPIC_API_KEY
-	DiscordWebhookURL  string // DISCORD_WEBHOOK_URL — webhook for posting messages
+	DiscordWebhookURL  string // DISCORD_WEBHOOK_URL — incoming webhook for outbound notifications
 	DiscordBotChannels string // DISCORD_BOT_CHANNELS — comma-separated channel IDs
 	SlackAppToken      string // SLACK_APP_TOKEN — xapp-... for Socket Mode
 	SlackBotChannels   string // SLACK_BOT_CHANNELS — comma-separated channel IDs

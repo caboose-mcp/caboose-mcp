@@ -1,0 +1,57 @@
+# deploy-bots.yml — build image, push to ECR, redeploy the bots ECS service
+#
+# Triggers:
+#   - manual (workflow_dispatch)
+#   - push to main that touches packages/server/**
+#
+# Required GitHub secrets:
+#   AWS_ACCESS_KEY_ID      — IAM user with ECR push + ECS update permissions
+#   AWS_SECRET_ACCESS_KEY
+
+name: Deploy Bots
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "packages/server/**"
+
+jobs:
+  deploy:
+    name: Build & Deploy Bots
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Log in to ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push image
+        env:
+          IMAGE: ${{ steps.ecr.outputs.registry }}/caboose-mcp:latest
+        run: |
+          docker build -t "$IMAGE" packages/server
+          docker push "$IMAGE"
+
+      - name: Force new bots deployment
+        run: |
+          aws ecs update-service \
+            --cluster caboose-mcp \
+            --service caboose-mcp-bots \
+            --force-new-deployment
+
+      - name: Wait for bots service to stabilize
+        run: |
+          aws ecs wait services-stable \
+            --cluster caboose-mcp \
+            --services caboose-mcp-bots
