@@ -35,13 +35,13 @@ func main() {
 		return
 	}
 
-	// --discord-bot: run the Discord gateway bot (blocks; run as a service).
+	// --discord-bot: Discord gateway bot is not available in this build.
 	if len(os.Args) > 1 && os.Args[1] == "--discord-bot" {
-		if err := tools.RunDiscordBot(cfg); err != nil {
-			log.Fatal(err)
-		}
+		log.Fatal("Discord bot support is not available in this build; the Discord gateway bot implementation has not been added yet")
 		return
 	}
+
+	// --slack-bot: run the Slack Socket Mode bot (blocks; run as a service).
 
 	// --slack-bot: run the Slack Socket Mode bot (blocks; run as a service).
 	if len(os.Args) > 1 && os.Args[1] == "--slack-bot" {

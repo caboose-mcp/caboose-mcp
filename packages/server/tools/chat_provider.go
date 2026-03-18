@@ -47,9 +47,7 @@ func (SlackProvider) Name() string { return "slack" }
 func (SlackProvider) FormatText(text string) string {
 	// Convert Discord/standard markdown → Slack mrkdwn
 	// **bold** → *bold*   *italic* → _italic_   # Header → *Header*
-	result := text
-	result = replaceMarkdown(result, "**", "*")
-	result = replaceMarkdown(result, "*", "_")
+	result := slackConvertMarkdown(text)
 	var out []string
 	for _, line := range splitLines(result) {
 		if len(line) > 2 && line[0] == '#' {
@@ -63,6 +61,45 @@ func (SlackProvider) FormatText(text string) string {
 		}
 	}
 	return joinLines(out)
+}
+
+// slackConvertMarkdown does a single-pass conversion of common markdown to Slack mrkdwn.
+// It converts:
+//   - **bold** → *bold*  (Slack bold)
+//   - *italic* → _italic_ (Slack italic)
+// It preserves list bullets like "* item" at the start of a line.
+func slackConvertMarkdown(text string) string {
+	result := ""
+	i := 0
+	for i < len(text) {
+		// Bold: **...** → *...*
+		if i+2 <= len(text) && text[i:i+2] == "**" {
+			result += "*"
+			i += 2
+			continue
+		}
+
+		// Italic or bullet: *...* → _..._ , but keep "* " at start of line as a bullet.
+		if text[i] == '*' {
+			isLineStart := i == 0 || text[i-1] == '\n'
+			nextIsSpace := i+1 < len(text) && text[i+1] == ' '
+			if isLineStart && nextIsSpace {
+				// Preserve list bullet "* "
+				result += "*"
+				i++
+				continue
+			}
+			// Treat as italic delimiter
+			result += "_"
+			i++
+			continue
+		}
+
+		// Default: copy character
+		result += string(text[i])
+		i++
+	}
+	return result
 }
 
 // splitLines / joinLines are small helpers used by providers.
@@ -91,19 +128,13 @@ func joinLines(lines []string) string {
 }
 
 // replaceMarkdown swaps a markdown delimiter for another (e.g. "**" → "*").
-// Handles paired delimiters only (open + close).
+// It performs a straightforward substring replacement; callers ensure pairing if needed.
 func replaceMarkdown(s, from, to string) string {
 	result := ""
-	open := false
 	i := 0
 	for i < len(s) {
 		if i+len(from) <= len(s) && s[i:i+len(from)] == from {
-			if open {
-				result += to
-			} else {
-				result += to
-			}
-			open = !open
+			result += to
 			i += len(from)
 		} else {
 			result += string(s[i])

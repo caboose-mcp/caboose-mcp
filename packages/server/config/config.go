@@ -13,6 +13,7 @@ type Config struct {
 	GPGKeyID        string
 	SlackToken      string
 	DiscordToken    string
+	DiscordWebhookURL string // DISCORD_WEBHOOK_URL
 	BambuIP         string
 	BambuAccessCode string
 	BambuSerial     string

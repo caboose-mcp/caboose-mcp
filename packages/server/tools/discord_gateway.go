@@ -26,7 +26,7 @@ import (
 
 // RunDiscordBot starts the Discord gateway bot and blocks until the context
 // is cancelled or a fatal error occurs.
-func RunDiscordBot(cfg *config.Config) error {
+func RunDiscordBot(ctx context.Context, cfg *config.Config) error {
 	if cfg.DiscordToken == "" {
 		return fmt.Errorf("DISCORD_TOKEN is not set")
 	}
@@ -53,8 +53,13 @@ func RunDiscordBot(cfg *config.Config) error {
 	dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsMessageContent
 
 	dg.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		// Ignore messages from self
-		if m.Author.ID == s.State.User.ID {
+		// Ignore messages from other bots (including ourselves)
+		if m.Author != nil && m.Author.Bot {
+			return
+		}
+
+		// Ignore messages from self when state information is available
+		if s.State != nil && s.State.User != nil && m.Author != nil && m.Author.ID == s.State.User.ID {
 			return
 		}
 
@@ -69,7 +74,7 @@ func RunDiscordBot(cfg *config.Config) error {
 		// Must mention the bot or be a DM to trigger a response
 		botMentioned := false
 		for _, u := range m.Mentions {
-			if u.ID == s.State.User.ID {
+			if s.State != nil && s.State.User != nil && u.ID == s.State.User.ID {
 				botMentioned = true
 				break
 			}
@@ -80,7 +85,7 @@ func RunDiscordBot(cfg *config.Config) error {
 
 		// Strip the @mention prefix from the message
 		content := strings.TrimSpace(m.Content)
-		if s.State.User != nil {
+		if s.State != nil && s.State.User != nil {
 			content = strings.ReplaceAll(content, "<@"+s.State.User.ID+">", "")
 			content = strings.ReplaceAll(content, "<@!"+s.State.User.ID+">", "")
 			content = strings.TrimSpace(content)
@@ -112,8 +117,10 @@ func RunDiscordBot(cfg *config.Config) error {
 
 	log.Printf("⚔️  Caboose of the Shire is now online in Discord (channels: %v, DMs: always)", cfg.DiscordBotChannels)
 
-	// Block forever — caller should handle OS signals if needed
-	select {}
+	// Block until the provided context is cancelled, then shut down gracefully.
+	<-ctx.Done()
+	log.Printf("Discord bot shutting down: %v", ctx.Err())
+	return nil
 }
 
 // splitMessage splits a long message into chunks of at most maxLen characters,

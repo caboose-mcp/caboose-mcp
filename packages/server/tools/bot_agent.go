@@ -100,7 +100,13 @@ func agentLoop(ctx context.Context, client anthropic.Client, systemPrompt, userM
 			case anthropic.ToolUseBlock:
 				toolUseBlocks = append(toolUseBlocks, v)
 				var input any
-				json.Unmarshal(v.Input, &input)
+				if err := json.Unmarshal(v.Input, &input); err != nil {
+					// Preserve the raw input and surface the JSON error in the assistant content.
+					input = map[string]any{
+						"error": fmt.Sprintf("invalid tool input JSON: %v", err),
+						"raw":   string(v.Input),
+					}
+				}
 				assistantContent = append(assistantContent, anthropic.ContentBlockParamUnion{
 					OfToolUse: &anthropic.ToolUseBlockParam{
 						ID:    v.ID,
@@ -122,7 +128,22 @@ func agentLoop(ctx context.Context, client anthropic.Client, systemPrompt, userM
 		var toolResults []anthropic.ContentBlockParamUnion
 		for _, tu := range toolUseBlocks {
 			var args map[string]any
-			json.Unmarshal(tu.Input, &args)
+			if err := json.Unmarshal(tu.Input, &args); err != nil {
+				// Surface JSON decoding errors as tool_result errors instead of silently
+				// passing nil/empty args to the tool.
+				resultText := fmt.Sprintf("invalid tool input JSON for %s: %v", tu.Name, err)
+				toolResult := anthropic.ToolResultBlockParam{
+					ToolUseID: tu.ID,
+					Content: []anthropic.ToolResultBlockParamContentUnion{
+						{OfText: &anthropic.TextBlockParam{Text: resultText}},
+					},
+				}
+				toolResult.IsError = param.NewOpt(true)
+				toolResults = append(toolResults, anthropic.ContentBlockParamUnion{
+					OfToolResult: &toolResult,
+				})
+				continue
+			}
 
 			resultText, execErr := "", error(nil)
 			if exec, ok := toolMap[tu.Name]; ok {
@@ -156,10 +177,10 @@ func agentLoop(ctx context.Context, client anthropic.Client, systemPrompt, userM
 }
 
 // invokeHandler calls an MCP tool handler with a plain args map.
-func invokeHandler(handler func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error), args map[string]any) (string, error) {
+func invokeHandler(ctx context.Context, handler func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error), args map[string]any) (string, error) {
 	req := mcp.CallToolRequest{}
 	req.Params.Arguments = args
-	result, err := handler(context.Background(), req)
+	result, err := handler(ctx, req)
 	if err != nil {
 		return "", err
 	}
