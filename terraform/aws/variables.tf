@@ -21,3 +21,33 @@ variable "cloudsync_bucket_name" {
   type        = string
   # Override in terraform.tfvars:  cloudsync_bucket_name = "my-caboose-cloudsync"
 }
+
+variable "aws_profile" {
+  description = "Local AWS CLI profile to use. Leave empty to use the default credential chain."
+  type        = string
+  default     = ""
+}
+
+variable "slack_bot_channels" {
+  description = "Comma-separated Slack channel IDs the bot responds in (DMs always work)."
+  type        = string
+  default     = ""
+}
+
+variable "discord_bot_channels" {
+  description = "Comma-separated Discord channel IDs the bot responds in."
+  type        = string
+  default     = ""
+}
+
+variable "domain_name" {
+  description = "Custom domain for the MCP HTTP server (e.g. mcp.chrismarasco.io)."
+  type        = string
+  default     = "mcp.chrismarasco.io"
+}
+
+variable "route53_zone_id" {
+  description = "Route53 hosted zone ID for domain_name. Leave empty if DNS is managed elsewhere — you'll get validation CNAMEs to add manually."
+  type        = string
+  default     = ""
+}
