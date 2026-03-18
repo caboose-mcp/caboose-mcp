@@ -1,0 +1,21 @@
+{
+  "name": "caboose-mcp",
+  "private": true,
+  "description": "caboose-mcp monorepo — MCP server + VS Code extension",
+  "scripts": {
+    "build": "pnpm --filter vscode-caboose-mcp compile && pnpm server:build",
+    "server:build": "cd packages/server && /usr/local/go/bin/go build -o caboose-mcp .",
+    "extension:compile": "pnpm --filter vscode-caboose-mcp compile",
+    "extension:watch": "pnpm --filter vscode-caboose-mcp watch",
+    "extension:package": "pnpm --filter vscode-caboose-mcp package",
+    "docker:build": "docker build -f docker/Dockerfile -t caboose-mcp-server .",
+    "docker:up": "docker compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f docker/docker-compose.yml down",
+    "docker:logs": "docker compose -f docker/docker-compose.yml logs -f",
+    "lint": "pnpm --filter vscode-caboose-mcp lint"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  }
+}

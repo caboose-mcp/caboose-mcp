@@ -1,0 +1,66 @@
+# ci.yml — runs on every PR and push to main
+#
+# Jobs:
+#   server  — go vet + go build (linux/arm64 + linux/amd64)
+#   extension — tsc compile check
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─── Go server ──────────────────────────────────────────────────────────────
+  server:
+    name: Server (Go)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: packages/server/go.mod
+          cache-dependency-path: packages/server/go.sum
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: Build (amd64)
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /dev/null .
+
+      - name: Build (arm64)
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o /dev/null .
+
+  # ─── VS Code extension ──────────────────────────────────────────────────────
+  extension:
+    name: Extension (TypeScript)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/vscode-extension
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: packages/vscode-extension/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: TypeScript compile
+        run: pnpm compile

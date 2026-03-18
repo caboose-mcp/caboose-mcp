@@ -1,0 +1,12 @@
+# keep the build context small — only what the Dockerfile needs
+**/.git
+**/.gitignore
+**/node_modules
+**/out
+**/*.vsix
+packages/vscode-extension
+docker
+terraform
+.github
+*.md
+.env*

@@ -1,0 +1,105 @@
+# docker-compose.yml — local dev / self-hosted deployment
+#
+# Services:
+#   server    — caboose-mcp HTTP mode  →  http://localhost:8080/mcp
+#   n8n       — workflow automation    →  http://localhost:5678
+#
+# Quick start:
+#   cp .env.example .env          # fill in your secrets
+#   docker compose up -d
+#
+# n8n ↔ server wiring (automatic):
+#   server → n8n: server POSTs events to http://n8n:5678/webhook/caboose-events
+#   n8n → server: HTTP Request nodes POST MCP JSON to http://server:8080/mcp
+#
+# See docs/n8n.md for full integration documentation.
+
+services:
+  # ─── MCP Server ─────────────────────────────────────────────────────────────
+  server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: ghcr.io/caboose-mcp/caboose-mcp:latest
+    container_name: caboose-mcp
+    restart: unless-stopped
+
+    ports:
+      - "8080:8080"
+
+    volumes:
+      # Share host ~/.claude with the container so notes, secrets,
+      # focus sessions, audit logs, and sources persist across restarts.
+      - "${CLAUDE_DIR:-$HOME/.claude}:/root/.claude"
+
+    env_file:
+      - path: ../.env
+        required: false
+
+    environment:
+      MCP_AUTH_TOKEN: "${MCP_AUTH_TOKEN:-}"
+      AWS_REGION: "${AWS_REGION:-us-east-1}"
+      # container-internal URL — server pushes events to n8n here
+      N8N_WEBHOOK_URL: "http://n8n:5678/webhook/caboose-events"
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- --server-response http://localhost:8080/mcp 2>&1 | grep -q 'HTTP/'"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+    depends_on:
+      n8n:
+        condition: service_healthy
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ─── n8n ────────────────────────────────────────────────────────────────────
+  n8n:
+    build:
+      context: ..
+      dockerfile: packages/n8n/Dockerfile
+    image: caboose-n8n:latest
+    container_name: caboose-n8n
+    restart: unless-stopped
+
+    ports:
+      - "5678:5678"
+
+    volumes:
+      # Persist n8n workflows, credentials, and execution history.
+      - n8n_data:/home/node/.n8n
+
+    environment:
+      N8N_HOST: "${N8N_HOST:-localhost}"
+      N8N_PORT: 5678
+      N8N_PROTOCOL: "${N8N_PROTOCOL:-http}"
+      WEBHOOK_URL: "${N8N_PUBLIC_URL:-http://localhost:5678}"
+      # Used by HTTP Request nodes in all caboose-mcp workflows
+      CABOOSE_MCP_URL: "http://server:8080/mcp"
+      CABOOSE_MCP_TOKEN: "${MCP_AUTH_TOKEN:-}"
+      # Basic auth — enable for non-local deployments
+      N8N_BASIC_AUTH_ACTIVE: "${N8N_BASIC_AUTH_ACTIVE:-false}"
+      N8N_BASIC_AUTH_USER: "${N8N_BASIC_AUTH_USER:-}"
+      N8N_BASIC_AUTH_PASSWORD: "${N8N_BASIC_AUTH_PASSWORD:-}"
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  n8n_data:

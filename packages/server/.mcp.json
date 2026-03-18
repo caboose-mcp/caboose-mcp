@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "caboose-mcp": {
+      "type": "stdio",
+      "command": "/home/caboose/dev/caboose-mcp/caboose-mcp",
+      "args": [],
+      "cwd": "/home/caboose/dev/caboose-mcp"
+    }
+  }
+}
+

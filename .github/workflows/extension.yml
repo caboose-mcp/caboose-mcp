@@ -1,0 +1,62 @@
+# extension.yml — packages the VS Code extension on release tags
+#
+# Trigger: push of tag extension/v* (e.g. extension/v0.2.0)
+#
+# The packaged .vsix is uploaded as a GitHub Release asset.
+# To also publish to the VS Code Marketplace, uncomment the vsce publish step
+# and add VSCE_PAT to repo secrets.
+
+name: Extension Release
+
+on:
+  push:
+    tags: ["extension/v*"]
+  workflow_dispatch:
+
+jobs:
+  package:
+    name: Package VSIX
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/vscode-extension
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+          cache-dependency-path: packages/vscode-extension/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Compile TypeScript
+        run: pnpm compile
+
+      - name: Package extension
+        run: pnpm package
+
+      - name: Extract version from tag
+        id: ver
+        run: echo "version=${GITHUB_REF_NAME#extension/}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release and upload VSIX
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "Extension ${{ steps.ver.outputs.version }}"
+          tag_name: ${{ github.ref_name }}
+          files: packages/vscode-extension/*.vsix
+          generate_release_notes: true
+
+      # Uncomment to publish to VS Code Marketplace:
+      # - name: Publish to Marketplace
+      #   run: pnpm exec vsce publish
+      #   env:
+      #     VSCE_PAT: ${{ secrets.VSCE_PAT }}

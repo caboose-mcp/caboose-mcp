@@ -1,0 +1,23 @@
+# Go
+packages/server/caboose-mcp
+packages/server/*.patch
+*.patch
+
+# Node / pnpm
+node_modules/
+packages/vscode-extension/node_modules/
+packages/vscode-extension/out/
+packages/vscode-extension/*.vsix
+
+# Terraform
+terraform/.terraform/
+terraform/**/.terraform/
+terraform/**/*.tfstate
+terraform/**/*.tfstate.backup
+terraform/**/.terraform.lock.hcl
+*.tfvars
+!*.tfvars.example
+
+# Misc
+.env
+.DS_Store

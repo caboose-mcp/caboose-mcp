@@ -1,0 +1,117 @@
+{
+  "id": "caboose-event-receiver-v1",
+  "name": "Caboose Event Receiver",
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "nodes": [
+    {
+      "id": "wha-001",
+      "name": "Caboose Events",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [250, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "caboose-events",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "wha-002",
+      "name": "Route by Event Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [500, 300],
+      "parameters": {
+        "value1": "={{ $json.type }}",
+        "dataType": "string",
+        "fallbackOutput": "none",
+        "rules": {
+          "rules": [
+            { "output": 0, "value2": "gate_fired" },
+            { "output": 1, "value2": "source_changed" },
+            { "output": 2, "value2": "suggestion_created" },
+            { "output": 3, "value2": "error_reported" },
+            { "output": 4, "value2": "focus_started" },
+            { "output": 5, "value2": "focus_ended" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "wha-003",
+      "name": "Gate Alert",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [800, 60],
+      "parameters": {
+        "values": { "string": [{ "name": "message", "value": "=`Gate pending: ${$json.data.tool} — ID: ${$json.data.gate_id}\\nApprove: ${$json.data.approve_cmd}\\nDeny: ${$json.data.deny_cmd}`" }] }
+      }
+    },
+    {
+      "id": "wha-004",
+      "name": "Source Update",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [800, 180],
+      "parameters": {
+        "values": { "string": [{ "name": "message", "value": "=`Source updated: ${$json.data.source_name} (${$json.data.source_type})\\n${$json.data.summary}`" }] }
+      }
+    },
+    {
+      "id": "wha-005",
+      "name": "Suggestion Notification",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [800, 300],
+      "parameters": {
+        "values": { "string": [{ "name": "message", "value": "=`New suggestion [${$json.data.status}]: ${$json.data.title}\\nCategory: ${$json.data.category} | Dir: ${$json.data.dir}`" }] }
+      }
+    },
+    {
+      "id": "wha-006",
+      "name": "Error Alert",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [800, 420],
+      "parameters": {
+        "values": { "string": [{ "name": "message", "value": "=`Error from ${$json.data.source}: ${$json.data.message}`" }] }
+      }
+    },
+    {
+      "id": "wha-007",
+      "name": "Focus Started",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [800, 540],
+      "parameters": {
+        "values": { "string": [{ "name": "message", "value": "=`Focus started: ${$json.data.goal}`" }] }
+      }
+    },
+    {
+      "id": "wha-008",
+      "name": "Focus Ended",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [800, 660],
+      "parameters": {
+        "values": { "string": [{ "name": "message", "value": "=`Focus ended: ${$json.data.goal} | Parked: ${$json.data.parked_count}`" }] }
+      }
+    }
+  ],
+  "connections": {
+    "Caboose Events": {
+      "main": [[{ "node": "Route by Event Type", "type": "main", "index": 0 }]]
+    },
+    "Route by Event Type": {
+      "main": [
+        [{ "node": "Gate Alert", "type": "main", "index": 0 }],
+        [{ "node": "Source Update", "type": "main", "index": 0 }],
+        [{ "node": "Suggestion Notification", "type": "main", "index": 0 }],
+        [{ "node": "Error Alert", "type": "main", "index": 0 }],
+        [{ "node": "Focus Started", "type": "main", "index": 0 }],
+        [{ "node": "Focus Ended", "type": "main", "index": 0 }]
+      ]
+    }
+  }
+}

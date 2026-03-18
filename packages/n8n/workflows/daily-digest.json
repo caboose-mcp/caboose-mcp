@@ -1,0 +1,69 @@
+{
+  "id": "caboose-daily-digest-v1",
+  "name": "Caboose Daily Digest",
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "nodes": [
+    {
+      "id": "whb-001",
+      "name": "8am Daily",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 8 * * *" }] }
+      }
+    },
+    {
+      "id": "whb-002",
+      "name": "Source Digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [500, 220],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CABOOSE_MCP_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.CABOOSE_MCP_TOKEN }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
+        },
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"source_digest\",\"arguments\":{\"post_to\":\"slack\"}}}"
+      }
+    },
+    {
+      "id": "whb-003",
+      "name": "Tech Digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [500, 380],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CABOOSE_MCP_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.CABOOSE_MCP_TOKEN }}" }
+          ]
+        },
+        "sendBody": true,
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"si_tech_digest\",\"arguments\":{}}}"
+      }
+    }
+  ],
+  "connections": {
+    "8am Daily": {
+      "main": [[
+        { "node": "Source Digest", "type": "main", "index": 0 },
+        { "node": "Tech Digest", "type": "main", "index": 0 }
+      ]]
+    }
+  }
+}

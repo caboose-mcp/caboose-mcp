@@ -1,0 +1,66 @@
+{
+  "id": "caboose-nightly-scan-v1",
+  "name": "Caboose Nightly Scan",
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "nodes": [
+    {
+      "id": "whc-001",
+      "name": "Midnight",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {
+        "rule": { "interval": [{ "field": "cronExpression", "expression": "0 0 * * *" }] }
+      }
+    },
+    {
+      "id": "whc-002",
+      "name": "Scan Dir",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [500, 220],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CABOOSE_MCP_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.CABOOSE_MCP_TOKEN }}" }
+          ]
+        },
+        "sendBody": true,
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"si_scan_dir\",\"arguments\":{\"dir\":\"/home/caboose/dev\"}}}"
+      }
+    },
+    {
+      "id": "whc-003",
+      "name": "Check All Sources",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [500, 380],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.CABOOSE_MCP_URL }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.CABOOSE_MCP_TOKEN }}" }
+          ]
+        },
+        "sendBody": true,
+        "body": "{\"jsonrpc\":\"2.0\",\"id\":2,\"method\":\"tools/call\",\"params\":{\"name\":\"source_check\",\"arguments\":{}}}"
+      }
+    }
+  ],
+  "connections": {
+    "Midnight": {
+      "main": [[
+        { "node": "Scan Dir", "type": "main", "index": 0 },
+        { "node": "Check All Sources", "type": "main", "index": 0 }
+      ]]
+    }
+  }
+}

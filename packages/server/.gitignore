@@ -1,0 +1,26 @@
+node_modules/
+dist/
+*.log
+.env
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.env.local
+.env.*.local
+coverage/
+.nyc_output/
+.worktrees/
+.shortcuts-state.json
+
+# compiled binary
+caboose-mcp
+
+# temp planning / scratch files
+ADHD-FRIENDLY-CODE-ANALYSIS.md
+IMPLEMENTATION-CHECKLIST.md
+REFACTORING-EXAMPLES.md
+add-test-endpoints.patch
+fix-test-endpoints.txt
