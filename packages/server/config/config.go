@@ -12,8 +12,7 @@ type Config struct {
 	ClaudeDir       string
 	GPGKeyID        string
 	SlackToken      string
-	DiscordToken      string
-	DiscordWebhookURL string // DISCORD_WEBHOOK_URL — incoming webhook for outbound notifications
+	DiscordToken    string
 	BambuIP         string
 	BambuAccessCode string
 	BambuSerial     string
@@ -28,6 +27,11 @@ type Config struct {
 	// n8n integration
 	N8nWebhookURL string // N8N_WEBHOOK_URL
 	N8nAPIKey     string // N8N_API_KEY (optional, for header auth)
+	// Chat bot
+	AnthropicAPIKey    string // ANTHROPIC_API_KEY
+	DiscordBotChannels string // DISCORD_BOT_CHANNELS — comma-separated channel IDs
+	SlackAppToken      string // SLACK_APP_TOKEN — xapp-... for Socket Mode
+	SlackBotChannels   string // SLACK_BOT_CHANNELS — comma-separated channel IDs
 }
 
 func Load() *Config {
@@ -54,7 +58,7 @@ func Load() *Config {
 
 	greptileRepo := os.Getenv("GREPTILE_REPO")
 	if greptileRepo == "" {
-		greptileRepo = "github/caboose-mcp/caboose-mcp"
+		greptileRepo = "github/caboose/caboose-mcp"
 	}
 
 	// GitHub token: env var first, then fall back to `gh auth token`
@@ -70,8 +74,7 @@ func Load() *Config {
 		GitHubToken:     githubToken,
 		GPGKeyID:        os.Getenv("GPG_KEY_ID"),
 		SlackToken:      os.Getenv("SLACK_TOKEN"),
-		DiscordToken:      os.Getenv("DISCORD_TOKEN"),
-		DiscordWebhookURL: os.Getenv("DISCORD_WEBHOOK_URL"),
+		DiscordToken:    os.Getenv("DISCORD_TOKEN"),
 		BambuIP:         os.Getenv("BAMBU_IP"),
 		BambuAccessCode: os.Getenv("BAMBU_ACCESS_CODE"),
 		BambuSerial:     os.Getenv("BAMBU_SERIAL"),
@@ -81,7 +84,11 @@ func Load() *Config {
 		GreptileRepo:    greptileRepo,
 		PostgresURL:     os.Getenv("POSTGRES_URL"),
 		MongoURL:        os.Getenv("MONGO_URL"),
-		N8nWebhookURL:   os.Getenv("N8N_WEBHOOK_URL"),
-		N8nAPIKey:       os.Getenv("N8N_API_KEY"),
+		N8nWebhookURL:      os.Getenv("N8N_WEBHOOK_URL"),
+		N8nAPIKey:          os.Getenv("N8N_API_KEY"),
+		AnthropicAPIKey:    os.Getenv("ANTHROPIC_API_KEY"),
+		DiscordBotChannels: os.Getenv("DISCORD_BOT_CHANNELS"),
+		SlackAppToken:      os.Getenv("SLACK_APP_TOKEN"),
+		SlackBotChannels:   os.Getenv("SLACK_BOT_CHANNELS"),
 	}
 }
