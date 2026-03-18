@@ -5,14 +5,18 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/caboose-mcp/server/config"
 	"github.com/caboose-mcp/server/tools"
 	"github.com/caboose-mcp/server/tui"
+	"github.com/joho/godotenv"
 	"github.com/mark3labs/mcp-go/server"
 )
 
 func main() {
+	// Load .env from working directory if present (silently ignore if missing)
+	_ = godotenv.Load()
 	cfg := config.Load()
 
 	// --setup flag: interactive config wizard, writes .env file
@@ -28,6 +32,29 @@ func main() {
 		if err := tui.Run(cfg); err != nil {
 			log.Fatal(err)
 		}
+		return
+	}
+
+	// --discord-bot: run the Discord gateway bot (blocks; run as a service).
+	if len(os.Args) > 1 && os.Args[1] == "--discord-bot" {
+		if err := tools.RunDiscordBot(cfg); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
+	// --slack-bot: run the Slack Socket Mode bot (blocks; run as a service).
+	if len(os.Args) > 1 && os.Args[1] == "--slack-bot" {
+		if err := tools.RunSlackBot(cfg); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
+	// --bots: run both Slack and Discord bots concurrently.
+	// If one dies it logs the error and continues; the other keeps running.
+	if len(os.Args) > 1 && os.Args[1] == "--bots" {
+		runBots(cfg)
 		return
 	}
 
@@ -104,8 +131,36 @@ func buildMCPServer(cfg *config.Config) *server.MCPServer {
 	tools.RegisterToolsmith(s, cfg)
 	tools.RegisterSandbox(s, cfg)
 	tools.RegisterAudit(s, cfg)
-	tools.RegisterEnv(s, cfg)
 	return s
+}
+
+// runBots starts the Slack and Discord bots concurrently. If either exits with
+// an error it is logged but the other bot continues running. The process blocks
+// until both have exited.
+func runBots(cfg *config.Config) {
+	bots := []struct {
+		name string
+		fn   func(*config.Config) error
+	}{
+		{"slack", tools.RunSlackBot},
+		{"discord", tools.RunDiscordBot},
+	}
+
+	var wg sync.WaitGroup
+	for _, b := range bots {
+		b := b
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			log.Printf("starting %s bot", b.name)
+			if err := b.fn(cfg); err != nil {
+				log.Printf("%s bot exited with error: %v", b.name, err)
+			} else {
+				log.Printf("%s bot exited", b.name)
+			}
+		}()
+	}
+	wg.Wait()
 }
 
 // bearerAuthMiddleware rejects requests without the correct Authorization header.
