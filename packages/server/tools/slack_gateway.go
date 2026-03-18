@@ -29,6 +29,11 @@ import (
 	"github.com/slack-go/slack/socketmode"
 )
 
+// SlackProvider implements ChatProvider for the Slack Socket Mode bot.
+type SlackProvider struct{}
+
+func (SlackProvider) Name() string { return "slack" }
+
 // RunSlackBot starts the Slack Socket Mode bot and blocks until a fatal error.
 func RunSlackBot(cfg *config.Config) error {
 	if cfg.SlackToken == "" {

@@ -9,11 +9,12 @@ import (
 )
 
 type Config struct {
-	ClaudeDir       string
-	GPGKeyID        string
-	SlackToken      string
-	DiscordToken    string
-	BambuIP         string
+	ClaudeDir         string
+	GPGKeyID          string
+	SlackToken        string
+	DiscordToken      string
+	DiscordWebhookURL string // DISCORD_WEBHOOK_URL — incoming webhook for outbound notifications
+	BambuIP           string
 	BambuAccessCode string
 	BambuSerial     string
 	BambuBedTemp    int
@@ -73,8 +74,9 @@ func Load() *Config {
 		ClaudeDir:       claudeDir,
 		GitHubToken:     githubToken,
 		GPGKeyID:        os.Getenv("GPG_KEY_ID"),
-		SlackToken:      os.Getenv("SLACK_TOKEN"),
-		DiscordToken:    os.Getenv("DISCORD_TOKEN"),
+		SlackToken:         os.Getenv("SLACK_TOKEN"),
+		DiscordToken:       os.Getenv("DISCORD_TOKEN"),
+		DiscordWebhookURL:  os.Getenv("DISCORD_WEBHOOK_URL"),
 		BambuIP:         os.Getenv("BAMBU_IP"),
 		BambuAccessCode: os.Getenv("BAMBU_ACCESS_CODE"),
 		BambuSerial:     os.Getenv("BAMBU_SERIAL"),
