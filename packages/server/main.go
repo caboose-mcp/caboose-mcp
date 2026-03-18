@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -139,12 +140,14 @@ func buildMCPServer(cfg *config.Config) *server.MCPServer {
 // an error it is logged but the other bot continues running. The process blocks
 // until both have exited.
 func runBots(cfg *config.Config) {
-	bots := []struct {
+	ctx := context.Background()
+	type botFn struct {
 		name string
-		fn   func(*config.Config) error
-	}{
-		{"slack", tools.RunSlackBot},
-		{"discord", tools.RunDiscordBot},
+		run  func() error
+	}
+	bots := []botFn{
+		{"slack", func() error { return tools.RunSlackBot(cfg) }},
+		{"discord", func() error { return tools.RunDiscordBot(ctx, cfg) }},
 	}
 
 	var wg sync.WaitGroup
@@ -154,7 +157,7 @@ func runBots(cfg *config.Config) {
 		go func() {
 			defer wg.Done()
 			log.Printf("starting %s bot", b.name)
-			if err := b.fn(cfg); err != nil {
+			if err := b.run(); err != nil {
 				log.Printf("%s bot exited with error: %v", b.name, err)
 			} else {
 				log.Printf("%s bot exited", b.name)
