@@ -1,5 +1,15 @@
 # Copy to terraform.tfvars (gitignored) and fill in values.
+
 aws_region            = "us-east-1"
+aws_profile           = "default"        # local AWS CLI profile name
 environment           = "personal"
 iam_user_name         = "caboose_cli"
 cloudsync_bucket_name = "caboose-mcp-cloudsync-YOUR_UNIQUE_SUFFIX"
+
+# Optional: channel IDs the bots respond in (DMs always work without these)
+slack_bot_channels   = ""   # e.g. "C0123ABC,C0456DEF"
+discord_bot_channels = ""   # e.g. "123456789,987654321"
+
+# Custom domain
+domain_name     = "mcp.chrismarasco.io"
+route53_zone_id = ""   # set to your Route53 zone ID if DNS is in AWS, else add CNAME manually
