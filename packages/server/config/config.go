@@ -29,6 +29,7 @@ type Config struct {
 	N8nAPIKey     string // N8N_API_KEY (optional, for header auth)
 	// Chat bot
 	AnthropicAPIKey    string // ANTHROPIC_API_KEY
+	DiscordWebhookURL  string // DISCORD_WEBHOOK_URL — webhook for posting messages
 	DiscordBotChannels string // DISCORD_BOT_CHANNELS — comma-separated channel IDs
 	SlackAppToken      string // SLACK_APP_TOKEN — xapp-... for Socket Mode
 	SlackBotChannels   string // SLACK_BOT_CHANNELS — comma-separated channel IDs
@@ -87,6 +88,7 @@ func Load() *Config {
 		N8nWebhookURL:      os.Getenv("N8N_WEBHOOK_URL"),
 		N8nAPIKey:          os.Getenv("N8N_API_KEY"),
 		AnthropicAPIKey:    os.Getenv("ANTHROPIC_API_KEY"),
+		DiscordWebhookURL:  os.Getenv("DISCORD_WEBHOOK_URL"),
 		DiscordBotChannels: os.Getenv("DISCORD_BOT_CHANNELS"),
 		SlackAppToken:      os.Getenv("SLACK_APP_TOKEN"),
 		SlackBotChannels:   os.Getenv("SLACK_BOT_CHANNELS"),
