@@ -14,7 +14,6 @@ package tools
 //   agency_hint   — return formatted hint block for a message
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"os"
@@ -113,14 +112,12 @@ func LoadAgentSpecs(claudeDir string) []AgentSpec {
 func parseAgentSpec(slug, content string) AgentSpec {
 	spec := AgentSpec{Name: slug, Content: content}
 
-	scanner := bufio.NewScanner(strings.NewReader(content))
 	var paragraphLines []string
 	titleFound := false
 	inParagraph := false
 
-	for scanner.Scan() {
-		line := scanner.Text()
-
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
 		if !titleFound {
 			if strings.HasPrefix(line, "# ") {
 				spec.Title = strings.TrimPrefix(line, "# ")
