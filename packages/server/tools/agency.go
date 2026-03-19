@@ -269,9 +269,9 @@ func agencyListHandler(cfg *config.Config) func(context.Context, mcp.CallToolReq
 
 func agencyDetectHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		msg := req.GetString("message", "")
-		if msg == "" {
-			return mcp.NewToolResultText("message is required"), nil
+		msg, ok := req.RequireString("message")
+		if !ok {
+			return mcp.NewToolResultError("message is required"), nil
 		}
 		specs := LoadAgentSpecs(cfg.ClaudeDir)
 		matched := DetectAgent(msg, specs)
@@ -286,9 +286,9 @@ func agencyDetectHandler(cfg *config.Config) func(context.Context, mcp.CallToolR
 
 func agencyHintHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		msg := req.GetString("message", "")
-		if msg == "" {
-			return mcp.NewToolResultText("message is required"), nil
+		msg, ok := req.RequireString("message")
+		if !ok {
+			return mcp.NewToolResultError("message is required"), nil
 		}
 		specs := LoadAgentSpecs(cfg.ClaudeDir)
 		matched := DetectAgent(msg, specs)
