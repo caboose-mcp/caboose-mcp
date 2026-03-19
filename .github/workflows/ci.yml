@@ -156,7 +156,7 @@ jobs:
           node-version: "20"
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
 
       - name: Generate changelog.json from git history
         working-directory: ${{ github.workspace }}

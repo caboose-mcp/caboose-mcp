@@ -8,7 +8,7 @@ type Props = {
   className?: string
 }
 
-export default function CodeBlock({ code, language = 'text', label, className = '' }: Props) {
+export default function CodeBlock({ code, language: _language = 'text', label, className = '' }: Props) {
   const [copied, setCopied] = useState(false)
 
   const copy = async () => {

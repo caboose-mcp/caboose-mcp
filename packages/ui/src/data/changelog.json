@@ -1,0 +1,9 @@
+[
+  {
+    "hash": "placeholder",
+    "date": "2026-03-19T00:00:00Z",
+    "subject": "feat: JWT RBAC auth, React web UI, multi-stage Docker, CI/CD improvements",
+    "author": "Chris Marasco",
+    "tags": ["feat"]
+  }
+]
