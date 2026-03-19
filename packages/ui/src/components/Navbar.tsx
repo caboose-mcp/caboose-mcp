@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { BookOpen, FlaskConical, KeyRound, Clock, Menu, X, Zap } from 'lucide-react'
+import { BookOpen, FlaskConical, KeyRound, Clock, Menu, X } from 'lucide-react'
 
 const NAV = [
   { to: '/tools', label: 'Tools', icon: BookOpen },
@@ -18,10 +18,11 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-14">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-7 h-7 rounded-md bg-accent-green/10 border border-accent-green/30
-                            flex items-center justify-center group-hover:bg-accent-green/20 transition-colors">
-              <Zap className="w-3.5 h-3.5 text-accent-green" />
-            </div>
+            <img
+              src="/ui/logo.png"
+              alt="caboose-mcp"
+              className="w-7 h-7 rounded-md object-cover"
+            />
             <span className="font-mono font-medium text-text-primary text-sm">
               caboose<span className="text-accent-green">-mcp</span>
             </span>
