@@ -164,28 +164,28 @@ func notesDriveRestoreHandler(cfg *config.Config) func(context.Context, mcp.Call
 // ---- Drive helpers ----
 
 func driveFindFile(client *http.Client, name string) (string, error) {
-q := url.QueryEscape(fmt.Sprintf("name='%s' and trashed=false", name))
-resp, err := client.Get(fmt.Sprintf("%s/files?q=%s&fields=files(id)", driveAPIv3, q))
-if err != nil {
-return "", err
-}
-defer resp.Body.Close()
-body, _ := io.ReadAll(resp.Body)
-if resp.StatusCode >= 400 {
-return "", fmt.Errorf("Drive API error (HTTP %d): %s", resp.StatusCode, body)
-}
-var list struct {
-Files []struct {
-ID string `json:"id"`
-} `json:"files"`
-}
-if err := json.Unmarshal(body, &list); err != nil {
-return "", err
-}
-if len(list.Files) == 0 {
-return "", nil
-}
-return list.Files[0].ID, nil
+	q := url.QueryEscape(fmt.Sprintf("name='%s' and trashed=false", name))
+	resp, err := client.Get(fmt.Sprintf("%s/files?q=%s&fields=files(id)", driveAPIv3, q))
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode >= 400 {
+		return "", fmt.Errorf("Drive API error (HTTP %d): %s", resp.StatusCode, body)
+	}
+	var list struct {
+		Files []struct {
+			ID string `json:"id"`
+		} `json:"files"`
+	}
+	if err := json.Unmarshal(body, &list); err != nil {
+		return "", err
+	}
+	if len(list.Files) == 0 {
+		return "", nil
+	}
+	return list.Files[0].ID, nil
 }
 
 func driveCreateFile(client *http.Client, name string, data []byte) error {
