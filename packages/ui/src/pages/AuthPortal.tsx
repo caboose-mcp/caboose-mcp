@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { KeyRound, CheckCircle2, AlertCircle, Loader2, Copy, Check, ExternalLink } from 'lucide-react'
+import { KeyRound, CheckCircle2, AlertCircle, Loader2, Copy, Check } from 'lucide-react'
 import { exchangeMagicLink } from '../lib/api'
 import CodeBlock from '../components/CodeBlock'
 
@@ -33,15 +33,6 @@ export default function AuthPortal() {
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }
-
-  const mcpJson = result ? JSON.stringify({
-    mcpServers: {
-      caboose: {
-        url: 'https://mcp.chrismarasco.io/mcp',
-        headers: { Authorization: `Bearer ${result.token.slice(0, 20)}...` },
-      },
-    },
-  }, null, 2) : ''
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">

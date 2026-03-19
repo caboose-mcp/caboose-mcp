@@ -29,13 +29,6 @@ export default function ToolDetail() {
       }, null, 2)
     : ''
 
-  const exampleResponse = tool.example
-    ? JSON.stringify({
-        jsonrpc: '2.0',
-        result: { content: [{ type: 'text', text: tool.example.output }] },
-      }, null, 2)
-    : ''
-
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 animate-fade-in">
       {/* Back */}

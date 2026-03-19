@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
-import { Search, SlidersHorizontal, Globe, Cpu, X } from 'lucide-react'
+import { Search, Globe, Cpu, X } from 'lucide-react'
 import ToolCard from '../components/ToolCard'
-import { CATEGORIES, TOOLS, searchTools, getToolsByCategory, TOOL_COUNT } from '../data/tools'
+import { CATEGORIES, searchTools, getToolsByCategory, TOOL_COUNT } from '../data/tools'
 
 type Tier = 'all' | 'hosted' | 'local'
 

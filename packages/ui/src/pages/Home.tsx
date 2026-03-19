@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
 import {
-  Terminal, BookOpen, FlaskConical, KeyRound, ArrowRight, Zap,
-  Calendar, StickyNote, Focus, Github, MessageSquare, Database,
-  Shield, Bot, Server, Globe
+  BookOpen, FlaskConical, KeyRound, ArrowRight,
+  Calendar, Focus, Database,
+  Shield, Bot, Server
 } from 'lucide-react'
-import { TOOL_COUNT, TOOLS } from '../data/tools'
+import { TOOL_COUNT } from '../data/tools'
 
 const STATS = [
   { value: `${TOOL_COUNT}+`, label: 'MCP Tools' },

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Play, Loader2, AlertCircle, Terminal, FlaskConical, ChevronDown, ChevronRight } from 'lucide-react'
+import { Play, Loader2, AlertCircle, FlaskConical, ChevronRight } from 'lucide-react'
 import { SANDBOX_TOOLS } from '../data/tools'
 import { runSandboxTool } from '../lib/api'
 import CodeBlock from '../components/CodeBlock'

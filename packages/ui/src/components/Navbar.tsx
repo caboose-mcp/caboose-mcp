@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Link, NavLink, useLocation } from 'react-router-dom'
-import { Terminal, BookOpen, FlaskConical, KeyRound, Clock, Menu, X, Zap } from 'lucide-react'
+import { Link, NavLink } from 'react-router-dom'
+import { BookOpen, FlaskConical, KeyRound, Clock, Menu, X, Zap } from 'lucide-react'
 
 const NAV = [
   { to: '/tools', label: 'Tools', icon: BookOpen },
@@ -11,7 +11,6 @@ const NAV = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
-  const { pathname } = useLocation()
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-bg/95 backdrop-blur-sm">

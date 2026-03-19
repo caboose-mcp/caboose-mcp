@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, Lock, Globe, Cpu } from 'lucide-react'
+import { ArrowRight, Globe, Cpu } from 'lucide-react'
 import type { ToolDef } from '../data/tools'
 import { CATEGORIES } from '../data/tools'
 
