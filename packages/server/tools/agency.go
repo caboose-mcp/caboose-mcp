@@ -88,6 +88,13 @@ func LoadAgentSpecs(claudeDir string) []AgentSpec {
 	dir := filepath.Join(claudeDir, "agents")
 	entries, err := os.ReadDir(dir)
 	if err != nil {
+		// Treat a missing directory as a graceful no-op, as documented.
+		if os.IsNotExist(err) {
+			return []AgentSpec{}
+		}
+		// For other errors, surface a warning so callers/operators can distinguish
+		// "no specs installed" from "specs present but unreadable".
+		fmt.Fprintf(os.Stderr, "warning: failed to read agent specs directory %s: %v\n", dir, err)
 		return nil
 	}
 
@@ -99,6 +106,8 @@ func LoadAgentSpecs(claudeDir string) []AgentSpec {
 		path := filepath.Join(dir, e.Name())
 		data, err := os.ReadFile(path)
 		if err != nil {
+			// Log and skip unreadable files instead of silently ignoring them.
+			fmt.Fprintf(os.Stderr, "warning: failed to read agent spec file %s: %v\n", path, err)
 			continue
 		}
 		slug := strings.TrimSuffix(e.Name(), ".md")
