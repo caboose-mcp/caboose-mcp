@@ -41,7 +41,7 @@ var agentToolMap = []struct {
 	minimize []string
 }{
 	{
-		keywords: []string{"backend", "engineer", "api", "server"},
+		keywords: []string{"backend", "api", "server"},
 		prefer:   []string{"docker_list_containers", "docker_logs", "docker_inspect", "github_list_repos", "github_search_code", "postgres_query", "mongodb_query", "health_report", "sandbox_run", "sandbox_diff", "execute_command"},
 		minimize: []string{"calendar", "notes", "printing", "learning tools"},
 	},
