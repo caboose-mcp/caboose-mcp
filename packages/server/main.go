@@ -171,6 +171,7 @@ func registerHostedTools(s *server.MCPServer, cfg *config.Config) {
 	tools.RegisterSandbox(s, cfg)
 	tools.RegisterAudit(s, cfg)
 	tools.RegisterAuth(s, cfg)
+	tools.RegisterAgency(s, cfg)
 }
 
 // registerLocalTools registers tools that require local hardware or LAN access.
