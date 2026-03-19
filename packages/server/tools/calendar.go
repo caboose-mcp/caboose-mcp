@@ -408,23 +408,23 @@ func refreshGoogleToken(ctx context.Context, cfg *config.Config, tok googleToken
 		"refresh_token": {tok.RefreshToken},
 		"grant_type":    {"refresh_token"},
 	}
-resp, err := http.PostForm(googleTokenURL, data)
-if err != nil {
-return tok, err
-}
-defer resp.Body.Close()
-body, _ := io.ReadAll(resp.Body)
-if resp.StatusCode >= 400 {
-return tok, fmt.Errorf("invalid OAuth error response (HTTP %d): %s", resp.StatusCode, body)
-}
-var result struct {
-AccessToken string `json:"access_token"`
-ExpiresIn   int    `json:"expires_in"`
-Error       string `json:"error"`
-}
-if err := json.Unmarshal(body, &result); err != nil {
-return tok, fmt.Errorf("invalid refresh response")
-}
+	resp, err := http.PostForm(googleTokenURL, data)
+	if err != nil {
+		return tok, err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode >= 400 {
+		return tok, fmt.Errorf("invalid OAuth error response (HTTP %d): %s", resp.StatusCode, body)
+	}
+	var result struct {
+		AccessToken string `json:"access_token"`
+		ExpiresIn   int    `json:"expires_in"`
+		Error       string `json:"error"`
+	}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return tok, fmt.Errorf("invalid refresh response")
+	}
 	if result.Error != "" {
 		return tok, fmt.Errorf("token refresh error: %s", result.Error)
 	}
