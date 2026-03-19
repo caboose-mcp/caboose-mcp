@@ -30,9 +30,9 @@ const discordAPIBase = "https://discord.com/api/v10"
 // DiscordWebhookPost sends a message to the configured DISCORD_WEBHOOK_URL.
 // Called by EmitEvent for push notifications and by the discord_webhook_post tool.
 func DiscordWebhookPost(webhookURL, content string) error {
-if webhookURL == "" {
-return fmt.Errorf("Discord webhook URL not configured")
-}
+	if webhookURL == "" {
+		return fmt.Errorf("Discord webhook URL not configured")
+	}
 	body, _ := json.Marshal(map[string]string{"content": content})
 	resp, err := http.Post(webhookURL, "application/json", bytes.NewReader(body))
 	if err != nil {
@@ -81,9 +81,9 @@ func RegisterDiscord(s *server.MCPServer, cfg *config.Config) {
 }
 
 func discordDo(cfg *config.Config, method, path string, body any) ([]byte, error) {
-if cfg.DiscordToken == "" {
-return nil, fmt.Errorf("Discord token not configured")
-}
+	if cfg.DiscordToken == "" {
+		return nil, fmt.Errorf("Discord token not configured")
+	}
 	var reqBody io.Reader
 	if body != nil {
 		data, err := json.Marshal(body)
