@@ -11,37 +11,54 @@ import (
 	"github.com/caboose-mcp/server/tools"
 )
 
-// authMiddleware handles all request authentication and tool ACL enforcement.
+// authMiddleware handles request authentication and tool ACL enforcement.
 //
-// Priority order:
-//  1. /auth/verify path → served unauthenticated (magic link exchange)
+// When MCP_AUTH_TOKEN is set (adminToken non-empty), auth is required:
+//  1. /auth/verify path → unauthenticated (magic link exchange)
 //  2. No Authorization header → 401
 //  3. Bearer matches adminToken → full admin access, no ACL check
 //  4. Valid JWT → ACL check on tools/call; JWT claims injected into context
-//  5. Otherwise → 401
+//  5. Invalid token → 401
 //
-// If adminToken is empty the static bypass is disabled; JWT is still supported.
+// When MCP_AUTH_TOKEN is not set (open/local mode), auth is optional:
+//  - No bearer → request passes through without claims (tools check own credentials)
+//  - Valid JWT → claims injected for per-user scoping (calendar tokens, ACL)
+//  - Invalid JWT → 401 (don't silently drop a bad token)
 func authMiddleware(adminToken string, jwtSecret []byte, claudeDir string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Magic link verification endpoint is unauthenticated by design.
+		// Magic link verification endpoint is always unauthenticated.
 		if r.URL.Path == "/auth/verify" {
 			tools.HandleMagicVerify(claudeDir, jwtSecret)(w, r)
 			return
 		}
 
-		bearer, ok := extractBearer(r)
-		if !ok {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
+		bearer, hasBearer, hasAuthHeader := extractBearer(r)
 
 		// Admin token bypass — full access, no ACL.
-		if adminToken != "" && bearer == adminToken {
+		if adminToken != "" && hasBearer && bearer == adminToken {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		// JWT path.
+		// If MCP_AUTH_TOKEN is set, an Authorization header is required.
+		if adminToken != "" && !hasAuthHeader {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		// No Authorization header and no admin token configured → open/local mode, pass through.
+		if !hasAuthHeader {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// Authorization header present but no valid non-empty Bearer token → treat as invalid token.
+		if !hasBearer {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		// Bearer present: validate as JWT and inject claims.
 		claims, err := tools.VerifyJWT(claudeDir, jwtSecret, bearer)
 		if err != nil {
 			log.Printf("auth: JWT verification failed: %v", err)
@@ -49,14 +66,13 @@ func authMiddleware(adminToken string, jwtSecret []byte, claudeDir string, next 
 			return
 		}
 
-		// Enforce tool ACL: only applies when the token has an explicit tool list.
+		// Enforce tool ACL when the token carries an explicit allowlist.
 		if r.Method == http.MethodPost && len(claims.Tools) > 0 {
 			body, err := io.ReadAll(r.Body)
 			if err != nil {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
-			// Restore body so the MCP handler can read it.
 			r.Body = io.NopCloser(bytes.NewReader(body))
 
 			if toolName, ok := extractToolName(body); ok && !claimsAllowTool(claims.Tools, toolName) {
@@ -73,19 +89,26 @@ func authMiddleware(adminToken string, jwtSecret []byte, claudeDir string, next 
 			}
 		}
 
-		// Inject claims so tool handlers can read them with tools.GetAuthClaims(ctx).
 		ctx := tools.WithAuthClaims(r.Context(), claims)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
-func extractBearer(r *http.Request) (string, bool) {
+func extractBearer(r *http.Request) (string, bool, bool) {
 	auth := r.Header.Get("Authorization")
+	if auth == "" {
+		// No Authorization header present.
+		return "", false, false
+	}
+
 	bearer, ok := strings.CutPrefix(auth, "Bearer ")
 	if !ok || bearer == "" {
-		return "", false
+		// Authorization header present, but not a valid non-empty Bearer token.
+		return "", false, true
 	}
-	return bearer, true
+
+	// Valid non-empty Bearer token.
+	return bearer, true, true
 }
 
 // extractToolName parses the tool name from a tools/call JSON-RPC body.
