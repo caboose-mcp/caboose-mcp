@@ -156,7 +156,7 @@ return mcp.NewToolResultError(fmt.Sprintf("token exchange failed: %v", err)), ni
 defer resp.Body.Close()
 body, _ := io.ReadAll(resp.Body)
 if resp.StatusCode >= 400 {
-return mcp.NewToolResultError(fmt.Sprintf("Invalid OAuth error response (HTTP %d): %s", resp.StatusCode, body)), nil
+return mcp.NewToolResultError(fmt.Sprintf("invalid OAuth error response (HTTP %d): %s", resp.StatusCode, body)), nil
 }
 var tok struct {
 AccessToken  string `json:"access_token"`
