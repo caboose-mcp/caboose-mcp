@@ -1,0 +1,29 @@
+meta {
+  name: si-git-diff
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "si_git_diff",
+      "arguments": {
+        ""dir"": "/home/caboose/dev/caboose-mcp"
+      }
+    }
+  }
+}
