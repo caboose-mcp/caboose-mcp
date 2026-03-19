@@ -46,9 +46,9 @@ func RegisterSlack(s *server.MCPServer, cfg *config.Config) {
 }
 
 func slackAPICall(cfg *config.Config, method, endpoint string, body any) (map[string]any, error) {
-if cfg.SlackToken == "" {
-return nil, fmt.Errorf("Slack token not configured")
-}
+	if cfg.SlackToken == "" {
+		return nil, fmt.Errorf("Slack token not configured")
+	}
 	var reqBody io.Reader
 	if body != nil {
 		data, err := json.Marshal(body)
