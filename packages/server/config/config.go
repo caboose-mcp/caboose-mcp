@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -110,10 +111,26 @@ func Load() *Config {
 
 // uiOrigin returns the allowed CORS origin for the standalone UI.
 func uiOrigin() string {
-	if v := os.Getenv("MCP_UI_ORIGIN"); v != "" {
-		return v
+	const defaultOrigin = "https://ui.mcp.chrismarasco.io"
+
+	v := strings.TrimSpace(os.Getenv("MCP_UI_ORIGIN"))
+	if v == "" {
+		return defaultOrigin
 	}
-	return "https://ui.mcp.chrismarasco.io"
+
+	// Normalize by removing any trailing slashes to avoid malformed URLs like "//".
+	v = strings.TrimRight(v, "/")
+
+	// Validate that the value is a well-formed http(s) URL.
+	u, err := url.Parse(v)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return defaultOrigin
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return defaultOrigin
+	}
+
+	return v
 }
 
 // releaseStage reads CABOOSE_ENV and normalises to "experimental" or "stable".
