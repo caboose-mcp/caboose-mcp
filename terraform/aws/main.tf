@@ -515,7 +515,7 @@ resource "aws_ecs_task_definition" "serve" {
   container_definitions = jsonencode([{
     name      = "serve"
     image     = "${aws_ecr_repository.caboose_mcp.repository_url}:latest"
-    command   = ["--serve", ":8080"]
+    command   = ["--serve-hosted", ":8080"]
     essential = true
 
     portMappings = [{

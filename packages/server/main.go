@@ -59,16 +59,28 @@ func main() {
 		return
 	}
 
-	// --serve [addr]: run HTTP/SSE transport instead of stdio.
+	// --serve [addr]: HTTP server with all tools (hosted + local).
+	// --serve-hosted [addr]: HTTP server with cloud-safe tools only (no Docker/Bambu/Blender/shell).
+	// --serve-local [addr]: HTTP server with local-only tools (Docker, shell, Bambu, Blender, Chezmoi, Toolsmith).
 	// addr defaults to :8080. Set MCP_AUTH_TOKEN to require bearer auth.
-	// Example: ./caboose-mcp --serve :9090
-	if len(os.Args) > 1 && os.Args[1] == "--serve" {
-		addr := ":8080"
-		if len(os.Args) > 2 {
-			addr = os.Args[2]
+	for _, flag := range []string{"--serve", "--serve-hosted", "--serve-local"} {
+		if len(os.Args) > 1 && os.Args[1] == flag {
+			addr := ":8080"
+			if len(os.Args) > 2 {
+				addr = os.Args[2]
+			}
+			var s *server.MCPServer
+			switch flag {
+			case "--serve-hosted":
+				s = buildHostedMCPServer(cfg)
+			case "--serve-local":
+				s = buildLocalMCPServer(cfg)
+			default:
+				s = buildMCPServer(cfg)
+			}
+			serveHTTP(cfg, addr, s)
+			return
 		}
-		serveHTTP(cfg, addr)
-		return
 	}
 
 	s := buildMCPServer(cfg)
@@ -79,8 +91,7 @@ func main() {
 
 // serveHTTP runs the MCP server over HTTP using the Streamable HTTP transport.
 // If MCP_AUTH_TOKEN is set, all requests must include "Authorization: Bearer <token>".
-func serveHTTP(cfg *config.Config, addr string) {
-	s := buildMCPServer(cfg)
+func serveHTTP(cfg *config.Config, addr string, s *server.MCPServer) {
 	httpSrv := server.NewStreamableHTTPServer(s,
 		server.WithEndpointPath("/mcp"),
 		server.WithStateLess(true),
@@ -100,22 +111,16 @@ func serveHTTP(cfg *config.Config, addr string) {
 	}
 }
 
-// buildMCPServer creates and fully registers the MCP server.
-// Extracted so both stdio and HTTP paths share the same tool set.
-func buildMCPServer(cfg *config.Config) *server.MCPServer {
-	s := server.NewMCPServer("caboose-mcp", "2.0.0",
-		server.WithToolCapabilities(false),
-	)
+// registerHostedTools registers tools that are safe to run in a cloud/hosted environment.
+// These tools have no dependency on local hardware, Docker, or LAN-connected devices.
+func registerHostedTools(s *server.MCPServer, cfg *config.Config) {
 	tools.RegisterClaude(s, cfg)
 	tools.RegisterSecrets(s, cfg)
 	tools.RegisterGitHub(s, cfg)
-	tools.RegisterDocker(s, cfg)
 	tools.RegisterDatabase(s, cfg)
-	tools.RegisterSystem(s, cfg)
 	tools.RegisterSlack(s, cfg)
 	tools.RegisterDiscord(s, cfg)
 	tools.RegisterEnv(s, cfg)
-	tools.RegisterPrinting(s, cfg)
 	tools.RegisterMermaid(s, cfg)
 	tools.RegisterGreptile(s, cfg)
 	tools.RegisterSelfImprove(s, cfg)
@@ -129,10 +134,48 @@ func buildMCPServer(cfg *config.Config) *server.MCPServer {
 	tools.RegisterCalendar(s, cfg)
 	tools.RegisterNotes(s, cfg)
 	tools.RegisterSources(s, cfg)
-	tools.RegisterChezmoi(s, cfg)
-	tools.RegisterToolsmith(s, cfg)
 	tools.RegisterSandbox(s, cfg)
 	tools.RegisterAudit(s, cfg)
+}
+
+// registerLocalTools registers tools that require local hardware or LAN access.
+// These tools depend on Docker, a local shell, Bambu printer, Blender, Chezmoi, or local source code.
+func registerLocalTools(s *server.MCPServer, cfg *config.Config) {
+	tools.RegisterDocker(s, cfg)
+	tools.RegisterSystem(s, cfg)
+	tools.RegisterPrinting(s, cfg)
+	tools.RegisterChezmoi(s, cfg)
+	tools.RegisterToolsmith(s, cfg)
+}
+
+// buildHostedMCPServer creates a server with only cloud-safe hosted tools.
+// Used for --serve-hosted and ECS Fargate deployments.
+func buildHostedMCPServer(cfg *config.Config) *server.MCPServer {
+	s := server.NewMCPServer("caboose-mcp", "2.0.0",
+		server.WithToolCapabilities(false),
+	)
+	registerHostedTools(s, cfg)
+	return s
+}
+
+// buildLocalMCPServer creates a server with only local/hardware tools.
+// Used for --serve-local when running on the Pi alongside Claude Code.
+func buildLocalMCPServer(cfg *config.Config) *server.MCPServer {
+	s := server.NewMCPServer("caboose-mcp", "2.0.0",
+		server.WithToolCapabilities(false),
+	)
+	registerLocalTools(s, cfg)
+	return s
+}
+
+// buildMCPServer creates a server with all tools (hosted + local combined).
+// Used for --serve and stdio (default) modes.
+func buildMCPServer(cfg *config.Config) *server.MCPServer {
+	s := server.NewMCPServer("caboose-mcp", "2.0.0",
+		server.WithToolCapabilities(false),
+	)
+	registerHostedTools(s, cfg)
+	registerLocalTools(s, cfg)
 	return s
 }
 
