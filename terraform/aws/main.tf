@@ -367,7 +367,7 @@ resource "aws_lb_target_group" "serve" {
 
   health_check {
     path    = "/mcp"
-    matcher = "200,405"
+    matcher = "200,401,405"
   }
 
   tags = local.common_tags
