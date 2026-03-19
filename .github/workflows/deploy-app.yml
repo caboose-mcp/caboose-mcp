@@ -16,6 +16,8 @@ on:
     branches: [main]
     paths:
       - "packages/server/**"
+      - "packages/ui/**"
+      - "docker/Dockerfile"
 
 jobs:
   deploy:
@@ -40,8 +42,20 @@ jobs:
         env:
           IMAGE: ${{ steps.ecr.outputs.registry }}/caboose-mcp:latest
         run: |
-          docker build -t "$IMAGE" packages/server
+          docker build -f docker/Dockerfile -t "$IMAGE" .
           docker push "$IMAGE"
+
+      - name: Index in Greptile (async)
+        if: ${{ secrets.GREPTILE_API_KEY != '' }}
+        env:
+          GREPTILE_API_KEY: ${{ secrets.GREPTILE_API_KEY }}
+        run: |
+          curl -s -X POST https://api.greptile.com/v2/repositories \
+            -H "Authorization: Bearer $GREPTILE_API_KEY" \
+            -H "X-Github-Token: ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"remote\":\"github\",\"repository\":\"${{ github.repository }}\",\"branch\":\"main\"}" \
+            || true
 
       - name: Force new serve deployment
         run: |

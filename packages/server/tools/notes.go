@@ -108,7 +108,7 @@ func noteListHandler(cfg *config.Config) func(context.Context, mcp.CallToolReque
 }
 
 func notesDriveBackupHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		data, err := os.ReadFile(notesPath(cfg))
 		if os.IsNotExist(err) {
 			return mcp.NewToolResultText("No notes to backup."), nil
@@ -116,7 +116,7 @@ func notesDriveBackupHandler(cfg *config.Config) func(context.Context, mcp.CallT
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
-		client, err := googleCalendarClient(cfg)
+		client, err := googleCalendarClient(ctx, cfg)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("not authorized: %v — run calendar_auth_url first", err)), nil
 		}
@@ -138,8 +138,8 @@ func notesDriveBackupHandler(cfg *config.Config) func(context.Context, mcp.CallT
 }
 
 func notesDriveRestoreHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		client, err := googleCalendarClient(cfg)
+	return func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		client, err := googleCalendarClient(ctx, cfg)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("not authorized: %v — run calendar_auth_url first", err)), nil
 		}

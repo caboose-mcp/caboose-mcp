@@ -286,6 +286,114 @@ Set these in **GitHub → Settings → Secrets → Actions**:
 
 ---
 
+## JWT RBAC Auth Setup
+
+Per-token access control with magic link exchange. Each JWT carries a tool allowlist and Google OAuth scopes.
+
+### 1. Create a token (CLI or via Claude)
+
+```bash
+./caboose-mcp auth:create \
+  --label "vscode-alice" \
+  --tools "calendar_list,calendar_create,note_add,focus_start,focus_status" \
+  --google-scopes "calendar" \
+  --expires 90
+# → Magic link (valid 15 min): http://localhost:8080/auth/verify?token=abc...
+```
+
+Or via MCP tool: `auth_create_token(label="vscode-alice", tools="calendar_list,note_add", expires_days=90)`
+
+### 2. Exchange for JWT
+
+```bash
+curl "http://localhost:8080/auth/verify?token=<magic>"
+# → {"token":"eyJ...","jti":"6ba7b810-...","expires_at":"2026-06-17T00:00:00Z"}
+```
+
+### 3. Use JWT as bearer token
+
+```http
+Authorization: Bearer eyJ...
+```
+
+### 4. Link Discord/Slack/Google identity for SSO
+
+```
+auth_link_identity(jti="6ba7b810-...", platform="discord", platform_id="123456789")
+auth_link_identity(jti="6ba7b810-...", platform="slack",   platform_id="U0123ABCD")
+auth_link_identity(jti="6ba7b810-...", platform="google",  platform_id="alice@gmail.com")
+```
+
+Once linked, messages from that Discord/Slack user automatically apply the token's tool ACL and Google scope restrictions.
+
+### 5. Revoke a token
+
+```
+auth_revoke_token(jti="6ba7b810-...")
+```
+
+### Storage layout
+
+```
+~/.claude/auth/
+  jwt-secret.key          — 32-byte hex HS256 key (auto-created on first serve)
+  issued-tokens.json      — all issued tokens
+  magic-tokens.json       — pending 15-min one-time links
+  identities.json         — platform:id → JTI mappings
+
+~/.claude/google/
+  calendar-token.json           — global/admin Google token
+  calendar-token-<jti>.json     — per-user Google token (created after calendar_auth_complete)
+```
+
+### Environment variables
+
+| Variable | Description |
+|----------|-------------|
+| `MCP_AUTH_TOKEN` | Static superuser token (bypasses all ACL) |
+| `MCP_BASE_URL` | Base URL used in magic link output (default `http://localhost:8080`) |
+
+---
+
+## AWS Cost Estimates
+
+Running the full caboose-mcp stack on AWS ECS Fargate (hosted tier only):
+
+| Service | Spec | Est. monthly cost |
+|---------|------|-------------------|
+| ECS Fargate — `caboose-mcp-serve` | 0.25 vCPU / 0.5 GB | ~$8–12 |
+| ECS Fargate — `caboose-mcp-bots` | 0.25 vCPU / 0.5 GB | ~$8–12 |
+| ALB (Application Load Balancer) | base + ~0.008/LCU-hr | ~$18 |
+| ACM (TLS certificate) | managed cert | free |
+| ECR (container registry) | 5-image lifecycle policy | ~$0.10/GB/month |
+| Secrets Manager | ~3 secrets | ~$1.20 |
+| S3 (cloud sync bucket) | small config files | < $0.01 |
+| CloudWatch Logs (30-day retention) | low-volume | ~$0.50–2 |
+| **Estimated total** | | **~$35–50/month** |
+
+### Budget alert
+
+```bash
+aws budgets create-budget \
+  --account-id "$(aws sts get-caller-identity --query Account --output text)" \
+  --budget '{
+    "BudgetName": "caboose-mcp-monthly",
+    "BudgetLimit": {"Amount": "60", "Unit": "USD"},
+    "TimeUnit": "MONTHLY",
+    "BudgetType": "COST"
+  }' \
+  --notifications-with-subscribers '[{
+    "Notification": {
+      "NotificationType": "ACTUAL",
+      "ComparisonOperator": "GREATER_THAN",
+      "Threshold": 80
+    },
+    "Subscribers": [{"SubscriptionType": "EMAIL", "Address": "you@example.com"}]
+  }]'
+```
+
+---
+
 ## Environment Variables Reference
 
 Full reference: [docs/tools.md](tools.md#configuration)
