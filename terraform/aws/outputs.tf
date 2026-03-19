@@ -29,6 +29,11 @@ output "acm_certificate_arn" {
   value       = aws_acm_certificate.mcp.arn
 }
 
+output "route53_zone_id" {
+  description = "Route53 hosted zone ID — consumed by caboose-mcp-ui terraform via remote_state."
+  value       = var.route53_zone_id
+}
+
 output "acm_validation_records" {
   description = "DNS validation CNAMEs to add if route53_zone_id is empty."
   value = {

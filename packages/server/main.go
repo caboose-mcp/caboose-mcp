@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/caboose-mcp/server/config"
@@ -113,13 +114,21 @@ func serveHTTP(cfg *config.Config, addr string, s *server.MCPServer) {
 	authedMCP := authMiddleware(adminToken, jwtSecret, cfg.ClaudeDir, httpSrv)
 
 	mux := http.NewServeMux()
+	// /ui/* → 301 redirect to the standalone UI repo (path-preserving)
+	mux.HandleFunc("/ui/", func(w http.ResponseWriter, r *http.Request) {
+		target := cfg.UIOrigin + strings.TrimPrefix(r.URL.Path, "/ui")
+		if r.URL.RawQuery != "" {
+			target += "?" + r.URL.RawQuery
+		}
+		http.Redirect(w, r, target, http.StatusMovedPermanently)
+	})
+	mux.HandleFunc("/ui", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, cfg.UIOrigin+"/", http.StatusMovedPermanently)
+	})
 	// Public routes (no auth)
-	mux.Handle("/ui/", uiHandler())
-	mux.Handle("/ui", http.RedirectHandler("/ui/", http.StatusMovedPermanently))
 	mux.HandleFunc("/api/sandbox", sandboxHandler(cfg))
 	mux.HandleFunc("/api/config", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
 		fmt.Fprintf(w, `{"env":%q}`, cfg.ReleaseStage)
 	})
 	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
@@ -134,13 +143,13 @@ func serveHTTP(cfg *config.Config, addr string, s *server.MCPServer) {
 	} else {
 		log.Printf("caboose-mcp HTTP server on %s (JWT auth only — set MCP_AUTH_TOKEN for admin bypass)", addr)
 	}
-	log.Printf("UI:      http://%s/ui/", addr)
+	log.Printf("UI:      %s", cfg.UIOrigin)
 	log.Printf("MCP:     http://%s/mcp", addr)
 	log.Printf("Sandbox: http://%s/api/sandbox", addr)
 	log.Printf("Health:  http://%s/health", addr)
 	log.Printf("Release: %s", cfg.ReleaseStage)
 
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	if err := http.ListenAndServe(addr, corsMiddleware(cfg.UIOrigin, mux)); err != nil {
 		log.Fatal(err)
 	}
 }

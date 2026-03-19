@@ -40,6 +40,8 @@ type Config struct {
 	// "experimental" (default) → warnings shown everywhere.
 	// "stable" → all warnings suppressed.
 	ReleaseStage string // CABOOSE_ENV
+	// UIOrigin is the allowed CORS origin for the standalone UI.
+	UIOrigin string // MCP_UI_ORIGIN (default: https://ui.mcp.chrismarasco.io)
 }
 
 func Load() *Config {
@@ -102,7 +104,16 @@ func Load() *Config {
 		ElevenLabsAPIKey:   os.Getenv("ELEVENLABS_API_KEY"),
 		ElevenLabsVoiceID:  os.Getenv("ELEVENLABS_VOICE_ID"),
 		ReleaseStage:       releaseStage(),
+		UIOrigin:           uiOrigin(),
 	}
+}
+
+// uiOrigin returns the allowed CORS origin for the standalone UI.
+func uiOrigin() string {
+	if v := os.Getenv("MCP_UI_ORIGIN"); v != "" {
+		return v
+	}
+	return "https://ui.mcp.chrismarasco.io"
 }
 
 // releaseStage reads CABOOSE_ENV and normalises to "experimental" or "stable".
