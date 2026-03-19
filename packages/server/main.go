@@ -181,6 +181,7 @@ func registerLocalTools(s *server.MCPServer, cfg *config.Config) {
 	tools.RegisterPrinting(s, cfg)
 	tools.RegisterChezmoi(s, cfg)
 	tools.RegisterToolsmith(s, cfg)
+	tools.RegisterAgency(s, cfg)
 }
 
 // mcpServerOptions returns the base options for all MCP server builds,
