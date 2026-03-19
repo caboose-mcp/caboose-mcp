@@ -365,8 +365,8 @@ resource "aws_lb_target_group" "serve" {
   target_type = "ip"
 
   health_check {
-    path    = "/mcp"
-    matcher = "200,401,405"
+    path    = "/health"
+    matcher = "200"
   }
 
   tags = local.common_tags
