@@ -84,6 +84,15 @@ func setupCheckHandler(cfg *config.Config) func(context.Context, mcp.CallToolReq
 			checks = append(checks, checkItem{"Discord", "MISSING", "Set DISCORD_TOKEN to your bot token"})
 		}
 
+		// ElevenLabs TTS
+		if cfg.ElevenLabsAPIKey != "" && cfg.ElevenLabsVoiceID != "" {
+			checks = append(checks, checkItem{"ElevenLabs TTS", "OK", fmt.Sprintf("voice=%s", cfg.ElevenLabsVoiceID)})
+		} else if cfg.ElevenLabsAPIKey != "" {
+			checks = append(checks, checkItem{"ElevenLabs TTS", "WARN", "ELEVENLABS_API_KEY set but ELEVENLABS_VOICE_ID is missing — TTS disabled until both are set"})
+		} else {
+			checks = append(checks, checkItem{"ElevenLabs TTS", "MISSING", "Set ELEVENLABS_API_KEY and ELEVENLABS_VOICE_ID to enable voice replies in Discord/Slack"})
+		}
+
 		// Bambu
 		if cfg.BambuIP != "" && cfg.BambuSerial != "" && cfg.BambuAccessCode != "" {
 			checks = append(checks, checkItem{"Bambu A1", "OK", fmt.Sprintf("IP=%s serial=%s", cfg.BambuIP, cfg.BambuSerial)})

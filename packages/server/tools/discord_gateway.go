@@ -15,14 +15,47 @@ package tools
 //                          (leave empty to respond only in DMs)
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/caboose-mcp/server/config"
 )
+
+// botMsgCache is a size-capped map of bot message ID → reply text for 🔊 reactions.
+type botMsgCache struct {
+	mu   sync.Mutex
+	keys []string
+	data map[string]string
+}
+
+func newBotMsgCache() *botMsgCache {
+	return &botMsgCache{data: make(map[string]string)}
+}
+
+func (c *botMsgCache) set(id, text string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if _, exists := c.data[id]; !exists {
+		c.keys = append(c.keys, id)
+		if len(c.keys) > 100 {
+			delete(c.data, c.keys[0])
+			c.keys = c.keys[1:]
+		}
+	}
+	c.data[id] = text
+}
+
+func (c *botMsgCache) get(id string) (string, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	v, ok := c.data[id]
+	return v, ok
+}
 
 // RunDiscordBot starts the Discord gateway bot and blocks until the context
 // is cancelled or a fatal error occurs.
@@ -50,7 +83,11 @@ func RunDiscordBot(ctx context.Context, cfg *config.Config) error {
 		return fmt.Errorf("creating discord session: %w", err)
 	}
 
-	dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages | discordgo.IntentsMessageContent
+	dg.Identify.Intents = discordgo.IntentsGuildMessages | discordgo.IntentsDirectMessages |
+		discordgo.IntentsMessageContent | discordgo.IntentsGuildMessageReactions |
+		discordgo.IntentsDirectMessageReactions
+
+	cache := newBotMsgCache()
 
 	dg.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
 		// Ignore messages from other bots (including ourselves)
@@ -106,9 +143,75 @@ func RunDiscordBot(ctx context.Context, cfg *config.Config) error {
 		}
 
 		// Discord messages are capped at 2000 chars — split if needed
-		for _, chunk := range splitMessage(reply, 2000) {
-			s.ChannelMessageSend(m.ChannelID, chunk)
+		chunks := splitMessage(reply, 2000)
+
+		// Try TTS — attach MP3 to the first chunk if audio is available
+		if ShouldSpeak(reply) {
+			if audio, err := Synthesize(context.Background(), cfg, reply); err == nil && audio != nil {
+				msg, sendErr := s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
+					Content: chunks[0],
+					Files:   []*discordgo.File{{Name: "caboose.mp3", Reader: bytes.NewReader(audio)}},
+				})
+				if sendErr == nil && msg != nil {
+					cache.set(msg.ID, reply)
+				}
+				for _, chunk := range chunks[1:] {
+					s.ChannelMessageSend(m.ChannelID, chunk)
+				}
+				return
+			} else if err != nil {
+				log.Printf("discord tts error: %v", err)
+			}
 		}
+
+		// Plain text fallback (TTS disabled, skipped, or failed)
+		for _, chunk := range chunks {
+			msg, err := s.ChannelMessageSend(m.ChannelID, chunk)
+			if err == nil && msg != nil {
+				cache.set(msg.ID, reply)
+			}
+		}
+	})
+
+	// 🔊 reaction handler — synthesize audio on demand for any bot message
+	dg.AddHandler(func(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
+		// Ignore bots and self
+		if r.Member != nil && r.Member.User != nil && r.Member.User.Bot {
+			return
+		}
+		if s.State != nil && s.State.User != nil && r.UserID == s.State.User.ID {
+			return
+		}
+		if r.Emoji.Name != "🔊" {
+			return
+		}
+
+		// Look up cached text or fetch the message directly
+		text, found := cache.get(r.MessageID)
+		if !found {
+			msg, err := s.ChannelMessage(r.ChannelID, r.MessageID)
+			if err != nil {
+				log.Printf("discord reaction: fetch message %s: %v", r.MessageID, err)
+				return
+			}
+			text = msg.Content
+		}
+		if text == "" {
+			return
+		}
+
+		audio, err := Synthesize(context.Background(), cfg, text)
+		if err != nil {
+			log.Printf("discord reaction tts error: %v", err)
+			return
+		}
+		if audio == nil {
+			return
+		}
+
+		s.ChannelMessageSendComplex(r.ChannelID, &discordgo.MessageSend{
+			Files: []*discordgo.File{{Name: "caboose.mp3", Reader: bytes.NewReader(audio)}},
+		})
 	})
 
 	if err := dg.Open(); err != nil {

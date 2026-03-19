@@ -33,6 +33,9 @@ type Config struct {
 	DiscordBotChannels string // DISCORD_BOT_CHANNELS — comma-separated channel IDs
 	SlackAppToken      string // SLACK_APP_TOKEN — xapp-... for Socket Mode
 	SlackBotChannels   string // SLACK_BOT_CHANNELS — comma-separated channel IDs
+	// ElevenLabs TTS
+	ElevenLabsAPIKey  string // ELEVENLABS_API_KEY
+	ElevenLabsVoiceID string // ELEVENLABS_VOICE_ID — required to enable TTS
 }
 
 func Load() *Config {
@@ -92,5 +95,7 @@ func Load() *Config {
 		DiscordBotChannels: os.Getenv("DISCORD_BOT_CHANNELS"),
 		SlackAppToken:      os.Getenv("SLACK_APP_TOKEN"),
 		SlackBotChannels:   os.Getenv("SLACK_BOT_CHANNELS"),
+		ElevenLabsAPIKey:   os.Getenv("ELEVENLABS_API_KEY"),
+		ElevenLabsVoiceID:  os.Getenv("ELEVENLABS_VOICE_ID"),
 	}
 }

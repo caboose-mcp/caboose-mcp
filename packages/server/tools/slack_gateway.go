@@ -18,6 +18,7 @@ package tools
 //	                     (DMs always work without this)
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log"
@@ -128,5 +129,23 @@ func handleSlackMessage(cfg *config.Config, api *slack.Client, provider SlackPro
 			continue
 		}
 		log.Printf("posted Slack message to channel %s at %s", channelID, ts)
+	}
+
+	// Attach TTS audio if the reply warrants it
+	if ShouldSpeak(reply) {
+		if audio, err := Synthesize(context.Background(), cfg, reply); err == nil && audio != nil {
+			_, err := api.UploadFileV2(slack.UploadFileV2Parameters{
+				Channel:  ev.Channel,
+				Filename: "caboose.mp3",
+				FileSize: len(audio),
+				Reader:   bytes.NewReader(audio),
+				Title:    "Voice response",
+			})
+			if err != nil {
+				log.Printf("slack tts upload error for channel %s: %v", ev.Channel, err)
+			}
+		} else if err != nil {
+			log.Printf("slack tts synthesize error: %v", err)
+		}
 	}
 }
