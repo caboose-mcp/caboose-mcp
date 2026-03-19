@@ -1,3 +1,4 @@
 packages:
   - "packages/vscode-extension"
   - "packages/n8n"
+  - "packages/ui"

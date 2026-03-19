@@ -7,7 +7,6 @@ FROM node:20-alpine AS ui-builder
 WORKDIR /ui-src
 RUN corepack enable && corepack prepare pnpm@latest --activate
 
-# Install deps (no frozen-lockfile — lock file not committed)
 COPY packages/ui/package.json ./
 RUN pnpm install --no-frozen-lockfile
 

@@ -138,9 +138,6 @@ jobs:
   ui-build:
     name: UI Build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/ui
 
     steps:
       - uses: actions/checkout@v4
@@ -149,17 +146,16 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 10
 
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+      - name: Install dependencies (workspace root)
+        run: pnpm install --frozen-lockfile
 
       - name: Generate changelog.json from git history
-        working-directory: ${{ github.workspace }}
         run: |
           git log --pretty=format:'{"hash":"%H","date":"%aI","subject":"%s","author":"%an"}' -50 \
           | python3 -c "
@@ -172,7 +168,6 @@ jobs:
                   e = json.loads(line)
               except json.JSONDecodeError:
                   continue
-              # extract conventional commit type tags
               tags = re.findall(r'^(feat|fix|docs|ci|chore|refactor|style|test|perf)', e['subject'])
               e['tags'] = tags if tags else ['other']
               e['hash'] = e['hash'][:40]
@@ -182,6 +177,7 @@ jobs:
           echo "Generated $(wc -l < packages/ui/src/data/changelog.json) lines of changelog"
 
       - name: Build UI
+        working-directory: packages/ui
         run: pnpm build
 
       - name: Upload UI dist artifact
