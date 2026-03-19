@@ -25,13 +25,11 @@ func ShouldSpeak(text string) bool {
 }
 
 // Synthesize calls the ElevenLabs v1 TTS API and returns MP3 bytes.
-// Returns nil, nil if ElevenLabsAPIKey is not configured (silent no-op).
+// Returns nil, nil if ElevenLabsAPIKey or ElevenLabsVoiceID is not configured (silent no-op).
 func Synthesize(ctx context.Context, cfg *config.Config, text string) ([]byte, error) {
 	if cfg.ElevenLabsAPIKey == "" || cfg.ElevenLabsVoiceID == "" {
 		return nil, nil
 	}
-
-	voiceID := cfg.ElevenLabsVoiceID
 
 	body, err := json.Marshal(map[string]any{
 		"text":     text,
@@ -46,7 +44,7 @@ func Synthesize(ctx context.Context, cfg *config.Config, text string) ([]byte, e
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-		"https://api.elevenlabs.io/v1/text-to-speech/"+voiceID,
+		"https://api.elevenlabs.io/v1/text-to-speech/"+cfg.ElevenLabsVoiceID,
 		bytes.NewReader(body))
 	if err != nil {
 		return nil, fmt.Errorf("tts: create request: %w", err)
