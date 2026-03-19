@@ -86,7 +86,7 @@ Claude Code will launch the binary automatically. All 108 tools are available.
 ./caboose-mcp --serve :9090  # custom port
 ```
 
-Set `MCP_AUTH_TOKEN` to require bearer auth:
+Set `MCP_AUTH_TOKEN` to optionally require bearer auth (recommended for network-exposed instances):
 ```bash
 export MCP_AUTH_TOKEN=$(openssl rand -hex 32)
 ./caboose-mcp --serve
@@ -176,7 +176,6 @@ aws secretsmanager put-secret-value \
   --secret-id caboose-mcp/env \
   --secret-string '{
     "ANTHROPIC_API_KEY":  "sk-ant-...",
-    "MCP_AUTH_TOKEN":     "<openssl rand -hex 32>",
     "SLACK_TOKEN":        "xoxb-...",
     "SLACK_APP_TOKEN":    "xapp-...",
     "DISCORD_TOKEN":      "...",
@@ -223,15 +222,7 @@ aws ecs update-service \
   --force-new-deployment
 ```
 
-### 6. Get your bearer token
-
-```bash
-aws secretsmanager get-secret-value --secret-id caboose-mcp/env \
-  --query 'SecretString' --output text \
-  | python3 -c "import sys,json; print(json.load(sys.stdin)['MCP_AUTH_TOKEN'])"
-```
-
-### 7. Connect VS Code
+### 6. Connect VS Code
 
 Add to `.vscode/mcp.json`:
 
@@ -240,18 +231,22 @@ Add to `.vscode/mcp.json`:
   "servers": {
     "caboose-mcp": {
       "type": "http",
-      "url": "https://mcp.yourdomain.com/mcp",
-      "headers": { "Authorization": "Bearer <MCP_AUTH_TOKEN>" }
+      "url": "https://mcp.yourdomain.com/mcp"
     }
   }
 }
 ```
 
-### 8. Verify
+Or via [Claude Code](https://claude.ai/claude-code) CLI:
 
 ```bash
-curl -s -H "Authorization: Bearer <token>" \
-  https://mcp.yourdomain.com/mcp \
+claude mcp add --transport http MCP_CABOOSE https://mcp.yourdomain.com/mcp
+```
+
+### 7. Verify
+
+```bash
+curl -s https://mcp.yourdomain.com/mcp \
   -d '{"jsonrpc":"2.0","method":"tools/list","id":1}' \
   -H "Content-Type: application/json" | jq '.result.tools | length'
 # → 88
@@ -268,7 +263,6 @@ Set these in **GitHub → Settings → Secrets → Actions**:
 | `AWS_ACCESS_KEY_ID` | deploy-infra, deploy-app, deploy-bots |
 | `AWS_SECRET_ACCESS_KEY` | deploy-infra, deploy-app, deploy-bots |
 | `SECRET_ANTHROPIC_API_KEY` | deploy-infra (syncs to Secrets Manager) |
-| `SECRET_MCP_AUTH_TOKEN` | deploy-infra |
 | `SECRET_SLACK_TOKEN` | deploy-infra |
 | `SECRET_SLACK_APP_TOKEN` | deploy-infra |
 | `SECRET_DISCORD_TOKEN` | deploy-infra |
