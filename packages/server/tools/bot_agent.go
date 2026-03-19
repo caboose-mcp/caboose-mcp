@@ -62,7 +62,7 @@ func RunBotAgent(ctx context.Context, cfg *config.Config, provider ChatProvider,
 
 	// Inject agency-agents context hint if a spec matches the user message
 	if specs := LoadAgentSpecs(cfg.ClaudeDir); len(specs) > 0 {
-		if matched := DetectAgent(userMsg, specs); matched != nil {
+		if matched, _ := DetectAgent(userMsg, specs); matched != nil {
 			if hint := ToolHintsForAgent(*matched); hint != "" {
 				systemPrompt += "\n\n" + hint
 			}

@@ -171,11 +171,18 @@ func tokenize(text string) []string {
 	return tokens
 }
 
+// agentScoreThreshold is the minimum keyword-match score required for a
+// confident agent detection. Scores below this are not considered a match.
+const agentScoreThreshold = 3
+
 // DetectAgent scores each spec against the user message and returns the best
-// match if its score is >= 3. Returns nil if no confident match.
-func DetectAgent(userMsg string, specs []AgentSpec) *AgentSpec {
+// match together with its score. The spec is nil when the top score is below
+// agentScoreThreshold. The score is always the highest score seen across all
+// specs (0 when no specs are loaded), so callers can report how close the
+// detection came even when no confident match was found.
+func DetectAgent(userMsg string, specs []AgentSpec) (*AgentSpec, int) {
 	if len(specs) == 0 {
-		return nil
+		return nil, 0
 	}
 
 	msgTokens := tokenize(userMsg)
@@ -212,11 +219,11 @@ func DetectAgent(userMsg string, specs []AgentSpec) *AgentSpec {
 		return specs[results[a].idx].Name < specs[results[b].idx].Name
 	})
 
-	if results[0].score < 3 {
-		return nil
+	if results[0].score < agentScoreThreshold {
+		return nil, results[0].score
 	}
 	match := specs[results[0].idx]
-	return &match
+	return &match, results[0].score
 }
 
 // ToolHintsForAgent returns a formatted hint string for injecting into system prompts.
@@ -243,7 +250,7 @@ func RegisterAgency(s *server.MCPServer, cfg *config.Config) {
 	), agencyListHandler(cfg))
 
 	s.AddTool(mcp.NewTool("agency_detect",
-		mcp.WithDescription("Detect the best-matching agent persona for a given message. Returns the matched agent name and confidence score."),
+		mcp.WithDescription("Detect the best-matching agent persona for a given message. Returns the matched agent name, its confidence score, and the score threshold used to accept a match."),
 		mcp.WithString("message", mcp.Required(), mcp.Description("The user message or task description to classify")),
 	), agencyDetectHandler(cfg))
 
@@ -274,12 +281,12 @@ func agencyDetectHandler(cfg *config.Config) func(context.Context, mcp.CallToolR
 			return mcp.NewToolResultText("message is required"), nil
 		}
 		specs := LoadAgentSpecs(cfg.ClaudeDir)
-		matched := DetectAgent(msg, specs)
+		matched, score := DetectAgent(msg, specs)
 		if matched == nil {
-			return mcp.NewToolResultText("No confident match (score below threshold). All tools are equally relevant."), nil
+			return mcp.NewToolResultText(fmt.Sprintf("No confident match (score: %d, threshold: %d). All tools are equally relevant.", score, agentScoreThreshold)), nil
 		}
 		hint := ToolHintsForAgent(*matched)
-		result := fmt.Sprintf("Matched: %s (%s)\n\n%s", matched.Title, matched.Name, hint)
+		result := fmt.Sprintf("Matched: %s (%s)\nConfidence score: %d (threshold: %d)\n\n%s", matched.Title, matched.Name, score, agentScoreThreshold, hint)
 		return mcp.NewToolResultText(result), nil
 	}
 }
@@ -291,7 +298,7 @@ func agencyHintHandler(cfg *config.Config) func(context.Context, mcp.CallToolReq
 			return mcp.NewToolResultText("message is required"), nil
 		}
 		specs := LoadAgentSpecs(cfg.ClaudeDir)
-		matched := DetectAgent(msg, specs)
+		matched, _ := DetectAgent(msg, specs)
 		if matched == nil {
 			return mcp.NewToolResultText("No confident match — no hint needed. All tools are equally relevant for this message."), nil
 		}
