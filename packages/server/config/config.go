@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -40,6 +41,8 @@ type Config struct {
 	// "experimental" (default) → warnings shown everywhere.
 	// "stable" → all warnings suppressed.
 	ReleaseStage string // CABOOSE_ENV
+	// UIOrigin is the allowed CORS origin for the standalone UI.
+	UIOrigin string // MCP_UI_ORIGIN (default: https://ui.mcp.chrismarasco.io)
 }
 
 func Load() *Config {
@@ -102,7 +105,32 @@ func Load() *Config {
 		ElevenLabsAPIKey:   os.Getenv("ELEVENLABS_API_KEY"),
 		ElevenLabsVoiceID:  os.Getenv("ELEVENLABS_VOICE_ID"),
 		ReleaseStage:       releaseStage(),
+		UIOrigin:           uiOrigin(),
 	}
+}
+
+// uiOrigin returns the allowed CORS origin for the standalone UI.
+func uiOrigin() string {
+	const defaultOrigin = "https://ui.mcp.chrismarasco.io"
+
+	v := strings.TrimSpace(os.Getenv("MCP_UI_ORIGIN"))
+	if v == "" {
+		return defaultOrigin
+	}
+
+	// Normalize by removing any trailing slashes to avoid malformed URLs like "//".
+	v = strings.TrimRight(v, "/")
+
+	// Validate that the value is a well-formed http(s) URL.
+	u, err := url.Parse(v)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return defaultOrigin
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return defaultOrigin
+	}
+
+	return v
 }
 
 // releaseStage reads CABOOSE_ENV and normalises to "experimental" or "stable".
