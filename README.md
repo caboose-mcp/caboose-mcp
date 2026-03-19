@@ -1,155 +1,186 @@
 # caboose-mcp
 
-Personal AI toolserver monorepo. Exposes 105 MCP tools to Claude and VS Code via a Go server, with a companion VS Code extension and n8n workflow automation.
+Personal AI toolserver — 108 MCP tools exposed to Claude, VS Code, and chat bots via a Go server hosted on AWS ECS.
 
-## Packages
+[![Deploy Infra](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-infra.yml/badge.svg)](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-infra.yml)
+[![Deploy Bots](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-bots.yml/badge.svg)](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-bots.yml)
+[![Deploy App](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-app.yml/badge.svg)](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-app.yml)
+[![Release](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/release.yml/badge.svg)](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/release.yml)
+[![Go 1.24](https://img.shields.io/badge/go-1.24-00ADD8?logo=go)](https://go.dev)
+[![MCP Live](https://img.shields.io/website?url=https%3A%2F%2Fmcp.chrismarasco.io%2Fmcp&label=mcp.chrismarasco.io&logo=amazonaws)](https://mcp.chrismarasco.io/mcp)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-| Package | Description |
-|---------|-------------|
-| [`packages/server`](packages/server) | Go MCP server — 105 tools across 25 groups (focus, slack, docker, calendar, etc.) |
-| [`packages/vscode-extension`](packages/vscode-extension) | VS Code sidebar + status bar; connects to the server over stdio or HTTP |
-| [`packages/n8n`](packages/n8n) | Custom n8n image with pre-loaded caboose-mcp workflows |
+**Live endpoint:** `https://mcp.chrismarasco.io/mcp` (bearer auth required)
 
-## Quick Start (Docker)
+---
 
-```bash
-# 1. Clone
-git clone https://github.com/caboose-mcp/caboose-mcp
-cd caboose-mcp
+## Architecture
 
-# 2. Configure
-cp .env.example .env
-# Edit .env — at minimum set SLACK_TOKEN, GITHUB_TOKEN, GPG_KEY_ID
-
-# 3. Start
-docker compose -f docker/docker-compose.yml up -d
-
-# MCP server:  http://localhost:8080/mcp
-# n8n:         http://localhost:5678
+```mermaid
+graph TD
+    Claude["Claude Code (stdio)"] -->|all 108 tools| Binary["caboose-mcp (Pi)"]
+    VSCode["VS Code / Bruno"] -->|HTTPS + Bearer| ALB["ALB · mcp.chrismarasco.io"]
+    ALB --> Serve["ECS · --serve-hosted\n88 hosted tools"]
+    Slack["Slack"] --> Bots["ECS · --bots\nSlack + Discord gateway"]
+    Discord["Discord"] --> Bots
+    Bots -->|Claude Haiku| Agent["Bot agent loop"]
+    Binary -->|LAN MQTT| Bambu["Bambu A1 Printer"]
+    Binary -->|socket| DockerD["Docker daemon"]
+    Serve & Bots --> SM["AWS Secrets Manager\ncaboose-mcp/env"]
 ```
 
-The server mounts your `~/.claude` directory so all data (notes, sessions, secrets, audit logs) persists on the host. n8n workflows are auto-imported on first run.
+---
 
-## Quick Start (Local / Claude stdio)
+## Tool Tiers
 
-```bash
-# Build the server
-cd packages/server
-export PATH=$PATH:/usr/local/go/bin
-go build -o caboose-mcp .
+Tools are split so the cloud server only exposes what's safe remotely.
 
-# Add to Claude's .mcp.json
+| Tier | Flag | Count | What's included |
+|------|------|-------|-----------------|
+| **Hosted** | `--serve-hosted` | 88 | Calendar, Slack, Discord, GitHub, Notes, Focus, Learning, Sources, CloudSync, Audit, Health, Secrets, DB, Mermaid, Greptile, Sandbox, Persona, Jokes, Setup |
+| **Local** | `--serve-local` | 20 | Docker, execute_command, Bambu, Blender, Chezmoi, Toolsmith |
+| **Combined** | `--serve` / stdio | 108 | Everything |
+
+Full reference: [docs/tools.md](docs/tools.md)
+
+---
+
+## Quick Start
+
+### Connect to the live server
+
+**VS Code** — add to `.vscode/mcp.json`:
+```json
 {
-  "mcpServers": {
-    "caboose": {
-      "type": "stdio",
-      "command": "/path/to/packages/server/caboose-mcp"
+  "servers": {
+    "caboose-mcp": {
+      "type": "http",
+      "url": "https://mcp.chrismarasco.io/mcp",
+      "headers": { "Authorization": "Bearer <MCP_AUTH_TOKEN>" }
     }
   }
 }
 ```
 
-## VS Code Extension
+**Bruno** — open the `bruno/` folder as a collection, set the `production` environment `authToken`.
 
+Get the token:
 ```bash
-cd packages/vscode-extension
-pnpm install
-pnpm compile
-# Press F5 in VS Code to launch the extension host
+aws secretsmanager get-secret-value --secret-id caboose-mcp/env \
+  --query 'SecretString' --output text \
+  | python3 -c "import sys,json; print(json.load(sys.stdin)['MCP_AUTH_TOKEN'])"
 ```
 
-Configure via Settings → Caboose MCP:
-- `cabooseMcp.transport`: `http` (default) or `stdio`
-- `cabooseMcp.host` / `cabooseMcp.port`: point at the Docker server
-- `cabooseMcp.binaryPath`: path to the built binary (stdio mode)
+### Run locally (Claude Code on Pi)
 
-## n8n Integration
+```bash
+cd packages/server && go build -o caboose-mcp .
 
-Three workflows are pre-loaded:
-- **Event Receiver** — receives `gate_fired`, `source_changed`, `focus_started`, etc.
-- **Daily Digest** — 8am: calls `source_digest` + `si_tech_digest`
-- **Nightly Scan** — midnight: calls `si_scan_dir` + `source_check`
+# Interactive setup wizard — writes .env
+./caboose-mcp --setup
 
-See [docs/n8n.md](docs/n8n.md) for full documentation.
+# Terminal UI dashboard
+./caboose-mcp --tui
 
-## Infrastructure (Terraform)
+./caboose-mcp                # stdio — all tools (Claude Code)
+./caboose-mcp --serve        # HTTP :8080 — all tools
+./caboose-mcp --serve-hosted # HTTP :8080 — hosted tools only
+./caboose-mcp --serve-local  # HTTP :8080 — local tools only
+./caboose-mcp --bots         # Slack + Discord bots (blocks)
+```
 
-Provisions AWS resources: IAM user (Bedrock), S3 bucket (cloudsync), ECR repo (Docker images).
+`.mcp.json` for Claude Code:
+```json
+{
+  "mcpServers": {
+    "caboose": { "command": "/path/to/packages/server/caboose-mcp", "type": "stdio" }
+  }
+}
+```
+
+### Run with Docker Compose (server + n8n)
+
+```bash
+cp .env.example .env          # fill in secrets
+docker compose -f docker/docker-compose.yml up -d
+```
+
+| Service | URL |
+|---------|-----|
+| MCP server | `http://localhost:8080/mcp` |
+| n8n | `http://localhost:5678` |
+
+Full setup instructions for both local and hosted deploys: [docs/setup.md](docs/setup.md)
+
+---
+
+## CI / CD
+
+| Workflow | Trigger | Action |
+|----------|---------|--------|
+| `deploy-infra.yml` | Push to `terraform/aws/**` or manual | `tofu apply` + sync secrets to AWS Secrets Manager |
+| `deploy-bots.yml` | Push to `packages/server/**` on main | Build AMD64 image → ECR → redeploy `caboose-mcp-bots` |
+| `deploy-app.yml` | Push to `packages/server/**` on main | Build AMD64 image → ECR → redeploy `caboose-mcp-serve` |
+| `release.yml` | Push tag `v*.*.*` | Build linux/amd64 + linux/arm64 binaries → GitHub Release |
+
+### Creating a release
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+This triggers `release.yml` which builds binaries for both architectures and attaches them to a GitHub Release.
+
+---
+
+## Infrastructure
+
+AWS resources managed by OpenTofu in `terraform/aws/`:
+
+- **ECS Fargate** — `caboose-mcp-bots` (`--bots`) + `caboose-mcp-serve` (`--serve-hosted`)
+- **ALB** — HTTPS 443, HTTP→HTTPS redirect, `mcp.chrismarasco.io`
+- **ACM** — TLS cert, DNS-validated via Route53
+- **ECR** — Docker image registry (lifecycle: keep last 5)
+- **Secrets Manager** — `caboose-mcp/env` — secrets injected into ECS tasks at startup
+- **S3** — encrypted config sync bucket
+- **CloudWatch Logs** — 30-day retention per service
 
 ```bash
 cd terraform/aws
 cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars
-
-terraform init
-terraform plan
-terraform apply
+tofu init && tofu plan && tofu apply
 ```
 
-See [terraform/aws/README.md](terraform/aws/README.md) for details.
+---
 
-## Development
-
-### Root scripts (pnpm)
+## Adding a Tool
 
 ```bash
-pnpm build              # compile extension + build Go server
-pnpm server:build       # Go build only
-pnpm extension:compile  # tsc compile only
-pnpm extension:package  # package .vsix
-pnpm docker:build       # docker build
-pnpm docker:up          # docker compose up -d
-pnpm docker:down        # docker compose down
-pnpm docker:logs        # follow compose logs
+tool_scaffold   # generate tools/mytool.go skeleton
+tool_write      # write the file
+tool_rebuild    # go build
 ```
 
-### Go server
+Or edit `packages/server/tools/` directly — one `.go` file per feature group.
 
-```bash
-cd packages/server
-go build -o caboose-mcp .
-go vet ./...
-```
+---
 
-No database or migration step — the server uses flat JSON files under `~/.claude/`.
-
-### Adding a tool
-
-```bash
-# From Claude or the extension, call:
-tool_scaffold   # generates a new tools/mytool.go skeleton
-tool_write      # writes the file
-tool_rebuild    # runs go build
-```
-
-Or edit `packages/server/tools/` directly and run `go build`.
-
-## Releases
-
-| Tag pattern | Action |
-|-------------|--------|
-| `server/v1.2.3` | Builds Go binary for linux/amd64 + arm64; pushes Docker image to GHCR |
-| `extension/v0.2.0` | Packages `.vsix`; creates GitHub Release with the asset attached |
-
-## Repository layout
+## Repository Layout
 
 ```
-packages/
-  server/              Go MCP server
-  vscode-extension/    VS Code extension (TypeScript)
-  n8n/                 Custom n8n image + pre-built workflow JSON
-docker/
-  Dockerfile           Multi-stage Go build → alpine runtime
-  docker-compose.yml   server + n8n services
+packages/server/         Go MCP server
+  tools/                 One .go file per feature group (108 tools)
+  config/config.go       All env vars → Config struct
+  main.go                Flags, server builders, bot runner
+bruno/                   Bruno collection (120 requests, 24 categories)
+terraform/aws/           OpenTofu — ECS, ALB, ACM, ECR, S3, Secrets Manager
+.github/workflows/       deploy-infra, deploy-bots, deploy-app, release
 docs/
-  n8n.md               n8n integration guide
-terraform/
-  aws/                 IAM, S3, ECR
-.github/workflows/
-  ci.yml               Go vet/build + TS compile on PR
-  docker.yml           Build + push to GHCR on main / server/v* tag
-  extension.yml        Package + release VSIX on extension/v* tag
+  tools.md               Full tool reference
 ```
+
+---
 
 ## License
 
