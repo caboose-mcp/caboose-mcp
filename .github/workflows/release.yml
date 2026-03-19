@@ -1,7 +1,11 @@
 name: Release
 
+# Triggers:
+#   - push of a v*.*.* tag  → versioned release
+#   - push to main          → auto-release with date-based tag (v{YYYY.MM.DD}.{run})
 on:
   push:
+    branches: [main]
     tags:
       - "v*.*.*"
 
@@ -15,6 +19,26 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute version
+        id: version
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+          else
+            DATE=$(date +'%Y.%m.%d')
+            TAG="v${DATE}.${{ github.run_number }}"
+            echo "tag=${TAG}" >> $GITHUB_OUTPUT
+            echo "prerelease=true" >> $GITHUB_OUTPUT
+            # Create and push the tag so the release has one
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git config user.name "github-actions[bot]"
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
 
       - uses: actions/setup-go@v5
         with:
@@ -28,7 +52,7 @@ jobs:
           GOARCH: amd64
           CGO_ENABLED: "0"
         run: |
-          go build -ldflags="-s -w -X main.version=${{ github.ref_name }}" \
+          go build -ldflags="-s -w -X main.version=${{ steps.version.outputs.tag }}" \
             -o ../../dist/caboose-mcp-linux-amd64 .
 
       - name: Build linux/arm64
@@ -38,13 +62,15 @@ jobs:
           GOARCH: arm64
           CGO_ENABLED: "0"
         run: |
-          go build -ldflags="-s -w -X main.version=${{ github.ref_name }}" \
+          go build -ldflags="-s -w -X main.version=${{ steps.version.outputs.tag }}" \
             -o ../../dist/caboose-mcp-linux-arm64 .
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: ${{ github.ref_name }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          prerelease: ${{ steps.version.outputs.prerelease }}
           generate_release_notes: true
           files: |
             dist/caboose-mcp-linux-amd64

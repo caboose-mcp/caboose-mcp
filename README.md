@@ -7,10 +7,10 @@ Personal AI toolserver — 108 MCP tools exposed to Claude, VS Code, and chat bo
 [![Deploy App](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-app.yml/badge.svg)](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-app.yml)
 [![Release](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/release.yml/badge.svg)](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/release.yml)
 [![Go 1.24](https://img.shields.io/badge/go-1.24-00ADD8?logo=go)](https://go.dev)
-[![MCP Live](https://img.shields.io/website?url=https%3A%2F%2Fmcp.chrismarasco.io%2Fmcp&label=mcp.chrismarasco.io&logo=amazonaws)](https://mcp.chrismarasco.io/mcp)
+[![MCP Live](https://img.shields.io/website?url=https%3A%2F%2Fmcp.chrismarasco.io%2Fhealth&label=mcp.chrismarasco.io&up_message=live&logo=amazonaws)](https://mcp.chrismarasco.io/ui/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-**Live endpoint:** `https://mcp.chrismarasco.io/mcp` (bearer auth required)
+**Live endpoint:** `https://mcp.chrismarasco.io/mcp` (bearer auth required) · **Web UI:** `https://mcp.chrismarasco.io/ui/`
 
 ---
 
@@ -118,19 +118,20 @@ Full setup instructions for both local and hosted deploys: [docs/setup.md](docs/
 
 | Workflow | Trigger | Action |
 |----------|---------|--------|
+| `ci.yml` | PR / push to main | Lint, test, build (amd64+arm64), e2e, UI build + changelog generation |
 | `deploy-infra.yml` | Push to `terraform/aws/**` or manual | `tofu apply` + sync secrets to AWS Secrets Manager |
-| `deploy-bots.yml` | Push to `packages/server/**` on main | Build AMD64 image → ECR → redeploy `caboose-mcp-bots` |
-| `deploy-app.yml` | Push to `packages/server/**` on main | Build AMD64 image → ECR → redeploy `caboose-mcp-serve` |
-| `release.yml` | Push tag `v*.*.*` | Build linux/amd64 + linux/arm64 binaries → GitHub Release |
+| `deploy-bots.yml` | Push to `packages/server/**` on main | Build image (Node.js UI → Go) → ECR → redeploy `caboose-mcp-bots` |
+| `deploy-app.yml` | Push to `packages/server/**` or `packages/ui/**` on main | Build image → ECR → redeploy `caboose-mcp-serve` → index Greptile |
+| `release.yml` | Push to main or `v*.*.*` tag | Build linux/amd64 + linux/arm64 → GitHub Release (auto date-tag on merge) |
 
-### Creating a release
+### Releases
+
+Releases are created **automatically on every merge to main** with a date-based tag (`vYYYY.MM.DD.N`). For a versioned release, push a `v*.*.*` tag:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.2.0
+git push origin v1.2.0
 ```
-
-This triggers `release.yml` which builds binaries for both architectures and attaches them to a GitHub Release.
 
 ---
 
@@ -169,19 +170,39 @@ Or edit `packages/server/tools/` directly — one `.go` file per feature group.
 ## Repository Layout
 
 ```
-packages/server/         Go MCP server
-  tools/                 One .go file per feature group (108 tools)
+packages/server/         Go MCP server (108 tools)
+  tools/                 One .go file per feature group
   config/config.go       All env vars → Config struct
-  main.go                Flags, server builders, bot runner
+  main.go                Flags, server builders, HTTP mux, bot runner
+  ui/dist/               Embedded React UI (built by CI)
+packages/ui/             React + Vite + Tailwind web UI
+  src/pages/             Home, Tools, Sandbox, AuthPortal, Changelog
+  src/data/tools.ts      Full tool catalog used by the UI
+packages/vscode-extension/  VS Code extension
 bruno/                   Bruno collection (120 requests, 24 categories)
+docker/Dockerfile        Multi-stage: Node.js UI build → Go build → alpine runtime
 terraform/aws/           OpenTofu — ECS, ALB, ACM, ECR, S3, Secrets Manager
-.github/workflows/       deploy-infra, deploy-bots, deploy-app, release
+.github/workflows/       ci, deploy-infra, deploy-bots, deploy-app, release
 docs/
   tools.md               Full tool reference
+  setup.md               Local + hosted deployment guide, JWT RBAC, AWS costs
 ```
 
 ---
 
 ## License
 
-MIT
+[MIT](LICENSE) — Copyright (c) 2025 [Chris Marasco](https://chris.marasco.io)
+
+---
+
+## Credits
+
+Built with love, chaos, and coffee by:
+
+| Contributor | Role |
+|-------------|------|
+| [Chris Marasco](https://chris.marasco.io) ([@cxm6467](https://github.com/cxm6467)) | Architect, product owner, primary developer |
+| [Claude](https://claude.ai) (Anthropic) | AI pair programmer and code generation |
+| [Claude Code](https://claude.ai/claude-code) | Agentic CLI — implementation, refactoring, debugging |
+| [GitHub Copilot](https://github.com/features/copilot) | Inline completion and suggestions |

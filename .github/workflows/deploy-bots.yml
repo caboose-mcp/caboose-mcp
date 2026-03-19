@@ -40,7 +40,7 @@ jobs:
         env:
           IMAGE: ${{ steps.ecr.outputs.registry }}/caboose-mcp:latest
         run: |
-          docker build -t "$IMAGE" packages/server
+          docker build -f docker/Dockerfile -t "$IMAGE" .
           docker push "$IMAGE"
 
       - name: Force new bots deployment
