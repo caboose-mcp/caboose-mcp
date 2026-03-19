@@ -118,22 +118,22 @@ func notesDriveBackupHandler(cfg *config.Config) func(context.Context, mcp.CallT
 		}
 		client, err := googleCalendarClient(ctx, cfg)
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("not authorized: %v — run calendar_auth_url first", err)), nil
+			return mcp.NewToolResultError(fmt.Sprintf("Google Drive backup unavailable: %v", err)), nil
 		}
-		fileID, err := driveFindFile(client, driveNotesFile)
-		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Drive lookup failed: %v", err)), nil
+	fileID, err := driveFindFile(client, driveNotesFile)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Drive lookup unavailable: %v", err)), nil
+	}
+	if fileID == "" {
+		if err := driveCreateFile(client, driveNotesFile, data); err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Drive upload unavailable: %v", err)), nil
 		}
-		if fileID == "" {
-			if err := driveCreateFile(client, driveNotesFile, data); err != nil {
-				return mcp.NewToolResultError(fmt.Sprintf("Drive upload failed: %v", err)), nil
-			}
-		} else {
-			if err := driveUpdateFile(client, fileID, data); err != nil {
-				return mcp.NewToolResultError(fmt.Sprintf("Drive update failed: %v", err)), nil
-			}
+	} else {
+		if err := driveUpdateFile(client, fileID, data); err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Drive update unavailable: %v", err)), nil
 		}
-		return mcp.NewToolResultText(fmt.Sprintf("Notes backed up to Google Drive as %q (%d bytes).", driveNotesFile, len(data))), nil
+	}
+	return mcp.NewToolResultText(fmt.Sprintf("Notes backed up to Google Drive as %q (%d bytes).", driveNotesFile, len(data))), nil
 	}
 }
 
@@ -141,19 +141,19 @@ func notesDriveRestoreHandler(cfg *config.Config) func(context.Context, mcp.Call
 	return func(ctx context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		client, err := googleCalendarClient(ctx, cfg)
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("not authorized: %v — run calendar_auth_url first", err)), nil
+			return mcp.NewToolResultError(fmt.Sprintf("Google Drive restore unavailable: %v", err)), nil
 		}
-		fileID, err := driveFindFile(client, driveNotesFile)
-		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Drive lookup failed: %v", err)), nil
-		}
-		if fileID == "" {
-			return mcp.NewToolResultText(fmt.Sprintf("No %q found on Drive. Run notes_drive_backup first.", driveNotesFile)), nil
-		}
-		data, err := driveDownloadFileByID(client, fileID)
-		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Drive download failed: %v", err)), nil
-		}
+	fileID, err := driveFindFile(client, driveNotesFile)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Drive lookup unavailable: %v", err)), nil
+	}
+	if fileID == "" {
+		return mcp.NewToolResultText(fmt.Sprintf("No %q found on Drive. Run notes_drive_backup first.", driveNotesFile)), nil
+	}
+	data, err := driveDownloadFileByID(client, fileID)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Drive download unavailable: %v", err)), nil
+	}
 		if err := os.WriteFile(notesPath(cfg), data, 0600); err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
@@ -171,6 +171,9 @@ func driveFindFile(client *http.Client, name string) (string, error) {
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode >= 400 {
+		return "", fmt.Errorf("Drive API error (HTTP %d): %s", resp.StatusCode, body)
+	}
 	var list struct {
 		Files []struct {
 			ID string `json:"id"`

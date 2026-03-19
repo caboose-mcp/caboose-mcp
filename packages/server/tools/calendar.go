@@ -149,23 +149,26 @@ func calendarAuthCompleteHandler(cfg *config.Config) func(context.Context, mcp.C
 			"redirect_uri":  {"urn:ietf:wg:oauth:2.0:oob"},
 			"grant_type":    {"authorization_code"},
 		}
-		resp, err := http.PostForm(googleTokenURL, data)
-		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("token exchange failed: %v", err)), nil
-		}
-		defer resp.Body.Close()
-		body, _ := io.ReadAll(resp.Body)
-		var tok struct {
-			AccessToken  string `json:"access_token"`
-			RefreshToken string `json:"refresh_token"`
-			ExpiresIn    int    `json:"expires_in"`
-			TokenType    string `json:"token_type"`
-			Error        string `json:"error"`
-			ErrorDesc    string `json:"error_description"`
-		}
-		if err := json.Unmarshal(body, &tok); err != nil {
-			return mcp.NewToolResultError("invalid response from Google"), nil
-		}
+resp, err := http.PostForm(googleTokenURL, data)
+if err != nil {
+return mcp.NewToolResultError(fmt.Sprintf("token exchange failed: %v", err)), nil
+}
+defer resp.Body.Close()
+body, _ := io.ReadAll(resp.Body)
+if resp.StatusCode >= 400 {
+return mcp.NewToolResultError(fmt.Sprintf("invalid OAuth error response (HTTP %d): %s", resp.StatusCode, body)), nil
+}
+var tok struct {
+AccessToken  string `json:"access_token"`
+RefreshToken string `json:"refresh_token"`
+ExpiresIn    int    `json:"expires_in"`
+TokenType    string `json:"token_type"`
+Error        string `json:"error"`
+ErrorDesc    string `json:"error_description"`
+}
+if err := json.Unmarshal(body, &tok); err != nil {
+return mcp.NewToolResultError("invalid response from Google"), nil
+}
 		if tok.Error != "" {
 			return mcp.NewToolResultError(fmt.Sprintf("auth error: %s — %s", tok.Error, tok.ErrorDesc)), nil
 		}
@@ -411,6 +414,9 @@ func refreshGoogleToken(ctx context.Context, cfg *config.Config, tok googleToken
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode >= 400 {
+		return tok, fmt.Errorf("invalid OAuth error response (HTTP %d): %s", resp.StatusCode, body)
+	}
 	var result struct {
 		AccessToken string `json:"access_token"`
 		ExpiresIn   int    `json:"expires_in"`

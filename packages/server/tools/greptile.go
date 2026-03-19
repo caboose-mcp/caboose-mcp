@@ -47,7 +47,7 @@ func greptileGetRepo(cfg *config.Config, req mcp.CallToolRequest) string {
 
 func greptileHTTP(cfg *config.Config, method, path string, body any) ([]byte, error) {
 	if cfg.GreptileAPIKey == "" {
-		return nil, fmt.Errorf("GREPTILE_API_KEY is not set")
+		return nil, fmt.Errorf("Greptile API key not configured")
 	}
 	var reqBody io.Reader
 	if body != nil {
