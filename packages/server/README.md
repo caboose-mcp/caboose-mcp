@@ -103,7 +103,7 @@ Claude communicates with the server over stdin/stdout using the MCP protocol. Th
 ./caboose-mcp --serve :8080
 ```
 
-Runs on `/mcp`. Set `MCP_AUTH_TOKEN` to require bearer auth:
+Runs on `/mcp`. Optionally set `MCP_AUTH_TOKEN` to require bearer auth:
 
 ```bash
 MCP_AUTH_TOKEN=secret ./caboose-mcp --serve :8080
@@ -162,7 +162,7 @@ All configuration is via environment variables. Copy `.env.example` to `.env` an
 | `GREPTILE_API_KEY` | For Greptile | From app.greptile.com |
 | `GREPTILE_REPO` | No | Default repo to query. Default: `github/caboose-mcp/server` |
 | `CLOUDSYNC_S3_BUCKET` | For S3 sync | S3 bucket for config sync (Gist backend uses `GITHUB_TOKEN`) |
-| `MCP_AUTH_TOKEN` | For HTTP mode | Bearer token for `--serve` HTTP transport |
+| `MCP_AUTH_TOKEN` | No | Optional bearer token for `--serve` HTTP transport (open/unauthenticated if unset) |
 
 ---
 

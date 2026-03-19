@@ -71,7 +71,7 @@ All tool calls are JSON-RPC 2.0 POST requests to `http://server:8080/mcp`.
 - Method: `POST`
 - URL: `{{ $env.CABOOSE_MCP_URL }}`  (set to `http://server:8080/mcp` in compose)
 - Headers: `Content-Type: application/json`
-  - If `MCP_AUTH_TOKEN` is set: `Authorization: Bearer {{ $env.CABOOSE_MCP_TOKEN }}`
+  - Optional: `Authorization: Bearer {{ $env.CABOOSE_MCP_TOKEN }}` (only if `MCP_AUTH_TOKEN` is set on the server)
 - Body (JSON):
 
 ```json
