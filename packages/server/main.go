@@ -171,7 +171,6 @@ func registerHostedTools(s *server.MCPServer, cfg *config.Config) {
 	tools.RegisterSandbox(s, cfg)
 	tools.RegisterAudit(s, cfg)
 	tools.RegisterAuth(s, cfg)
-	tools.RegisterAgency(s, cfg)
 }
 
 // registerLocalTools registers tools that require local hardware or LAN access.
@@ -182,6 +181,7 @@ func registerLocalTools(s *server.MCPServer, cfg *config.Config) {
 	tools.RegisterPrinting(s, cfg)
 	tools.RegisterChezmoi(s, cfg)
 	tools.RegisterToolsmith(s, cfg)
+	tools.RegisterAgency(s, cfg)
 }
 
 // mcpServerOptions returns the base options for all MCP server builds,
