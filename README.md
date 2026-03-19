@@ -130,7 +130,7 @@ Full setup instructions for both local and hosted deploys: [docs/setup.md](docs/
 | `ci.yml` | PR / push to main | Lint, test, build (amd64+arm64), e2e, UI build + changelog generation |
 | `deploy-infra.yml` | Push to `terraform/aws/**` or manual | `tofu apply` + sync secrets to AWS Secrets Manager |
 | `deploy-bots.yml` | Push to `packages/server/**` on main | Build image → ECR → redeploy `caboose-mcp-bots` |
-| `deploy-app.yml` | Push to `packages/server/**` on main | Build image → ECR → redeploy `caboose-mcp-serve` → index Greptile |
+| `deploy-app.yml` | Push to `packages/server/**` or `docker/Dockerfile` on main | Build image → ECR → redeploy `caboose-mcp-serve` → index Greptile |
 | `release.yml` | Push to main or `v*.*.*` tag | Build linux/amd64 + linux/arm64 → GitHub Release (auto date-tag on merge) |
 
 ### Releases
