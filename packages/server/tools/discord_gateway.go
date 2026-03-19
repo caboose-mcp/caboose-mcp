@@ -97,7 +97,8 @@ func RunDiscordBot(ctx context.Context, cfg *config.Config) error {
 		// Show typing indicator while processing
 		s.ChannelTyping(m.ChannelID)
 
-		reply, err := RunBotAgent(context.Background(), cfg, provider, content)
+		userKey := "discord:" + m.Author.ID
+		reply, err := RunBotAgent(context.Background(), cfg, provider, userKey, content)
 		if err != nil {
 			log.Printf("discord bot agent error: %v", err)
 			s.ChannelMessageSend(m.ChannelID, "⚠️ *The ravens returned with troubling news:* `"+err.Error()+"`")

@@ -41,7 +41,8 @@ type botTool struct {
 
 // RunBotAgent processes a single user message through the Claude agent loop
 // and returns a response formatted for the given ChatProvider.
-func RunBotAgent(ctx context.Context, cfg *config.Config, provider ChatProvider, userMsg string) (string, error) {
+// userKey is "<platform>:<userID>" and is used to load/save conversation history.
+func RunBotAgent(ctx context.Context, cfg *config.Config, provider ChatProvider, userKey, userMsg string) (string, error) {
 	if cfg.AnthropicAPIKey == "" {
 		return "", fmt.Errorf("ANTHROPIC_API_KEY is not set")
 	}
@@ -50,15 +51,27 @@ func RunBotAgent(ctx context.Context, cfg *config.Config, provider ChatProvider,
 	systemPrompt := fmt.Sprintf(botSystemPromptTemplate, provider.Name())
 	tools := buildMobileTools(cfg)
 
-	raw, err := agentLoop(ctx, client, systemPrompt, userMsg, tools)
+	// Load conversation history for this user
+	history := loadBotMemory(cfg.ClaudeDir, userKey)
+
+	raw, err := agentLoop(ctx, client, systemPrompt, userMsg, tools, history.Turns)
 	if err != nil {
 		return "", err
 	}
+
+	// Save updated history
+	history.Turns = append(history.Turns,
+		memoryTurn{Role: "user", Content: userMsg},
+		memoryTurn{Role: "assistant", Content: raw},
+	)
+	saveBotMemory(cfg.ClaudeDir, userKey, history)
+
 	return provider.FormatText(raw), nil
 }
 
 // agentLoop runs the multi-turn Claude conversation with tool use.
-func agentLoop(ctx context.Context, client anthropic.Client, systemPrompt, userMsg string, tools []botTool) (string, error) {
+// priorTurns injects saved conversation history before the current message.
+func agentLoop(ctx context.Context, client anthropic.Client, systemPrompt, userMsg string, tools []botTool, priorTurns []memoryTurn) (string, error) {
 	toolDefs := make([]anthropic.ToolUnionParam, len(tools))
 	toolMap := map[string]func(context.Context, map[string]any) (string, error){}
 	for i, t := range tools {
@@ -67,11 +80,27 @@ func agentLoop(ctx context.Context, client anthropic.Client, systemPrompt, userM
 		toolMap[t.def.Name] = t.execute
 	}
 
-	messages := []anthropic.MessageParam{
-		anthropic.NewUserMessage(anthropic.ContentBlockParamUnion{
-			OfText: &anthropic.TextBlockParam{Text: userMsg},
-		}),
+	// Build messages: inject history then append current user message.
+	// Anthropic requires messages to alternate user/assistant, so we pair turns.
+	var messages []anthropic.MessageParam
+	for i := 0; i+1 < len(priorTurns); i += 2 {
+		u := priorTurns[i]
+		a := priorTurns[i+1]
+		if u.Role != "user" || a.Role != "assistant" {
+			continue
+		}
+		messages = append(messages,
+			anthropic.NewUserMessage(anthropic.ContentBlockParamUnion{
+				OfText: &anthropic.TextBlockParam{Text: u.Content},
+			}),
+			anthropic.NewAssistantMessage(anthropic.ContentBlockParamUnion{
+				OfText: &anthropic.TextBlockParam{Text: a.Content},
+			}),
+		)
 	}
+	messages = append(messages, anthropic.NewUserMessage(anthropic.ContentBlockParamUnion{
+		OfText: &anthropic.TextBlockParam{Text: userMsg},
+	}))
 
 	for range 10 { // max 10 tool-use rounds
 		resp, err := client.Messages.New(ctx, anthropic.MessageNewParams{

@@ -42,10 +42,6 @@ resource "aws_iam_user" "caboose_cli" {
   tags = local.common_tags
 }
 
-resource "aws_iam_access_key" "caboose_cli" {
-  user = aws_iam_user.caboose_cli.name
-}
-
 resource "aws_iam_user_policy" "bedrock" {
   name = "caboose-mcp-bedrock"
   user = aws_iam_user.caboose_cli.name

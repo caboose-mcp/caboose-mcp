@@ -21,6 +21,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/caboose-mcp/server/config"
@@ -56,10 +57,14 @@ func RunSlackBot(cfg *config.Config) error {
 		slack.OptionAppLevelToken(cfg.SlackAppToken),
 	)
 
-	client := socketmode.New(api)
+	client := socketmode.New(api,
+		socketmode.OptionDebug(true),
+		socketmode.OptionLog(log.New(os.Stdout, "socketmode: ", log.Lshortfile|log.LstdFlags)),
+	)
 
 	go func() {
 		for evt := range client.Events {
+			log.Printf("[slack debug] event type: %s", evt.Type)
 			switch evt.Type {
 			case socketmode.EventTypeEventsAPI:
 				if evt.Request != nil {
@@ -67,8 +72,10 @@ func RunSlackBot(cfg *config.Config) error {
 				}
 				eventsAPIEvent, ok := evt.Data.(slackevents.EventsAPIEvent)
 				if !ok {
+					log.Printf("[slack debug] could not cast to EventsAPIEvent")
 					continue
 				}
+				log.Printf("[slack debug] events api event type: %s", eventsAPIEvent.Type)
 				go handleSlackMessage(cfg, api, provider, allowedChannels, eventsAPIEvent)
 			}
 		}
@@ -100,7 +107,8 @@ func handleSlackMessage(cfg *config.Config, api *slack.Client, provider SlackPro
 		return
 	}
 
-	reply, err := RunBotAgent(context.Background(), cfg, provider, text)
+	userKey := "slack:" + ev.User
+	reply, err := RunBotAgent(context.Background(), cfg, provider, userKey, text)
 	if err != nil {
 		log.Printf("slack bot agent error for channel %s: %v", ev.Channel, err)
 		// Send a generic error message to the user and log any failure to post it.
