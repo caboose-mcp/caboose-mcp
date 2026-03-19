@@ -1,0 +1,33 @@
+meta {
+  name: github-create-pr
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "github_create_pr",
+      "arguments": {
+        ""repo"": "caboose-mcp/caboose-mcp"
+        ""title"": "feat: my feature"
+        ""head"": "feat/my-branch"
+        ""base"": "main"
+        ""body"": "PR description"
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+meta {
+  name: si-tech-digest
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 9,
+    "method": "tools/call",
+    "params": {
+      "name": "si_tech_digest",
+      "arguments": {
+        ""dir"": "/home/caboose/dev/caboose-mcp"
+      }
+    }
+  }
+}

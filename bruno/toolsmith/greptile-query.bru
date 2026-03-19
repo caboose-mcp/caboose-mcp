@@ -1,0 +1,29 @@
+meta {
+  name: greptile-query
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 8,
+    "method": "tools/call",
+    "params": {
+      "name": "greptile_query",
+      "arguments": {
+        ""question"": "How does the bot agent loop work?"
+      }
+    }
+  }
+}

@@ -1,0 +1,30 @@
+meta {
+  name: focus-config-set-duration
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 6,
+    "method": "tools/call",
+    "params": {
+      "name": "focus_config",
+      "arguments": {
+        ""action"": "set_duration"
+        ""duration_minutes"": 25
+      }
+    }
+  }
+}

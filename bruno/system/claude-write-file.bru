@@ -1,0 +1,30 @@
+meta {
+  name: claude-write-file
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 7,
+    "method": "tools/call",
+    "params": {
+      "name": "claude_write_file",
+      "arguments": {
+        ""path"": "test.txt"
+        ""content"": "hello from Bruno"
+      }
+    }
+  }
+}

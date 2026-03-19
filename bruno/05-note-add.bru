@@ -1,0 +1,29 @@
+meta {
+  name: Note Add
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 5,
+    "method": "tools/call",
+    "params": {
+      "name": "note_add",
+      "arguments": {
+        "content": "Test note from Bruno"
+      }
+    }
+  }
+}

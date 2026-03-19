@@ -9,6 +9,13 @@
 #   AWS_SECRET_ACCESS_KEY
 #   TF_VAR_CLOUDSYNC_BUCKET_NAME  — globally unique S3 bucket name
 #   TF_VAR_ROUTE53_ZONE_ID        — Route53 zone ID (leave empty if not using Route53)
+#
+# App secrets pushed to Secrets Manager (caboose-mcp/env):
+#   SECRET_ANTHROPIC_API_KEY
+#   SECRET_SLACK_TOKEN
+#   SECRET_SLACK_APP_TOKEN
+#   SECRET_DISCORD_TOKEN
+#   SECRET_MCP_AUTH_TOKEN
 
 name: Deploy Infra
 
@@ -44,6 +51,21 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
+
+      - name: Sync secrets to AWS Secrets Manager
+        run: |
+          aws secretsmanager create-secret \
+            --name caboose-mcp/env \
+            --description "caboose-mcp runtime secrets" 2>/dev/null || true
+          aws secretsmanager put-secret-value \
+            --secret-id caboose-mcp/env \
+            --secret-string "{
+              \"ANTHROPIC_API_KEY\": \"${{ secrets.SECRET_ANTHROPIC_API_KEY }}\",
+              \"SLACK_TOKEN\": \"${{ secrets.SECRET_SLACK_TOKEN }}\",
+              \"SLACK_APP_TOKEN\": \"${{ secrets.SECRET_SLACK_APP_TOKEN }}\",
+              \"DISCORD_TOKEN\": \"${{ secrets.SECRET_DISCORD_TOKEN }}\",
+              \"MCP_AUTH_TOKEN\": \"${{ secrets.SECRET_MCP_AUTH_TOKEN }}\"
+            }"
 
       - name: Terraform Plan
         run: terraform plan -out=tfplan

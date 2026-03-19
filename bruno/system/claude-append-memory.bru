@@ -1,0 +1,30 @@
+meta {
+  name: claude-append-memory
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 8,
+    "method": "tools/call",
+    "params": {
+      "name": "claude_append_memory",
+      "arguments": {
+        ""content"": "# Test note
+Added from Bruno"
+      }
+    }
+  }
+}

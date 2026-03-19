@@ -1,0 +1,30 @@
+meta {
+  name: slack-read-messages
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+      "name": "slack_read_messages",
+      "arguments": {
+        ""channel"": "C0AJV8828SF"
+        ""limit"": 10
+      }
+    }
+  }
+}

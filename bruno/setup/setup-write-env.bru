@@ -1,0 +1,30 @@
+meta {
+  name: setup-write-env
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 5,
+    "method": "tools/call",
+    "params": {
+      "name": "setup_write_env",
+      "arguments": {
+        ""path"": "/home/caboose/dev/caboose-mcp/.env"
+        ""vars"": "KEY=value"
+      }
+    }
+  }
+}

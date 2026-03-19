@@ -1,0 +1,30 @@
+meta {
+  name: si-report-error
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 8,
+    "method": "tools/call",
+    "params": {
+      "name": "si_report_error",
+      "arguments": {
+        ""message"": "Something failed"
+        ""source"": "manual"
+      }
+    }
+  }
+}

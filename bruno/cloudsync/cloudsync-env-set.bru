@@ -1,0 +1,30 @@
+meta {
+  name: cloudsync-env-set
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "cloudsync_env_set",
+      "arguments": {
+        ""key"": "MY_VAR"
+        ""value"": "my-value"
+      }
+    }
+  }
+}
