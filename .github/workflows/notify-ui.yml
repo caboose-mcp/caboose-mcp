@@ -22,18 +22,27 @@ jobs:
       - name: Send repository_dispatch to caboose-mcp/ui
         env:
           TOKEN: ${{ secrets.UI_DISPATCH_TOKEN }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
-          curl -fsSL \
+          python3 - << 'PY' | curl -fsSL \
             -X POST \
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $TOKEN" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
             https://api.github.com/repos/caboose-mcp/ui/dispatches \
-            -d "{
-              \"event_type\": \"caboose-mcp-updated\",
-              \"client_payload\": {
-                \"sha\": \"${{ github.sha }}\",
-                \"ref\": \"${{ github.ref_name }}\",
-                \"message\": $(echo '${{ github.event.head_commit.message }}' | python3 -c \"import sys,json; print(json.dumps(sys.stdin.read().strip()))\")
-              }
-            }"
+            -d @-
+          import json
+          import os
+          import sys
+
+          payload = {
+              "event_type": "caboose-mcp-updated",
+              "client_payload": {
+                  "sha": os.environ.get("GITHUB_SHA", ""),
+                  "ref": os.environ.get("GITHUB_REF_NAME", ""),
+                  "message": os.environ.get("COMMIT_MESSAGE", "").strip(),
+              },
+          }
+
+          sys.stdout.write(json.dumps(payload))
+          PY
