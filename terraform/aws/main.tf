@@ -179,7 +179,7 @@ data "aws_subnets" "default" {
 # Create the secret, then populate it:
 #   aws secretsmanager put-secret-value \
 #     --secret-id caboose-mcp/env \
-#     --secret-string '{"ANTHROPIC_API_KEY":"...","SLACK_TOKEN":"...","SLACK_APP_TOKEN":"...","DISCORD_TOKEN":"...","MCP_AUTH_TOKEN":"..."}'
+#     --secret-string '{"ANTHROPIC_API_KEY":"...","SLACK_TOKEN":"...","SLACK_APP_TOKEN":"...","DISCORD_TOKEN":"..."}'
 
 resource "aws_secretsmanager_secret" "env" {
   name        = "caboose-mcp/env"
@@ -532,7 +532,6 @@ resource "aws_ecs_task_definition" "serve" {
     }
 
     secrets = [
-      { name = "MCP_AUTH_TOKEN",   valueFrom = "${aws_secretsmanager_secret.env.arn}:MCP_AUTH_TOKEN::" },
       { name = "ANTHROPIC_API_KEY", valueFrom = "${aws_secretsmanager_secret.env.arn}:ANTHROPIC_API_KEY::" },
     ]
   }])
