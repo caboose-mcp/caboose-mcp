@@ -123,7 +123,11 @@ func serveHTTP(cfg *config.Config, addr string, s *server.MCPServer) {
 		http.Redirect(w, r, target, http.StatusMovedPermanently)
 	})
 	mux.HandleFunc("/ui", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, cfg.UIOrigin+"/", http.StatusMovedPermanently)
+		target := cfg.UIOrigin + "/"
+		if r.URL.RawQuery != "" {
+			target += "?" + r.URL.RawQuery
+		}
+		http.Redirect(w, r, target, http.StatusMovedPermanently)
 	})
 	// Public routes (no auth)
 	mux.HandleFunc("/api/sandbox", sandboxHandler(cfg))
