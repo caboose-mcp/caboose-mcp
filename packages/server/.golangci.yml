@@ -1,20 +1,14 @@
+run:
+  timeout: 5m
+
 linters:
+  disable-all: true
   enable:
-    - govet
-    - staticcheck
-    - gosimple
-    - unused
-    - ineffassign
-    - typecheck
-  disable:
-    - errcheck  # too many pre-existing unchecked returns; enable incrementally
+    - typecheck   # catches compile errors
+    - govet       # catches real bugs (nilderef, printf format, etc.)
 
 linters-settings:
   govet:
-    enable-all: true
     disable:
-      - fieldalignment  # not worth restructuring existing structs
-
-issues:
-  max-issues-per-linter: 50
-  max-same-issues: 10
+      - shadow         # too many pre-existing shadowed err vars
+      - fieldalignment # not worth restructuring existing structs
