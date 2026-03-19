@@ -105,10 +105,10 @@ func slackPostMessageHandler(cfg *config.Config) func(context.Context, mcp.CallT
 }
 
 func slackListChannelsHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-if cfg.SlackToken == "" {
-return mcp.NewToolResultError("Slack token not configured"), nil
-}
+	return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		if cfg.SlackToken == "" {
+			return mcp.NewToolResultError("Slack token not configured"), nil
+		}
 		limit := req.GetInt("limit", 100)
 		u := fmt.Sprintf("https://slack.com/api/conversations.list?limit=%d&types=public_channel,private_channel", limit)
 		httpReq, _ := http.NewRequest("GET", u, nil)
@@ -131,10 +131,10 @@ return mcp.NewToolResultError("Slack token not configured"), nil
 }
 
 func slackReadMessagesHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-if cfg.SlackToken == "" {
-return mcp.NewToolResultError("Slack token not configured"), nil
-}
+	return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		if cfg.SlackToken == "" {
+			return mcp.NewToolResultError("Slack token not configured"), nil
+		}
 		channel, err := req.RequireString("channel")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
