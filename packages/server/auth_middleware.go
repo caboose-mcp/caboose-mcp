@@ -32,7 +32,7 @@ func authMiddleware(adminToken string, jwtSecret []byte, claudeDir string, next 
 			return
 		}
 
-		bearer, hasBearer := extractBearer(r)
+		bearer, hasBearer, hasAuthHeader := extractBearer(r)
 
 		// Admin token bypass — full access, no ACL.
 		if adminToken != "" && hasBearer && bearer == adminToken {
@@ -40,15 +40,21 @@ func authMiddleware(adminToken string, jwtSecret []byte, claudeDir string, next 
 			return
 		}
 
-		// If MCP_AUTH_TOKEN is set, a valid token is required.
-		if adminToken != "" && !hasBearer {
+		// If MCP_AUTH_TOKEN is set, an Authorization header is required.
+		if adminToken != "" && !hasAuthHeader {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
-		// No bearer token and no admin token configured → open/local mode, pass through.
-		if !hasBearer {
+		// No Authorization header and no admin token configured → open/local mode, pass through.
+		if !hasAuthHeader {
 			next.ServeHTTP(w, r)
+			return
+		}
+
+		// Authorization header present but no valid non-empty Bearer token → treat as invalid token.
+		if !hasBearer {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
 
@@ -88,13 +94,21 @@ func authMiddleware(adminToken string, jwtSecret []byte, claudeDir string, next 
 	})
 }
 
-func extractBearer(r *http.Request) (string, bool) {
+func extractBearer(r *http.Request) (string, bool, bool) {
 	auth := r.Header.Get("Authorization")
+	if auth == "" {
+		// No Authorization header present.
+		return "", false, false
+	}
+
 	bearer, ok := strings.CutPrefix(auth, "Bearer ")
 	if !ok || bearer == "" {
-		return "", false
+		// Authorization header present, but not a valid non-empty Bearer token.
+		return "", false, true
 	}
-	return bearer, true
+
+	// Valid non-empty Bearer token.
+	return bearer, true, true
 }
 
 // extractToolName parses the tool name from a tools/call JSON-RPC body.
