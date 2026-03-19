@@ -12,6 +12,9 @@ Personal AI toolserver — 108 MCP tools exposed to Claude, VS Code, and chat bo
 
 **Live endpoint:** `https://mcp.chrismarasco.io/mcp` (bearer auth required) · **Web UI:** `https://mcp.chrismarasco.io/ui/`
 
+> [!WARNING]
+> **Experimental software — use at your own risk.** This project is under active development and has not been fully tested. Tools may behave unexpectedly, modify data, or fail without warning. See the [Disclaimer](#disclaimer) for full terms.
+
 ---
 
 ## Architecture
@@ -187,6 +190,24 @@ docs/
   tools.md               Full tool reference
   setup.md               Local + hosted deployment guide, JWT RBAC, AWS costs
 ```
+
+---
+
+## Disclaimer
+
+**caboose-mcp is experimental software provided "as is", without warranty of any kind, express or implied.**
+
+By using this software you acknowledge and agree that:
+
+- This project is under active development and **has not been fully tested** in all environments or configurations.
+- Tools may execute shell commands, modify files, query external APIs, send messages, or interact with cloud infrastructure. **Outcomes are not guaranteed to be correct or safe.**
+- No warranty is provided — express, implied, statutory, or otherwise — including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement.
+- The author(s) shall not be liable for any direct, indirect, incidental, special, consequential, or exemplary damages arising from the use or inability to use this software, even if advised of the possibility of such damages.
+- **Do not use in production systems, with sensitive or regulated data, or in any context where failures could cause harm**, until you have reviewed and validated the relevant tools for your use case.
+
+This disclaimer is in addition to and does not limit the terms of the [MIT License](LICENSE).
+
+The `CABOOSE_ENV=stable` flag may be set to suppress experimental warnings once a deployment has been reviewed and accepted for a given use case — this does not alter or waive any of the above terms.
 
 ---
 

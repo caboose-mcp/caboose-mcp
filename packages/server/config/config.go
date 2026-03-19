@@ -36,6 +36,10 @@ type Config struct {
 	// ElevenLabs TTS
 	ElevenLabsAPIKey  string // ELEVENLABS_API_KEY
 	ElevenLabsVoiceID string // ELEVENLABS_VOICE_ID — required to enable TTS
+	// Release stage flag — controls experimental banner and MCP disclaimer.
+	// "experimental" (default) → warnings shown everywhere.
+	// "stable" → all warnings suppressed.
+	ReleaseStage string // CABOOSE_ENV
 }
 
 func Load() *Config {
@@ -97,5 +101,15 @@ func Load() *Config {
 		SlackBotChannels:   os.Getenv("SLACK_BOT_CHANNELS"),
 		ElevenLabsAPIKey:   os.Getenv("ELEVENLABS_API_KEY"),
 		ElevenLabsVoiceID:  os.Getenv("ELEVENLABS_VOICE_ID"),
+		ReleaseStage:       releaseStage(),
 	}
+}
+
+// releaseStage reads CABOOSE_ENV and normalises to "experimental" or "stable".
+func releaseStage() string {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv("CABOOSE_ENV")))
+	if v == "stable" {
+		return "stable"
+	}
+	return "experimental"
 }

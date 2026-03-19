@@ -117,6 +117,11 @@ func serveHTTP(cfg *config.Config, addr string, s *server.MCPServer) {
 	mux.Handle("/ui/", uiHandler())
 	mux.Handle("/ui", http.RedirectHandler("/ui/", http.StatusMovedPermanently))
 	mux.HandleFunc("/api/sandbox", sandboxHandler(cfg))
+	mux.HandleFunc("/api/config", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		fmt.Fprintf(w, `{"env":%q}`, cfg.ReleaseStage)
+	})
 	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
@@ -133,6 +138,7 @@ func serveHTTP(cfg *config.Config, addr string, s *server.MCPServer) {
 	log.Printf("MCP:     http://%s/mcp", addr)
 	log.Printf("Sandbox: http://%s/api/sandbox", addr)
 	log.Printf("Health:  http://%s/health", addr)
+	log.Printf("Release: %s", cfg.ReleaseStage)
 
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatal(err)
@@ -177,12 +183,27 @@ func registerLocalTools(s *server.MCPServer, cfg *config.Config) {
 	tools.RegisterToolsmith(s, cfg)
 }
 
+// mcpServerOptions returns the base options for all MCP server builds,
+// including an experimental disclaimer when ReleaseStage != "stable".
+func mcpServerOptions(cfg *config.Config) []server.ServerOption {
+	opts := []server.ServerOption{server.WithToolCapabilities(false)}
+	if cfg.ReleaseStage != "stable" {
+		opts = append(opts, server.WithInstructions(
+			"⚠️  EXPERIMENTAL SOFTWARE — USE AT YOUR OWN RISK\n\n"+
+				"caboose-mcp is under active development and has not been fully tested. "+
+				"Tools may behave unexpectedly, produce incorrect results, modify data, or fail without warning. "+
+				"No warranty is provided, express or implied. "+
+				"Do not use this server for critical workflows, production systems, or sensitive data without understanding the risks.\n\n"+
+				"Set CABOOSE_ENV=stable to suppress this message once the deployment is considered production-ready.",
+		))
+	}
+	return opts
+}
+
 // buildHostedMCPServer creates a server with only cloud-safe hosted tools.
 // Used for --serve-hosted and ECS Fargate deployments.
 func buildHostedMCPServer(cfg *config.Config) *server.MCPServer {
-	s := server.NewMCPServer("caboose-mcp", "2.0.0",
-		server.WithToolCapabilities(false),
-	)
+	s := server.NewMCPServer("caboose-mcp", "2.0.0", mcpServerOptions(cfg)...)
 	registerHostedTools(s, cfg)
 	return s
 }
@@ -190,9 +211,7 @@ func buildHostedMCPServer(cfg *config.Config) *server.MCPServer {
 // buildLocalMCPServer creates a server with only local/hardware tools.
 // Used for --serve-local when running on the Pi alongside Claude Code.
 func buildLocalMCPServer(cfg *config.Config) *server.MCPServer {
-	s := server.NewMCPServer("caboose-mcp", "2.0.0",
-		server.WithToolCapabilities(false),
-	)
+	s := server.NewMCPServer("caboose-mcp", "2.0.0", mcpServerOptions(cfg)...)
 	registerLocalTools(s, cfg)
 	return s
 }
@@ -200,9 +219,7 @@ func buildLocalMCPServer(cfg *config.Config) *server.MCPServer {
 // buildMCPServer creates a server with all tools (hosted + local combined).
 // Used for --serve and stdio (default) modes.
 func buildMCPServer(cfg *config.Config) *server.MCPServer {
-	s := server.NewMCPServer("caboose-mcp", "2.0.0",
-		server.WithToolCapabilities(false),
-	)
+	s := server.NewMCPServer("caboose-mcp", "2.0.0", mcpServerOptions(cfg)...)
 	registerHostedTools(s, cfg)
 	registerLocalTools(s, cfg)
 	return s
