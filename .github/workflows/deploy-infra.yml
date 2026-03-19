@@ -44,13 +44,13 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
         with:
-          terraform_version: "~> 1.6"
+          tofu_version: "~> 1.6"
 
       - name: Terraform Init
-        run: terraform init
+        run: tofu init
 
       - name: Sync secrets to AWS Secrets Manager
         run: |
@@ -68,10 +68,12 @@ jobs:
             }"
 
       - name: Terraform Plan
-        run: terraform plan -out=tfplan
+        run: tofu plan -out=tfplan
         env:
           TF_VAR_cloudsync_bucket_name: ${{ secrets.TF_VAR_CLOUDSYNC_BUCKET_NAME }}
           TF_VAR_route53_zone_id: ${{ secrets.TF_VAR_ROUTE53_ZONE_ID }}
+          TF_VAR_slack_bot_channels: ${{ secrets.TF_VAR_SLACK_BOT_CHANNELS }}
+          TF_VAR_discord_bot_channels: ${{ secrets.TF_VAR_DISCORD_BOT_CHANNELS }}
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        run: tofu apply -auto-approve tfplan

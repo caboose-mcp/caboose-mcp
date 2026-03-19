@@ -20,12 +20,11 @@ terraform {
     }
   }
 
-  # Uncomment to store state in S3 (recommended for shared/production use):
-  # backend "s3" {
-  #   bucket = "your-terraform-state-bucket"
-  #   key    = "caboose-mcp/terraform.tfstate"
-  #   region = "us-east-1"
-  # }
+  backend "s3" {
+    bucket = "caboose-mcp-tfstate"
+    key    = "caboose-mcp/terraform.tfstate"
+    region = "us-east-1"
+  }
 }
 
 provider "aws" {
