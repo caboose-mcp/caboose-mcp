@@ -1,0 +1,29 @@
+meta {
+  name: cloudsync-push
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 4,
+    "method": "tools/call",
+    "params": {
+      "name": "cloudsync_push",
+      "arguments": {
+        ""passphrase"": "<your-passphrase>"
+      }
+    }
+  }
+}

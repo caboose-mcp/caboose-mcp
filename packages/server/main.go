@@ -1,92 +1,154 @@
 package main
 
 import (
+	"context"
+	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
-	"strings"
+	"sync"
 
 	"github.com/caboose-mcp/server/config"
 	"github.com/caboose-mcp/server/tools"
 	"github.com/caboose-mcp/server/tui"
+	"github.com/joho/godotenv"
 	"github.com/mark3labs/mcp-go/server"
 )
 
 func main() {
+	// Load .env from working directory if present (silently ignore if missing)
+	_ = godotenv.Load()
 	cfg := config.Load()
 
-	// --setup flag: interactive config wizard, writes .env file
-	if len(os.Args) > 1 && os.Args[1] == "--setup" {
+	if len(os.Args) < 2 {
+		// Default: stdio MCP server
+		s := buildMCPServer(cfg)
+		if err := server.ServeStdio(s); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
+
+	switch os.Args[1] {
+	case "--setup":
 		if err := tui.RunSetup(cfg); err != nil {
 			log.Fatal(err)
 		}
-		return
-	}
 
-	// --tui flag: launch terminal UI instead of MCP server
-	if len(os.Args) > 1 && os.Args[1] == "--tui" {
+	case "--tui":
 		if err := tui.Run(cfg); err != nil {
 			log.Fatal(err)
 		}
-		return
-	}
 
-	// --serve [addr]: run HTTP/SSE transport instead of stdio.
-	// addr defaults to :8080. Set MCP_AUTH_TOKEN to require bearer auth.
-	// Example: ./caboose-mcp --serve :9090
-	if len(os.Args) > 1 && os.Args[1] == "--serve" {
+	case "--discord-bot":
+		log.Fatal("Discord bot support is not available in this build")
+
+	case "--slack-bot":
+		if err := tools.RunSlackBot(cfg); err != nil {
+			log.Fatal(err)
+		}
+
+	case "--bots":
+		runBots(cfg)
+
+	// auth:create — CLI token creation (magic link exchange)
+	case "auth:create":
+		fs := flag.NewFlagSet("auth:create", flag.ExitOnError)
+		label := fs.String("label", "", "Friendly name for the token (required)")
+		toolsFlag := fs.String("tools", "", "Comma-separated tool names (empty = all)")
+		scopes := fs.String("google-scopes", "", "Comma-separated Google scopes")
+		expires := fs.Int("expires", 30, "Days until token expires")
+		_ = fs.Parse(os.Args[2:])
+		if *label == "" {
+			fmt.Fprintln(os.Stderr, "usage: caboose-mcp auth:create --label <name> [--tools ...] [--google-scopes ...] [--expires N]")
+			os.Exit(1)
+		}
+		if err := tools.CreateTokenCLI(cfg, *label, *toolsFlag, *scopes, *expires); err != nil {
+			log.Fatal(err)
+		}
+
+	case "--serve", "--serve-hosted", "--serve-local":
 		addr := ":8080"
 		if len(os.Args) > 2 {
 			addr = os.Args[2]
 		}
-		serveHTTP(cfg, addr)
-		return
-	}
+		var s *server.MCPServer
+		switch os.Args[1] {
+		case "--serve-hosted":
+			s = buildHostedMCPServer(cfg)
+		case "--serve-local":
+			s = buildLocalMCPServer(cfg)
+		default:
+			s = buildMCPServer(cfg)
+		}
+		serveHTTP(cfg, addr, s)
 
-	s := buildMCPServer(cfg)
-	if err := server.ServeStdio(s); err != nil {
-		log.Fatal(err)
+	default:
+		// Unknown flag — fall back to stdio (preserves backward compat for
+		// cases where the binary is called with unexpected arguments).
+		s := buildMCPServer(cfg)
+		if err := server.ServeStdio(s); err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 
 // serveHTTP runs the MCP server over HTTP using the Streamable HTTP transport.
-// If MCP_AUTH_TOKEN is set, all requests must include "Authorization: Bearer <token>".
-func serveHTTP(cfg *config.Config, addr string) {
-	s := buildMCPServer(cfg)
+//
+// Route map:
+//   /ui/*         → embedded React UI (unauthenticated, static files)
+//   /api/sandbox  → public sandbox tool execution (unauthenticated, rate-limited)
+//   /auth/verify  → magic link → JWT exchange (unauthenticated, handled in authMiddleware)
+//   /*            → authMiddleware → MCP server (bearer token or JWT required)
+func serveHTTP(cfg *config.Config, addr string, s *server.MCPServer) {
+	jwtSecret := tools.LoadAuthStore(cfg)
+
 	httpSrv := server.NewStreamableHTTPServer(s,
 		server.WithEndpointPath("/mcp"),
 		server.WithStateLess(true),
 	)
 
-	authToken := os.Getenv("MCP_AUTH_TOKEN")
-	var handler http.Handler = httpSrv
-	if authToken != "" {
-		handler = bearerAuthMiddleware(authToken, httpSrv)
-		log.Printf("caboose-mcp HTTP server on %s (bearer auth enabled)", addr)
-	} else {
-		log.Printf("caboose-mcp HTTP server on %s (WARNING: no MCP_AUTH_TOKEN set — server is unauthenticated)", addr)
-	}
+	adminToken := os.Getenv("MCP_AUTH_TOKEN")
+	authedMCP := authMiddleware(adminToken, jwtSecret, cfg.ClaudeDir, httpSrv)
 
-	if err := http.ListenAndServe(addr, handler); err != nil {
+	mux := http.NewServeMux()
+	// Public routes (no auth)
+	mux.Handle("/ui/", uiHandler())
+	mux.Handle("/ui", http.RedirectHandler("/ui/", http.StatusMovedPermanently))
+	mux.HandleFunc("/api/sandbox", sandboxHandler(cfg))
+	mux.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
+	// Authenticated routes
+	mux.Handle("/", authedMCP)
+
+	if adminToken != "" {
+		log.Printf("caboose-mcp HTTP server on %s (admin token + JWT auth)", addr)
+	} else {
+		log.Printf("caboose-mcp HTTP server on %s (JWT auth only — set MCP_AUTH_TOKEN for admin bypass)", addr)
+	}
+	log.Printf("UI:      http://%s/ui/", addr)
+	log.Printf("MCP:     http://%s/mcp", addr)
+	log.Printf("Sandbox: http://%s/api/sandbox", addr)
+	log.Printf("Health:  http://%s/health", addr)
+
+	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatal(err)
 	}
 }
 
-// buildMCPServer creates and fully registers the MCP server.
-// Extracted so both stdio and HTTP paths share the same tool set.
-func buildMCPServer(cfg *config.Config) *server.MCPServer {
-	s := server.NewMCPServer("caboose-mcp", "2.0.0",
-		server.WithToolCapabilities(false),
-	)
+// registerHostedTools registers tools that are safe to run in a cloud/hosted environment.
+// These tools have no dependency on local hardware, Docker, or LAN-connected devices.
+func registerHostedTools(s *server.MCPServer, cfg *config.Config) {
 	tools.RegisterClaude(s, cfg)
 	tools.RegisterSecrets(s, cfg)
 	tools.RegisterGitHub(s, cfg)
-	tools.RegisterDocker(s, cfg)
 	tools.RegisterDatabase(s, cfg)
-	tools.RegisterSystem(s, cfg)
 	tools.RegisterSlack(s, cfg)
 	tools.RegisterDiscord(s, cfg)
-	tools.RegisterPrinting(s, cfg)
+	tools.RegisterEnv(s, cfg)
 	tools.RegisterMermaid(s, cfg)
 	tools.RegisterGreptile(s, cfg)
 	tools.RegisterSelfImprove(s, cfg)
@@ -100,22 +162,80 @@ func buildMCPServer(cfg *config.Config) *server.MCPServer {
 	tools.RegisterCalendar(s, cfg)
 	tools.RegisterNotes(s, cfg)
 	tools.RegisterSources(s, cfg)
-	tools.RegisterChezmoi(s, cfg)
-	tools.RegisterToolsmith(s, cfg)
 	tools.RegisterSandbox(s, cfg)
 	tools.RegisterAudit(s, cfg)
-	tools.RegisterEnv(s, cfg)
+	tools.RegisterAuth(s, cfg)
+}
+
+// registerLocalTools registers tools that require local hardware or LAN access.
+// These tools depend on Docker, a local shell, Bambu printer, Blender, Chezmoi, or local source code.
+func registerLocalTools(s *server.MCPServer, cfg *config.Config) {
+	tools.RegisterDocker(s, cfg)
+	tools.RegisterSystem(s, cfg)
+	tools.RegisterPrinting(s, cfg)
+	tools.RegisterChezmoi(s, cfg)
+	tools.RegisterToolsmith(s, cfg)
+}
+
+// buildHostedMCPServer creates a server with only cloud-safe hosted tools.
+// Used for --serve-hosted and ECS Fargate deployments.
+func buildHostedMCPServer(cfg *config.Config) *server.MCPServer {
+	s := server.NewMCPServer("caboose-mcp", "2.0.0",
+		server.WithToolCapabilities(false),
+	)
+	registerHostedTools(s, cfg)
 	return s
 }
 
-// bearerAuthMiddleware rejects requests without the correct Authorization header.
-func bearerAuthMiddleware(token string, next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		auth := r.Header.Get("Authorization")
-		if !strings.HasPrefix(auth, "Bearer ") || strings.TrimPrefix(auth, "Bearer ") != token {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
+// buildLocalMCPServer creates a server with only local/hardware tools.
+// Used for --serve-local when running on the Pi alongside Claude Code.
+func buildLocalMCPServer(cfg *config.Config) *server.MCPServer {
+	s := server.NewMCPServer("caboose-mcp", "2.0.0",
+		server.WithToolCapabilities(false),
+	)
+	registerLocalTools(s, cfg)
+	return s
 }
+
+// buildMCPServer creates a server with all tools (hosted + local combined).
+// Used for --serve and stdio (default) modes.
+func buildMCPServer(cfg *config.Config) *server.MCPServer {
+	s := server.NewMCPServer("caboose-mcp", "2.0.0",
+		server.WithToolCapabilities(false),
+	)
+	registerHostedTools(s, cfg)
+	registerLocalTools(s, cfg)
+	return s
+}
+
+// runBots starts the Slack and Discord bots concurrently. If either exits with
+// an error it is logged but the other bot continues running. The process blocks
+// until both have exited.
+func runBots(cfg *config.Config) {
+	ctx := context.Background()
+	type botFn struct {
+		name string
+		run  func() error
+	}
+	bots := []botFn{
+		{"slack", func() error { return tools.RunSlackBot(cfg) }},
+		{"discord", func() error { return tools.RunDiscordBot(ctx, cfg) }},
+	}
+
+	var wg sync.WaitGroup
+	for _, b := range bots {
+		b := b
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			log.Printf("starting %s bot", b.name)
+			if err := b.run(); err != nil {
+				log.Printf("%s bot exited with error: %v", b.name, err)
+			} else {
+				log.Printf("%s bot exited", b.name)
+			}
+		}()
+	}
+	wg.Wait()
+}
+

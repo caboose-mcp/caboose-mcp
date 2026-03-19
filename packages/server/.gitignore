@@ -1,5 +1,9 @@
 node_modules/
 dist/
+# Keep the embedded UI placeholder so go:embed compiles without a full UI build
+!ui/
+!ui/dist/
+!ui/dist/index.html
 *.log
 .env
 .DS_Store

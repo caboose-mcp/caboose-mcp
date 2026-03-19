@@ -133,7 +133,7 @@ func calendarAuthURLHandler(cfg *config.Config) func(context.Context, mcp.CallTo
 }
 
 func calendarAuthCompleteHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		code, err := req.RequireString("code")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
@@ -178,15 +178,18 @@ return mcp.NewToolResultError("invalid response from Google"), nil
 			Expiry:       time.Now().Add(time.Duration(tok.ExpiresIn) * time.Second),
 			TokenType:    tok.TokenType,
 		}
-		if err := saveGoogleToken(cfg, token); err != nil {
+		if err := saveGoogleToken(ctx, cfg, token); err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("failed to save token: %v", err)), nil
 		}
-		return mcp.NewToolResultText("Google Calendar authorized. You can now use calendar_list, calendar_create, and calendar_delete."), nil
+		// Tell the user where the token was saved (per-user or global).
+		tokenFile := googleTokenPath(ctx, cfg)
+		return mcp.NewToolResultText(fmt.Sprintf(
+			"Google Calendar authorized. Token saved to %s.\nYou can now use calendar_list, calendar_create, and calendar_delete.", tokenFile)), nil
 	}
 }
 
 func calendarListHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		days := req.GetInt("days", 7)
 		if days < 1 {
 			days = 7
@@ -195,7 +198,7 @@ func calendarListHandler(cfg *config.Config) func(context.Context, mcp.CallToolR
 			days = 90
 		}
 		calID := req.GetString("calendar_id", "primary")
-		client, err := googleCalendarClient(cfg)
+		client, err := googleCalendarClient(ctx, cfg)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
@@ -251,7 +254,10 @@ func calendarListHandler(cfg *config.Config) func(context.Context, mcp.CallToolR
 }
 
 func calendarCreateHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		if err := checkGoogleScope(ctx, "https://www.googleapis.com/auth/calendar"); err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
 		title, err := req.RequireString("title")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
@@ -271,7 +277,7 @@ func calendarCreateHandler(cfg *config.Config) func(context.Context, mcp.CallToo
 			}
 		}
 		calID := req.GetString("calendar_id", "primary")
-		client, err := googleCalendarClient(cfg)
+		client, err := googleCalendarClient(ctx, cfg)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
@@ -306,13 +312,16 @@ func calendarCreateHandler(cfg *config.Config) func(context.Context, mcp.CallToo
 }
 
 func calendarDeleteHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		if err := checkGoogleScope(ctx, "https://www.googleapis.com/auth/calendar"); err != nil {
+			return mcp.NewToolResultError(err.Error()), nil
+		}
 		eventID, err := req.RequireString("event_id")
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 		calID := req.GetString("calendar_id", "primary")
-		client, err := googleCalendarClient(cfg)
+		client, err := googleCalendarClient(ctx, cfg)
 		if err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}
@@ -340,8 +349,29 @@ func googleCredentialsPath(cfg *config.Config) string {
 	return filepath.Join(cfg.ClaudeDir, "google", "credentials.json")
 }
 
-func googleTokenPath(cfg *config.Config) string {
+// googleTokenPath returns the token file path. When a JWT identity is present
+// in ctx it returns a per-JTI path so each user has isolated Google tokens.
+func googleTokenPath(ctx context.Context, cfg *config.Config) string {
+	if claims := GetAuthClaims(ctx); claims != nil && claims.JTI != "" {
+		return filepath.Join(cfg.ClaudeDir, "google", "calendar-token-"+claims.JTI+".json")
+	}
 	return filepath.Join(cfg.ClaudeDir, "google", "calendar-token.json")
+}
+
+// checkGoogleScope returns an error if the JWT in ctx exists but does not
+// include requiredScope. Admin/unauthenticated requests always pass.
+func checkGoogleScope(ctx context.Context, requiredScope string) error {
+	claims := GetAuthClaims(ctx)
+	if claims == nil || len(claims.GoogleScopes) == 0 {
+		return nil
+	}
+	for _, s := range claims.GoogleScopes {
+		if s == requiredScope || s == "https://www.googleapis.com/auth/calendar" {
+			return nil
+		}
+	}
+	return fmt.Errorf("insufficient Google scope: token has %v, need %s",
+		claims.GoogleScopes, requiredScope)
 }
 
 func loadGoogleCredentials(cfg *config.Config) (googleCredentials, error) {
@@ -353,24 +383,25 @@ func loadGoogleCredentials(cfg *config.Config) (googleCredentials, error) {
 	return creds, json.Unmarshal(data, &creds)
 }
 
-func loadGoogleToken(cfg *config.Config) (googleToken, error) {
+func loadGoogleToken(ctx context.Context, cfg *config.Config) (googleToken, error) {
 	var tok googleToken
-	data, err := os.ReadFile(googleTokenPath(cfg))
+	data, err := os.ReadFile(googleTokenPath(ctx, cfg))
 	if err != nil {
 		return tok, err
 	}
 	return tok, json.Unmarshal(data, &tok)
 }
 
-func saveGoogleToken(cfg *config.Config, tok googleToken) error {
-	if err := os.MkdirAll(filepath.Dir(googleTokenPath(cfg)), 0700); err != nil {
+func saveGoogleToken(ctx context.Context, cfg *config.Config, tok googleToken) error {
+	path := googleTokenPath(ctx, cfg)
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return err
 	}
 	b, _ := json.MarshalIndent(tok, "", "  ")
-	return os.WriteFile(googleTokenPath(cfg), b, 0600)
+	return os.WriteFile(path, b, 0600)
 }
 
-func refreshGoogleToken(cfg *config.Config, tok googleToken, creds googleCredentials) (googleToken, error) {
+func refreshGoogleToken(ctx context.Context, cfg *config.Config, tok googleToken, creds googleCredentials) (googleToken, error) {
 	data := url.Values{
 		"client_id":     {creds.Installed.ClientID},
 		"client_secret": {creds.Installed.ClientSecret},
@@ -399,26 +430,26 @@ return tok, fmt.Errorf("invalid refresh response")
 	}
 	tok.AccessToken = result.AccessToken
 	tok.Expiry = time.Now().Add(time.Duration(result.ExpiresIn) * time.Second)
-	_ = saveGoogleToken(cfg, tok)
+	_ = saveGoogleToken(ctx, cfg, tok)
 	return tok, nil
 }
 
-func googleCalendarClient(cfg *config.Config) (*http.Client, error) {
-tok, err := loadGoogleToken(cfg)
-if err != nil {
-return nil, fmt.Errorf("Google Calendar not authorized")
-}
-if time.Now().After(tok.Expiry.Add(-30 * time.Second)) {
-creds, err := loadGoogleCredentials(cfg)
-if err != nil {
-return nil, fmt.Errorf("Google Calendar credentials not found")
-}
-tok, err = refreshGoogleToken(cfg, tok, creds)
-if err != nil {
-return nil, fmt.Errorf("Google Calendar token refresh failed: %v", err)
-}
-}
-return &http.Client{Transport: &calBearerTransport{token: tok.AccessToken}}, nil
+func googleCalendarClient(ctx context.Context, cfg *config.Config) (*http.Client, error) {
+	tok, err := loadGoogleToken(ctx, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("not authorized: run calendar_auth_url first")
+	}
+	if time.Now().After(tok.Expiry.Add(-30 * time.Second)) {
+		creds, err := loadGoogleCredentials(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("credentials not found — run calendar_auth_url setup first")
+		}
+		tok, err = refreshGoogleToken(ctx, cfg, tok, creds)
+		if err != nil {
+			return nil, fmt.Errorf("token refresh failed: %v — run calendar_auth_url to re-authorize", err)
+		}
+	}
+	return &http.Client{Transport: &calBearerTransport{token: tok.AccessToken}}, nil
 }
 
 func calAPIGet(client *http.Client, apiURL string) ([]byte, error) {

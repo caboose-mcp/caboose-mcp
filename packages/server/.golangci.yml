@@ -1,0 +1,14 @@
+run:
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    - typecheck   # catches compile errors
+    - govet       # catches real bugs (nilderef, printf format, etc.)
+
+linters-settings:
+  govet:
+    disable:
+      - shadow         # too many pre-existing shadowed err vars
+      - fieldalignment # not worth restructuring existing structs

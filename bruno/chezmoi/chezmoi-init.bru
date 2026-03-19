@@ -1,0 +1,30 @@
+meta {
+  name: chezmoi-init
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 11,
+    "method": "tools/call",
+    "params": {
+      "name": "chezmoi_init",
+      "arguments": {
+        ""repo"": "caboose"
+        ""apply"": false
+      }
+    }
+  }
+}

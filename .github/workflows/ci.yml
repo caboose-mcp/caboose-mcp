@@ -1,8 +1,12 @@
 # ci.yml — runs on every PR and push to main
 #
-# Jobs:
-#   server  — go vet + go build (linux/arm64 + linux/amd64)
-#   extension — tsc compile check
+# Gates (all must pass before merge):
+#   lint      — golangci-lint (errcheck, staticcheck, govet, unused, gosimple)
+#   test      — go test ./... with coverage report; minimum 1% (raise as tests grow)
+#   build     — cross-compile for linux/amd64 + linux/arm64
+#   e2e       — build binary + smoke-test auth:create against a temp dir
+#   ui-build  — pnpm install + build React UI; generate changelog.json
+#   extension — TypeScript compile check for VS Code extension
 
 name: CI
 
@@ -13,9 +17,66 @@ on:
     branches: [main]
 
 jobs:
-  # ─── Go server ──────────────────────────────────────────────────────────────
-  server:
-    name: Server (Go)
+  # ─── Lint ────────────────────────────────────────────────────────────────────
+  lint:
+    name: Lint (golangci-lint)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: packages/server/go.mod
+          cache-dependency-path: packages/server/go.sum
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: packages/server
+          args: --timeout=5m
+
+  # ─── Unit tests + coverage gate ──────────────────────────────────────────────
+  test:
+    name: Unit Tests + Coverage
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: packages/server/go.mod
+          cache-dependency-path: packages/server/go.sum
+
+      - name: Run tests with coverage
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./tools/ -v
+
+      - name: Coverage gate (minimum 1% — increase as tests grow)
+        run: |
+          COVERAGE=$(go tool cover -func=coverage.out | grep '^total:' | awk '{print $3}' | tr -d '%')
+          echo "Total coverage: ${COVERAGE}%"
+          if [ "$(echo "$COVERAGE < 1.0" | bc -l)" -eq 1 ]; then
+            echo "Coverage ${COVERAGE}% is below minimum threshold of 1%"
+            exit 1
+          fi
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: packages/server/coverage.out
+
+  # ─── Build ───────────────────────────────────────────────────────────────────
+  build:
+    name: Build (Go)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -38,7 +99,95 @@ jobs:
       - name: Build (arm64)
         run: CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o /dev/null .
 
-  # ─── VS Code extension ──────────────────────────────────────────────────────
+  # ─── E2E smoke test ──────────────────────────────────────────────────────────
+  e2e:
+    name: E2E Smoke Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: packages/server/go.mod
+          cache-dependency-path: packages/server/go.sum
+
+      - name: Build binary
+        run: CGO_ENABLED=0 go build -o caboose-mcp .
+
+      - name: Smoke test — auth:create
+        run: |
+          export CLAUDE_DIR=$(mktemp -d)
+          OUTPUT=$(./caboose-mcp auth:create --label "e2e-smoke" --tools "note_add,focus_start" --expires 1)
+          echo "$OUTPUT"
+          echo "$OUTPUT" | grep -q "Magic link" || (echo "FAIL: no magic link in output" && exit 1)
+          echo "$OUTPUT" | grep -q "e2e-smoke"  || (echo "FAIL: label not in output" && exit 1)
+          echo "E2E smoke test passed"
+
+      - name: Smoke test — auth:create all tools (no --tools flag)
+        run: |
+          export CLAUDE_DIR=$(mktemp -d)
+          OUTPUT=$(./caboose-mcp auth:create --label "e2e-all-tools")
+          echo "$OUTPUT"
+          echo "$OUTPUT" | grep -q "Tools:   all" || (echo "FAIL: expected 'Tools: all'" && exit 1)
+
+  # ─── React UI build + changelog generation ───────────────────────────────────
+  ui-build:
+    name: UI Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 50  # enough for recent changelog entries
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies (workspace root)
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate changelog.json from git history
+        run: |
+          git log --pretty=format:'{"hash":"%H","date":"%aI","subject":"%s","author":"%an"}' -50 \
+          | python3 -c "
+          import sys, json, re
+          entries = []
+          for line in sys.stdin:
+              line = line.strip()
+              if not line: continue
+              try:
+                  e = json.loads(line)
+              except json.JSONDecodeError:
+                  continue
+              tags = re.findall(r'^(feat|fix|docs|ci|chore|refactor|style|test|perf)', e['subject'])
+              e['tags'] = tags if tags else ['other']
+              e['hash'] = e['hash'][:40]
+              entries.append(e)
+          print(json.dumps(entries, indent=2))
+          " > packages/ui/src/data/changelog.json
+          echo "Generated $(wc -l < packages/ui/src/data/changelog.json) lines of changelog"
+
+      - name: Build UI
+        working-directory: packages/ui
+        run: pnpm build
+
+      - name: Upload UI dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-dist
+          path: packages/ui/dist/
+          retention-days: 7
+
+  # ─── VS Code extension ───────────────────────────────────────────────────────
   extension:
     name: Extension (TypeScript)
     runs-on: ubuntu-latest

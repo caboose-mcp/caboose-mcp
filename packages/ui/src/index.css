@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-bg text-text-primary font-sans;
+  }
+
+  ::selection {
+    @apply bg-accent-green/20 text-accent-green;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-1.5;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-bg;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border-bright rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-border-glow;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-accent-green text-bg font-medium rounded-lg
+           hover:bg-accent-green/90 active:scale-95 transition-all duration-150 text-sm;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-4 py-2 border border-border text-text-secondary rounded-lg
+           hover:border-border-bright hover:text-text-primary transition-all duration-150 text-sm;
+  }
+
+  .card {
+    @apply bg-bg-card border border-border rounded-xl p-5
+           hover:border-border-bright transition-all duration-200;
+  }
+
+  .card-glow {
+    @apply card hover:shadow-lg hover:shadow-accent-green/5;
+  }
+
+  .tag {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium font-mono;
+  }
+
+  .input {
+    @apply w-full bg-bg-secondary border border-border rounded-lg px-3 py-2 text-sm
+           text-text-primary placeholder:text-text-muted
+           focus:outline-none focus:border-accent-green/50 focus:ring-1 focus:ring-accent-green/20
+           transition-all duration-150;
+  }
+
+  .terminal {
+    @apply bg-[#0a0a0f] border border-border rounded-xl overflow-hidden font-mono text-sm;
+  }
+
+  .terminal-bar {
+    @apply flex items-center gap-1.5 px-4 py-2.5 bg-bg-secondary border-b border-border;
+  }
+
+  .terminal-dot {
+    @apply w-3 h-3 rounded-full;
+  }
+}
+
+/* Syntax highlight overrides */
+.hljs-comment { color: #475569; }
+.hljs-string { color: #86efac; }
+.hljs-number { color: #fb923c; }
+.hljs-keyword { color: #a855f7; }
+.hljs-built_in { color: #38bdf8; }
+.hljs-attr { color: #93c5fd; }

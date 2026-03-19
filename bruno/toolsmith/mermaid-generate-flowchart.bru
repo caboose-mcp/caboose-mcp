@@ -1,0 +1,30 @@
+meta {
+  name: mermaid-generate-flowchart
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 6,
+    "method": "tools/call",
+    "params": {
+      "name": "mermaid_generate",
+      "arguments": {
+        ""type"": "flowchart"
+        ""source"": "User logs in -> Auth check -> Dashboard"
+      }
+    }
+  }
+}

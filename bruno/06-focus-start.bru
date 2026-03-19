@@ -1,0 +1,30 @@
+meta {
+  name: Focus Start
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 6,
+    "method": "tools/call",
+    "params": {
+      "name": "focus_start",
+      "arguments": {
+        "goal": "Testing the MCP server",
+        "duration": 25
+      }
+    }
+  }
+}

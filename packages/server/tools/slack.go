@@ -110,7 +110,7 @@ if cfg.SlackToken == "" {
 return mcp.NewToolResultError("Slack token not configured"), nil
 }
 		limit := req.GetInt("limit", 100)
-		u := fmt.Sprintf("https://slack.com/api/conversations.list?limit=%d", limit)
+		u := fmt.Sprintf("https://slack.com/api/conversations.list?limit=%d&types=public_channel,private_channel", limit)
 		httpReq, _ := http.NewRequest("GET", u, nil)
 		httpReq.Header.Set("Authorization", "Bearer "+cfg.SlackToken)
 		resp, err := http.DefaultClient.Do(httpReq)

@@ -1,0 +1,29 @@
+meta {
+  name: chezmoi-update
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 10,
+    "method": "tools/call",
+    "params": {
+      "name": "chezmoi_update",
+      "arguments": {
+        ""dry_run"": true
+      }
+    }
+  }
+}

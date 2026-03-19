@@ -1,0 +1,30 @@
+meta {
+  name: slack-post-message
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "slack_post_message",
+      "arguments": {
+        ""channel"": "C0AJV8828SF"
+        ""text"": "Hello from Bruno!"
+      }
+    }
+  }
+}
