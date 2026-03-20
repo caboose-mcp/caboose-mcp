@@ -15,6 +15,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/caboose-mcp/server/config"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -74,7 +75,7 @@ func chuckNorrisJokeHandler(cfg *config.Config) func(context.Context, mcp.CallTo
 		// Return the joke
 		result := fmt.Sprintf("Chuck Norris Joke:\n\n%s", joke.Value)
 		if len(joke.Categories) > 0 {
-			result = fmt.Sprintf("Chuck Norris Joke (%s):\n\n%s", joke.Categories[0], joke.Value)
+			result = fmt.Sprintf("Chuck Norris Joke (%s):\n\n%s", strings.Join(joke.Categories, ", "), joke.Value)
 		}
 
 		return mcp.NewToolResultText(result), nil
