@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/caboose-mcp/server/config"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -36,8 +37,10 @@ func RegisterChuckNorrisJoke(s *server.MCPServer, cfg *config.Config) {
 	), chuckNorrisJokeHandler(cfg))
 }
 
+var chuckNorrisHTTPClient = &http.Client{Timeout: 10 * time.Second}
+
 func chuckNorrisJokeHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		category := req.GetString("category", "")
 
 		// Build the API URL
@@ -47,8 +50,12 @@ func chuckNorrisJokeHandler(cfg *config.Config) func(context.Context, mcp.CallTo
 			apiURL = fmt.Sprintf("https://api.chucknorris.io/jokes/random?category=%s", url.QueryEscape(category))
 		}
 
-		// Make the HTTP request
-		resp, err := http.Get(apiURL)
+		// Make the HTTP request using the caller's context so it can be cancelled
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+		if err != nil {
+			return mcp.NewToolResultText(fmt.Sprintf("Error creating request: %v", err)), nil
+		}
+		resp, err := chuckNorrisHTTPClient.Do(httpReq)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Error fetching joke: %v", err)), nil
 		}
