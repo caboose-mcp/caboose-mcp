@@ -1,6 +1,6 @@
 # caboose-mcp
 
-Personal AI toolserver — 108 MCP tools exposed to Claude, VS Code, and chat bots via a Go server hosted on AWS ECS.
+Personal AI toolserver — 117 MCP tools exposed to Claude, VS Code, and chat bots via a Go server hosted on AWS ECS.
 
 [![Deploy Infra](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-infra.yml/badge.svg)](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-infra.yml)
 [![Deploy Bots](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-bots.yml/badge.svg)](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-bots.yml)
@@ -21,9 +21,9 @@ Personal AI toolserver — 108 MCP tools exposed to Claude, VS Code, and chat bo
 
 ```mermaid
 graph TD
-    Claude["Claude Code (stdio)"] -->|all 108 tools| Binary["caboose-mcp (Pi)"]
+    Claude["Claude Code (stdio)"] -->|all 117 tools| Binary["caboose-mcp (Pi)"]
     VSCode["VS Code / Bruno"] -->|HTTPS| ALB["ALB · mcp.chrismarasco.io"]
-    ALB --> Serve["ECS · --serve-hosted\n88 hosted tools"]
+    ALB --> Serve["ECS · --serve-hosted\n92 hosted tools"]
     Slack["Slack"] --> Bots["ECS · --bots\nSlack + Discord gateway"]
     Discord["Discord"] --> Bots
     Bots -->|Claude Haiku| Agent["Bot agent loop"]
@@ -40,9 +40,9 @@ Tools are split so the cloud server only exposes what's safe remotely.
 
 | Tier | Flag | Count | What's included |
 |------|------|-------|-----------------|
-| **Hosted** | `--serve-hosted` | 88 | Calendar, Slack, Discord, GitHub, Notes, Focus, Learning, Sources, CloudSync, Audit, Health, Secrets, DB, Mermaid, Greptile, Sandbox, Persona, Jokes, Setup |
-| **Local** | `--serve-local` | 20 | Docker, execute_command, Bambu, Blender, Chezmoi, Toolsmith |
-| **Combined** | `--serve` / stdio | 108 | Everything |
+| **Hosted** | `--serve-hosted` | 92 | Calendar, Slack, Discord, GitHub, Notes, Focus, Learning, Sources, CloudSync, Audit, Auth, Health, Secrets, DB, Env, Mermaid, Greptile, Sandbox, Persona, Jokes, Setup |
+| **Local** | `--serve-local` | 25 | Docker, execute_command, Bambu, Blender, Chezmoi, Toolsmith, Agency |
+| **Combined** | `--serve` / stdio | 117 | Everything |
 
 Full reference: [docs/tools.md](docs/tools.md)
 
@@ -179,7 +179,7 @@ Or edit `packages/server/tools/` directly — one `.go` file per feature group.
 ## Repository Layout
 
 ```
-packages/server/         Go MCP server (108 tools)
+packages/server/         Go MCP server (117 tools)
   tools/                 One .go file per feature group
   config/config.go       All env vars → Config struct
   main.go                Flags, server builders, HTTP mux, bot runner
