@@ -3,9 +3,11 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/caboose-mcp/server/tools"
@@ -21,9 +23,9 @@ import (
 //  5. Invalid token → 401
 //
 // When MCP_AUTH_TOKEN is not set (open/local mode), auth is optional:
-//  - No bearer → request passes through without claims (tools check own credentials)
-//  - Valid JWT → claims injected for per-user scoping (calendar tokens, ACL)
-//  - Invalid JWT → 401 (don't silently drop a bad token)
+//   - No bearer → request passes through without claims (tools check own credentials)
+//   - Valid JWT → claims injected for per-user scoping (calendar tokens, ACL)
+//   - Invalid JWT → 401 (don't silently drop a bad token)
 func authMiddleware(adminToken string, jwtSecret []byte, claudeDir string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Magic link verification endpoint is always unauthenticated.
@@ -42,7 +44,7 @@ func authMiddleware(adminToken string, jwtSecret []byte, claudeDir string, next 
 
 		// If MCP_AUTH_TOKEN is set, an Authorization header is required.
 		if adminToken != "" && !hasAuthHeader {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			writeUnauthorized(w)
 			return
 		}
 
@@ -54,7 +56,7 @@ func authMiddleware(adminToken string, jwtSecret []byte, claudeDir string, next 
 
 		// Authorization header present but no valid non-empty Bearer token → treat as invalid token.
 		if !hasBearer {
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			writeUnauthorized(w)
 			return
 		}
 
@@ -62,7 +64,7 @@ func authMiddleware(adminToken string, jwtSecret []byte, claudeDir string, next 
 		claims, err := tools.VerifyJWT(claudeDir, jwtSecret, bearer)
 		if err != nil {
 			log.Printf("auth: JWT verification failed: %v", err)
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			writeUnauthorized(w)
 			return
 		}
 
@@ -135,3 +137,18 @@ func claimsAllowTool(allowed []string, name string) bool {
 	return false
 }
 
+// writeUnauthorized writes a 401 response with a WWW-Authenticate header pointing
+// clients to the auth portal for discovery.
+func writeUnauthorized(w http.ResponseWriter) {
+	baseURL := mcpBaseURLMiddleware()
+	w.Header().Set("WWW-Authenticate", fmt.Sprintf(`Bearer realm="%s/auth"`, baseURL))
+	http.Error(w, "Unauthorized", http.StatusUnauthorized)
+}
+
+// mcpBaseURLMiddleware returns the MCP server base URL for the WWW-Authenticate header.
+func mcpBaseURLMiddleware() string {
+	if v := os.Getenv("MCP_BASE_URL"); v != "" {
+		return v
+	}
+	return "http://localhost:8080"
+}
