@@ -165,6 +165,12 @@ func serveHTTP(cfg *config.Config, addr string, s *server.MCPServer) {
 	}
 }
 
+// registerCommonTools registers tools available in both hosted and local modes.
+// These tools have no dependency on local hardware and are safe to run everywhere.
+func registerCommonTools(s *server.MCPServer, cfg *config.Config) {
+	tools.RegisterJokes(s, cfg)
+}
+
 // registerHostedTools registers tools that are safe to run in a cloud/hosted environment.
 // These tools have no dependency on local hardware, Docker, or LAN-connected devices.
 func registerHostedTools(s *server.MCPServer, cfg *config.Config) {
@@ -184,13 +190,13 @@ func registerHostedTools(s *server.MCPServer, cfg *config.Config) {
 	tools.RegisterHealth(s, cfg)
 	tools.RegisterPersona(s, cfg)
 	tools.RegisterFocus(s, cfg)
-	tools.RegisterJokes(s, cfg)
 	tools.RegisterCalendar(s, cfg)
 	tools.RegisterNotes(s, cfg)
 	tools.RegisterSources(s, cfg)
 	tools.RegisterSandbox(s, cfg)
 	tools.RegisterAudit(s, cfg)
 	tools.RegisterAuth(s, cfg)
+	registerCommonTools(s, cfg)
 }
 
 // registerLocalTools registers tools that require local hardware or LAN access.
@@ -202,6 +208,7 @@ func registerLocalTools(s *server.MCPServer, cfg *config.Config) {
 	tools.RegisterChezmoi(s, cfg)
 	tools.RegisterToolsmith(s, cfg)
 	tools.RegisterAgency(s, cfg)
+	registerCommonTools(s, cfg)
 }
 
 // mcpServerOptions returns the base options for all MCP server builds,
