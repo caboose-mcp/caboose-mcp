@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/caboose-mcp/server/config"
@@ -137,7 +138,13 @@ func (p *GoogleCalendarProvider) ExchangeCode(ctx context.Context, cfg *config.C
 		"redirect_uri":  {"urn:ietf:wg:oauth:2.0:oob"},
 		"grant_type":    {"authorization_code"},
 	}
-	resp, err := http.PostForm(googleTokenURL, data)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, googleTokenURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return fmt.Errorf("building token request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
 		return fmt.Errorf("token exchange failed: %w", err)
 	}
@@ -153,7 +160,10 @@ func (p *GoogleCalendarProvider) ExchangeCode(ctx context.Context, cfg *config.C
 	}
 
 	// Read and parse response
-	body, _ := readResponseBody(resp)
+	body, err := readResponseBody(resp)
+	if err != nil {
+		return fmt.Errorf("reading token response: %w", err)
+	}
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("invalid OAuth error response (HTTP %d): %s", resp.StatusCode, string(body))
 	}

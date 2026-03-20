@@ -300,7 +300,7 @@ func TestSplitCSV(t *testing.T) {
 func TestCreateIssuedToken(t *testing.T) {
 	dir := testClaudeDir(t)
 
-	issued, magicStr, err := createIssuedToken(dir, "e2e-user", []string{"note_add"}, nil, 30)
+	issued, magicStr, err := createIssuedToken(dir, "e2e-user", []string{"note_add"}, nil, nil, nil, 30)
 	if err != nil {
 		t.Fatalf("createIssuedToken failed: %v", err)
 	}

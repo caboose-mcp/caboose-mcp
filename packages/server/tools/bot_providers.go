@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/caboose-mcp/server/config"
 )
@@ -86,7 +87,7 @@ func (p *DiscordBotProvider) GetAuthURL(cfg *config.Config, state string) (strin
 		"redirect_uri":  {redirectURI},
 		"scope":         {discordBotAPIScopes},
 		"response_type": {"code"},
-		"permissions":   {"8"},
+		"permissions":   {"2048"},
 	}
 	if state != "" {
 		params.Set("state", state)
@@ -113,13 +114,22 @@ func (p *DiscordBotProvider) ExchangeCode(ctx context.Context, cfg *config.Confi
 		"redirect_uri":  {redirectURI},
 	}
 
-	resp, err := http.PostForm(discordBotTokenURL, data)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, discordBotTokenURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return fmt.Errorf("building token request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
 		return fmt.Errorf("token exchange failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("reading token response: %w", err)
+	}
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("invalid OAuth error response (HTTP %d): %s", resp.StatusCode, string(body))
 	}
@@ -161,19 +171,18 @@ func (p *DiscordBotProvider) GetClient(ctx context.Context, cfg *config.Config) 
 		return nil, fmt.Errorf("%s", p.AuthErrorMessage(cfg))
 	}
 
-	// For Discord, we don't implement refresh since the user can re-authorize manually.
-	// In production, implement refresh token logic if Discord provides refresh tokens.
-	return &http.Client{Transport: &botBearerTransport{token: tok.AccessToken}}, nil
+	// Discord bots use the "Bot" scheme, not "Bearer".
+	return &http.Client{Transport: &discordBotTransport{token: tok.AccessToken}}, nil
 }
 
 func (p *DiscordBotProvider) AuthErrorMessage(cfg *config.Config) string {
 	authURL, err := p.GetAuthURL(cfg, "")
 	if err != nil {
-		return "Discord bot not authorized. Set DISCORD_CLIENT_ID and DISCORD_CLIENT_SECRET, then call bot_auth_get_discord_url."
+		return "Discord bot not authorized. Ensure DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, and DISCORD_REDIRECT_URI are set, then retry your request."
 	}
 	return fmt.Sprintf(
-		"Discord bot not authorized.\n\nVisit this URL to authorize:\n\n%s\n\n"+
-			"Then call: bot_auth_complete_discord(code=\"<paste code here>\")",
+		"Discord bot not authorized.\n\nVisit this URL to authorize the bot:\n\n%s\n\n"+
+			"After completing authorization in your browser, retry your request.",
 		authURL)
 }
 
@@ -233,13 +242,22 @@ func (p *SlackBotProvider) ExchangeCode(ctx context.Context, cfg *config.Config,
 		"grant_type":    {"authorization_code"},
 	}
 
-	resp, err := http.PostForm(slackBotTokenURL, data)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, slackBotTokenURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return fmt.Errorf("building token request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(httpReq)
 	if err != nil {
 		return fmt.Errorf("token exchange failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return fmt.Errorf("reading token response: %w", err)
+	}
 	if resp.StatusCode >= 400 {
 		return fmt.Errorf("invalid OAuth error response (HTTP %d): %s", resp.StatusCode, string(body))
 	}
@@ -285,11 +303,11 @@ func (p *SlackBotProvider) GetClient(ctx context.Context, cfg *config.Config) (*
 func (p *SlackBotProvider) AuthErrorMessage(cfg *config.Config) string {
 	authURL, err := p.GetAuthURL(cfg, "")
 	if err != nil {
-		return "Slack bot not authorized. Set SLACK_CLIENT_ID and SLACK_CLIENT_SECRET, then call bot_auth_get_slack_url."
+		return "Slack bot not authorized. Ensure SLACK_CLIENT_ID and SLACK_CLIENT_SECRET are set, then retry your request."
 	}
 	return fmt.Sprintf(
-		"Slack bot not authorized.\n\nVisit this URL to authorize:\n\n%s\n\n"+
-			"Then call: bot_auth_complete_slack(code=\"<paste code here>\")",
+		"Slack bot not authorized.\n\nVisit this URL to authorize the bot:\n\n%s\n\n"+
+			"After completing authorization in your browser, retry your request.",
 		authURL)
 }
 
@@ -309,6 +327,17 @@ type botBearerTransport struct {
 func (t *botBearerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	req = req.Clone(req.Context())
 	req.Header.Set("Authorization", "Bearer "+t.token)
+	return http.DefaultTransport.RoundTrip(req)
+}
+
+// discordBotTransport is an http.RoundTripper that attaches Discord's Bot token scheme.
+type discordBotTransport struct {
+	token string
+}
+
+func (t *discordBotTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req = req.Clone(req.Context())
+	req.Header.Set("Authorization", "Bot "+t.token)
 	return http.DefaultTransport.RoundTrip(req)
 }
 
@@ -337,6 +366,9 @@ func saveBotToken(ctx context.Context, cfg *config.Config, provider OAuthProvide
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
 		return err
 	}
-	b, _ := json.MarshalIndent(tok, "", "  ")
+	b, err := json.MarshalIndent(tok, "", "  ")
+	if err != nil {
+		return err
+	}
 	return os.WriteFile(path, b, 0600)
 }
