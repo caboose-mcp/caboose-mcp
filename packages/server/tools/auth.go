@@ -40,12 +40,14 @@ var authClaimsKey = authClaimsKeyType{}
 
 // JWTClaims holds per-token access control data injected into context.
 type JWTClaims struct {
-	Subject      string   `json:"sub"`
-	JTI          string   `json:"jti"`
-	Tools        []string `json:"tools"`
-	GoogleScopes []string `json:"google_scopes"`
-	IssuedAt     int64    `json:"iat"`
-	ExpiresAt    int64    `json:"exp"`
+	Subject       string   `json:"sub"`
+	JTI           string   `json:"jti"`
+	Tools         []string `json:"tools"`
+	GoogleScopes  []string `json:"google_scopes"`
+	DiscordScopes []string `json:"discord_scopes"`
+	SlackScopes   []string `json:"slack_scopes"`
+	IssuedAt      int64    `json:"iat"`
+	ExpiresAt     int64    `json:"exp"`
 }
 
 // GetAuthClaims retrieves JWT claims from context. Returns nil for admin/unauthenticated.
@@ -63,20 +65,22 @@ func WithAuthClaims(ctx context.Context, claims *JWTClaims) context.Context {
 
 // IssuedToken is one entry in issued-tokens.json.
 type IssuedToken struct {
-	JTI          string    `json:"jti"`
-	Label        string    `json:"label"`
-	Tools        []string  `json:"tools"`
-	GoogleScopes []string  `json:"google_scopes"`
-	IssuedAt     time.Time `json:"issued_at"`
-	ExpiresAt    time.Time `json:"expires_at"`
-	Revoked      bool      `json:"revoked"`
+	JTI           string    `json:"jti"`
+	Label         string    `json:"label"`
+	Tools         []string  `json:"tools"`
+	GoogleScopes  []string  `json:"google_scopes"`
+	DiscordScopes []string  `json:"discord_scopes"`
+	SlackScopes   []string  `json:"slack_scopes"`
+	IssuedAt      time.Time `json:"issued_at"`
+	ExpiresAt     time.Time `json:"expires_at"`
+	Revoked       bool      `json:"revoked"`
 }
 
 // magicToken is one entry in magic-tokens.json.
 // Token field format: "<16-byte hex>:<jti>" — consumed on first use.
 type magicToken struct {
-	Token        string    `json:"token"`
-	ExpiresAt    time.Time `json:"expires_at"`
+	Token     string    `json:"token"`
+	ExpiresAt time.Time `json:"expires_at"`
 }
 
 // ---- File paths ----
@@ -245,12 +249,14 @@ func ClaimsForIdentity(claudeDir, platformKey string) (*JWTClaims, bool) {
 		return nil, false
 	}
 	return &JWTClaims{
-		Subject:      issued.Label,
-		JTI:          issued.JTI,
-		Tools:        issued.Tools,
-		GoogleScopes: issued.GoogleScopes,
-		IssuedAt:     issued.IssuedAt.Unix(),
-		ExpiresAt:    issued.ExpiresAt.Unix(),
+		Subject:       issued.Label,
+		JTI:           issued.JTI,
+		Tools:         issued.Tools,
+		GoogleScopes:  issued.GoogleScopes,
+		DiscordScopes: issued.DiscordScopes,
+		SlackScopes:   issued.SlackScopes,
+		IssuedAt:      issued.IssuedAt.Unix(),
+		ExpiresAt:     issued.ExpiresAt.Unix(),
 	}, true
 }
 
@@ -258,12 +264,14 @@ func ClaimsForIdentity(claudeDir, platformKey string) (*JWTClaims, bool) {
 
 func issueJWT(secret []byte, issued *IssuedToken) (string, error) {
 	claims := jwt.MapClaims{
-		"sub":           issued.Label,
-		"jti":           issued.JTI,
-		"tools":         issued.Tools,
-		"google_scopes": issued.GoogleScopes,
-		"iat":           issued.IssuedAt.Unix(),
-		"exp":           issued.ExpiresAt.Unix(),
+		"sub":            issued.Label,
+		"jti":            issued.JTI,
+		"tools":          issued.Tools,
+		"google_scopes":  issued.GoogleScopes,
+		"discord_scopes": issued.DiscordScopes,
+		"slack_scopes":   issued.SlackScopes,
+		"iat":            issued.IssuedAt.Unix(),
+		"exp":            issued.ExpiresAt.Unix(),
 	}
 	return jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(secret)
 }
@@ -311,18 +319,36 @@ func VerifyJWT(claudeDir string, secret []byte, rawToken string) (*JWTClaims, er
 			}
 		}
 	}
+	var discordScopes []string
+	if raw, ok := mc["discord_scopes"].([]any); ok {
+		for _, v := range raw {
+			if s, ok := v.(string); ok {
+				discordScopes = append(discordScopes, s)
+			}
+		}
+	}
+	var slackScopes []string
+	if raw, ok := mc["slack_scopes"].([]any); ok {
+		for _, v := range raw {
+			if s, ok := v.(string); ok {
+				slackScopes = append(slackScopes, s)
+			}
+		}
+	}
 
 	sub, _ := mc["sub"].(string)
 	iat, _ := mc["iat"].(float64)
 	exp, _ := mc["exp"].(float64)
 
 	return &JWTClaims{
-		Subject:      sub,
-		JTI:          jti,
-		Tools:        tools,
-		GoogleScopes: googleScopes,
-		IssuedAt:     int64(iat),
-		ExpiresAt:    int64(exp),
+		Subject:       sub,
+		JTI:           jti,
+		Tools:         tools,
+		GoogleScopes:  googleScopes,
+		DiscordScopes: discordScopes,
+		SlackScopes:   slackScopes,
+		IssuedAt:      int64(iat),
+		ExpiresAt:     int64(exp),
 	}, nil
 }
 
@@ -394,6 +420,8 @@ func RegisterAuth(s *server.MCPServer, cfg *config.Config) {
 		mcp.WithString("label", mcp.Required(), mcp.Description("Friendly name for this token (e.g. 'vscode-alice')")),
 		mcp.WithString("tools", mcp.Description("Comma-separated tool names this token can access. Empty means all tools.")),
 		mcp.WithString("google_scopes", mcp.Description("Comma-separated Google scopes ('calendar' = readonly, 'calendar.full' = full access)")),
+		mcp.WithString("discord_scopes", mcp.Description("Comma-separated Discord bot scopes ('discord' = 'discord_bot')")),
+		mcp.WithString("slack_scopes", mcp.Description("Comma-separated Slack bot scopes ('slack' = 'slack_bot')")),
 		mcp.WithNumber("expires_days", mcp.Description("Days until token expires (default 30)")),
 	), authCreateTokenHandler(cfg))
 
@@ -436,9 +464,11 @@ func authCreateTokenHandler(cfg *config.Config) func(context.Context, mcp.CallTo
 		}
 
 		toolList := splitCSV(req.GetString("tools", ""))
-		scopeList := expandGoogleScopes(splitCSV(req.GetString("google_scopes", "")))
+		googleScopeList := expandGoogleScopes(splitCSV(req.GetString("google_scopes", "")))
+		discordScopeList := expandDiscordScopes(splitCSV(req.GetString("discord_scopes", "")))
+		slackScopeList := expandSlackScopes(splitCSV(req.GetString("slack_scopes", "")))
 
-		issued, magicTokenStr, err := createIssuedToken(cfg.ClaudeDir, label, toolList, scopeList, expiresDays)
+		issued, magicTokenStr, err := createIssuedToken(cfg.ClaudeDir, label, toolList, googleScopeList, discordScopeList, slackScopeList, expiresDays)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("failed to create token: %v", err)), nil
 		}
@@ -452,8 +482,14 @@ func authCreateTokenHandler(cfg *config.Config) func(context.Context, mcp.CallTo
 		} else {
 			sb.WriteString("Tools:   all\n")
 		}
-		if len(scopeList) > 0 {
-			sb.WriteString(fmt.Sprintf("Scopes:  %s\n", strings.Join(scopeList, ", ")))
+		if len(googleScopeList) > 0 {
+			sb.WriteString(fmt.Sprintf("Google:  %s\n", strings.Join(googleScopeList, ", ")))
+		}
+		if len(discordScopeList) > 0 {
+			sb.WriteString(fmt.Sprintf("Discord: %s\n", strings.Join(discordScopeList, ", ")))
+		}
+		if len(slackScopeList) > 0 {
+			sb.WriteString(fmt.Sprintf("Slack:   %s\n", strings.Join(slackScopeList, ", ")))
 		}
 		sb.WriteString(fmt.Sprintf("\nMagic link (valid 15 min):\n%s/auth/verify?token=%s\n", baseURL, magicTokenStr))
 		sb.WriteString(fmt.Sprintf("\ncurl \"%s/auth/verify?token=%s\"\n", baseURL, magicTokenStr))
@@ -592,14 +628,16 @@ func authUnlinkIdentityHandler(cfg *config.Config) func(context.Context, mcp.Cal
 
 // CreateTokenCLI creates a token and prints the magic link to stdout.
 // Used by the auth:create CLI command in main.go.
-func CreateTokenCLI(cfg *config.Config, label, toolsStr, scopesStr string, expiresDays int) error {
+func CreateTokenCLI(cfg *config.Config, label, toolsStr, googleScopesStr, discordScopesStr, slackScopesStr string, expiresDays int) error {
 	if expiresDays < 1 {
 		expiresDays = 30
 	}
 	toolList := splitCSV(toolsStr)
-	scopeList := expandGoogleScopes(splitCSV(scopesStr))
+	googleScopeList := expandGoogleScopes(splitCSV(googleScopesStr))
+	discordScopeList := expandDiscordScopes(splitCSV(discordScopesStr))
+	slackScopeList := expandSlackScopes(splitCSV(slackScopesStr))
 
-	issued, magicTokenStr, err := createIssuedToken(cfg.ClaudeDir, label, toolList, scopeList, expiresDays)
+	issued, magicTokenStr, err := createIssuedToken(cfg.ClaudeDir, label, toolList, googleScopeList, discordScopeList, slackScopeList, expiresDays)
 	if err != nil {
 		return fmt.Errorf("failed to create token: %w", err)
 	}
@@ -613,8 +651,14 @@ func CreateTokenCLI(cfg *config.Config, label, toolsStr, scopesStr string, expir
 	} else {
 		fmt.Printf("Tools:   all\n")
 	}
-	if len(scopeList) > 0 {
-		fmt.Printf("Scopes:  %s\n", strings.Join(scopeList, ", "))
+	if len(googleScopeList) > 0 {
+		fmt.Printf("Google:  %s\n", strings.Join(googleScopeList, ", "))
+	}
+	if len(discordScopeList) > 0 {
+		fmt.Printf("Discord: %s\n", strings.Join(discordScopeList, ", "))
+	}
+	if len(slackScopeList) > 0 {
+		fmt.Printf("Slack:   %s\n", strings.Join(slackScopeList, ", "))
 	}
 	fmt.Printf("\nMagic link (valid 15 min):\n%s/auth/verify?token=%s\n", baseURL, magicTokenStr)
 	return nil
@@ -623,16 +667,18 @@ func CreateTokenCLI(cfg *config.Config, label, toolsStr, scopesStr string, expir
 // ---- Internal helpers ----
 
 // createIssuedToken is the shared logic for CLI and MCP tool token creation.
-func createIssuedToken(claudeDir, label string, toolList, scopeList []string, expiresDays int) (*IssuedToken, string, error) {
+func createIssuedToken(claudeDir, label string, toolList, googleScopeList, discordScopeList, slackScopeList []string, expiresDays int) (*IssuedToken, string, error) {
 	jti := uuid.New().String()
 	now := time.Now()
 	issued := IssuedToken{
-		JTI:          jti,
-		Label:        label,
-		Tools:        toolList,
-		GoogleScopes: scopeList,
-		IssuedAt:     now,
-		ExpiresAt:    now.AddDate(0, 0, expiresDays),
+		JTI:           jti,
+		Label:         label,
+		Tools:         toolList,
+		GoogleScopes:  googleScopeList,
+		DiscordScopes: discordScopeList,
+		SlackScopes:   slackScopeList,
+		IssuedAt:      now,
+		ExpiresAt:     now.AddDate(0, 0, expiresDays),
 	}
 	tokens := loadIssuedTokens(claudeDir)
 	tokens = append(tokens, issued)
@@ -675,6 +721,40 @@ func expandGoogleScope(s string) string {
 		return "https://www.googleapis.com/auth/calendar"
 	default:
 		return "https://www.googleapis.com/auth/" + s
+	}
+}
+
+func expandDiscordScopes(scopes []string) []string {
+	out := make([]string, 0, len(scopes))
+	for _, s := range scopes {
+		out = append(out, expandDiscordScope(s))
+	}
+	return out
+}
+
+func expandDiscordScope(s string) string {
+	switch s {
+	case "discord", "bot":
+		return "discord_bot"
+	default:
+		return s
+	}
+}
+
+func expandSlackScopes(scopes []string) []string {
+	out := make([]string, 0, len(scopes))
+	for _, s := range scopes {
+		out = append(out, expandSlackScope(s))
+	}
+	return out
+}
+
+func expandSlackScope(s string) string {
+	switch s {
+	case "slack", "bot":
+		return "slack_bot"
+	default:
+		return s
 	}
 }
 
