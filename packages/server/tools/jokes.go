@@ -37,7 +37,7 @@ func RegisterJokes(s *server.MCPServer, cfg *config.Config) {
 	s.AddTool(mcp.NewTool("chuck_norris_joke",
 		mcp.WithDescription("Fetch a random Chuck Norris joke from the api.chucknorris.io API"),
 		mcp.WithString("category", mcp.Description("Optional category of joke (e.g. 'career', 'celebrity', 'explicit'). If not specified, returns a random joke.")),
-	), chuckNorrisJokeHandler(cfg))
+	), newChuckNorrisJokeHandler(cfg, nil, ""))
 }
 
 func jokeHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -88,19 +88,26 @@ type ChuckNorrisJoke struct {
 	Categories []string `json:"categories"`
 }
 
-func chuckNorrisJokeHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+// newChuckNorrisJokeHandler returns a handler for the chuck_norris_joke tool.
+// httpClient and baseURL can be overridden for testing (pass nil/"" for production defaults).
+func newChuckNorrisJokeHandler(cfg *config.Config, httpClient *http.Client, baseURL string) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	if httpClient == nil {
+		httpClient = &http.Client{Timeout: 10 * time.Second}
+	}
+	if baseURL == "" {
+		baseURL = "https://api.chucknorris.io"
+	}
 	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		category := req.GetString("category", "")
 
 		// Build the API URL
-		apiURL := "https://api.chucknorris.io/jokes/random"
+		apiURL := baseURL + "/jokes/random"
 		if category != "" {
 			// URL encode the category parameter
-			apiURL = fmt.Sprintf("https://api.chucknorris.io/jokes/random?category=%s", url.QueryEscape(category))
+			apiURL = fmt.Sprintf("%s/jokes/random?category=%s", baseURL, url.QueryEscape(category))
 		}
 
 		// Make the HTTP request using context with timeout
-		httpClient := &http.Client{Timeout: 10 * time.Second}
 		httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Error building request: %v", err)), nil
