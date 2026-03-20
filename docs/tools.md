@@ -1,6 +1,6 @@
 # Tool Reference
 
-108 tools across two tiers. **Hosted** tools run on ECS (`--serve-hosted`). **Local** tools require the Pi (`--serve-local`). Both tiers together = `--serve` / stdio.
+117 tools across two tiers. **Hosted** tools run on ECS (`--serve-hosted`). **Local** tools require the Pi (`--serve-local`). Both tiers together = `--serve` / stdio.
 
 ---
 
@@ -189,6 +189,20 @@
 
 ---
 
+### Auth
+| Tool | Description |
+|------|-------------|
+| `auth_create_token` | Create a JWT token (magic link or named API token) |
+| `auth_list_tokens` | List all issued tokens |
+| `auth_revoke_token` | Revoke a token by ID |
+| `auth_link_identity` | Link a platform identity (Discord/Slack user ID) to a token |
+| `auth_list_identities` | List all linked platform identities |
+| `auth_unlink_identity` | Unlink a platform identity |
+
+**Stores:** `~/.claude/auth/` (JWT secret + token store)
+
+---
+
 ### Sandbox
 | Tool | Description |
 |------|-------------|
@@ -316,6 +330,17 @@ These tools require the binary to run on a machine with local hardware/network a
 | `tool_rebuild` | Run `go build` and return compiler output |
 
 **Requires:** Go toolchain on the host
+
+---
+
+### Agency
+| Tool | Description |
+|------|-------------|
+| `agency_list` | List all loaded agent spec files from `~/.claude/agents/` |
+| `agency_detect` | Detect best-matching agent persona for a message using keyword scoring |
+| `agency_hint` | Return a formatted tool hint block for a message (advisory, not enforced) |
+
+**Requires:** Agent spec markdown files in `~/.claude/agents/` (from [agency-agents](https://github.com/msitarzewski/agency-agents))
 
 ---
 
