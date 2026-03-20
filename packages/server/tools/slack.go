@@ -47,7 +47,7 @@ func RegisterSlack(s *server.MCPServer, cfg *config.Config) {
 
 func slackAPICall(cfg *config.Config, method, endpoint string, body any) (map[string]any, error) {
 	if cfg.SlackToken == "" {
-		return nil, fmt.Errorf("`slack_post_message` is not yet set up.\n\nTo configure it, set SLACK_TOKEN=<xoxb-your-token> in your environment or .env file.")
+		return nil, fmt.Errorf("Slack integration is not set up (SLACK_TOKEN missing).\n\nTo configure it, set SLACK_TOKEN=<xoxb-your-token> in your environment or .env file.")
 	}
 	var reqBody io.Reader
 	if body != nil {
