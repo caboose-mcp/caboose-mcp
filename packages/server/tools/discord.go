@@ -31,7 +31,7 @@ const discordAPIBase = "https://discord.com/api/v10"
 // Called by EmitEvent for push notifications and by the discord_webhook_post tool.
 func DiscordWebhookPost(webhookURL, content string) error {
 	if webhookURL == "" {
-		return fmt.Errorf("`discord_webhook_post` is not yet set up.\n\nTo configure it, set DISCORD_WEBHOOK_URL=<your-webhook-url> in your environment or .env file.")
+		return fmt.Errorf("`discord_webhook_post` is not yet set up.\n\nTo configure it, either set DISCORD_WEBHOOK_URL=<your-webhook-url> in your environment or .env file, or pass a `webhook_url` parameter directly to the `discord_webhook_post` tool.")
 	}
 	body, _ := json.Marshal(map[string]string{"content": content})
 	resp, err := http.Post(webhookURL, "application/json", bytes.NewReader(body))
