@@ -49,26 +49,26 @@ func chuckNorrisJokeHandler(cfg *config.Config) func(context.Context, mcp.CallTo
 		// Make the HTTP request
 		resp, err := http.Get(apiURL)
 		if err != nil {
-			return mcp.NewToolResultText(fmt.Sprintf("Error fetching joke: %v", err)), nil
+			return mcp.NewToolResultError(fmt.Sprintf("Error fetching joke: %v", err)), nil
 		}
 		defer resp.Body.Close()
 
 		// Check response status
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
-			return mcp.NewToolResultText(fmt.Sprintf("API error (status %d): %s", resp.StatusCode, string(body))), nil
+			return mcp.NewToolResultError(fmt.Sprintf("API error (status %d): %s", resp.StatusCode, string(body))), nil
 		}
 
 		// Read the response body
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return mcp.NewToolResultText(fmt.Sprintf("Error reading response: %v", err)), nil
+			return mcp.NewToolResultError(fmt.Sprintf("Error reading response: %v", err)), nil
 		}
 
 		// Parse the JSON response
 		var joke ChuckNorrisJoke
 		if err := json.Unmarshal(body, &joke); err != nil {
-			return mcp.NewToolResultText(fmt.Sprintf("Error parsing joke: %v", err)), nil
+			return mcp.NewToolResultError(fmt.Sprintf("Error parsing joke: %v", err)), nil
 		}
 
 		// Return the joke
