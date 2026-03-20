@@ -32,22 +32,17 @@ type ChuckNorrisJoke struct {
 	Categories []string `json:"categories"`
 }
 
+var chuckNorrisHTTPClient = &http.Client{Timeout: 10 * time.Second}
+
 func RegisterChuckNorrisJoke(s *server.MCPServer, cfg *config.Config) {
 	s.AddTool(mcp.NewTool("chuck_norris_joke",
 		mcp.WithDescription("Fetch a random Chuck Norris joke from the api.chucknorris.io API"),
 		mcp.WithString("category", mcp.Description("Optional category of joke (e.g. 'career', 'celebrity', 'explicit'). If not specified, returns a random joke.")),
-	), chuckNorrisJokeHandler(http.DefaultClient, chuckNorrisBaseURL))
+	), chuckNorrisJokeHandler(chuckNorrisHTTPClient, chuckNorrisBaseURL))
 }
 
-<<<<<<< HEAD
 func chuckNorrisJokeHandler(client *http.Client, baseURL string) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-=======
-var chuckNorrisHTTPClient = &http.Client{Timeout: 10 * time.Second}
-
-func chuckNorrisJokeHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
->>>>>>> origin/main
 		category := req.GetString("category", "")
 
 		// Build the API URL
@@ -56,17 +51,12 @@ func chuckNorrisJokeHandler(cfg *config.Config) func(context.Context, mcp.CallTo
 			apiURL = fmt.Sprintf("%s/jokes/random?category=%s", baseURL, url.QueryEscape(category))
 		}
 
-<<<<<<< HEAD
-		// Make the HTTP request
-		resp, err := client.Get(apiURL)
-=======
 		// Make the HTTP request using the caller's context so it can be cancelled
 		httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
 		if err != nil {
 			return mcp.NewToolResultText(fmt.Sprintf("Error creating request: %v", err)), nil
 		}
-		resp, err := chuckNorrisHTTPClient.Do(httpReq)
->>>>>>> origin/main
+		resp, err := client.Do(httpReq)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Error fetching joke: %v", err)), nil
 		}
