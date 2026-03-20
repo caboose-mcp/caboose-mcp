@@ -20,7 +20,6 @@ import (
 // Helper functions for oauth_provider.go — kept private to avoid duplication with calendar.go
 
 func readResponseBody(resp *http.Response) ([]byte, error) {
-	defer resp.Body.Close()
 	return io.ReadAll(resp.Body)
 }
 
@@ -34,10 +33,12 @@ type OAuthProvider interface {
 	// Name returns the stable provider identifier.
 	Name() string
 
-	// RequiredJWTScopes returns the scope strings that must appear in
-	// JWTClaims.GoogleScopes (or a future provider-specific field) for a
-	// request to be allowed to use this provider. Empty slice = no JWT scope
-	// restriction (admin / open-mode always passes).
+	// RequiredJWTScopes returns the scope strings that must appear in the
+	// provider-specific scope claim field within JWTClaims for a request to
+	// be allowed to use this provider. Google OAuth providers check
+	// JWTClaims.GoogleScopes; Discord and Slack bot providers check their
+	// respective JWTClaims.DiscordScopes / JWTClaims.SlackScopes fields.
+	// Empty slice = no JWT scope restriction (admin / open-mode always passes).
 	RequiredJWTScopes() []string
 
 	// TokenPath returns the filesystem path where this provider's OAuth token
