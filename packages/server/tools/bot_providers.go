@@ -23,11 +23,12 @@ const (
 	discordBotAPIScopes = "bot applications.commands"
 	discordBotClientID  = "DISCORD_CLIENT_ID"
 	discordBotClientSec = "DISCORD_CLIENT_SECRET"
+	discordRedirectURI  = "DISCORD_REDIRECT_URI"
 )
 
 // Slack OAuth2 constants for bot provider
 const (
-	slackBotOAuthURL  = "https://slack.com/oauth_authorize"
+	slackBotOAuthURL  = "https://slack.com/oauth/v2/authorize"
 	slackBotTokenURL  = "https://slack.com/api/oauth.v2.access"
 	slackBotAPIScopes = "chat:write channels:read channels:history commands"
 	slackBotClientID  = "SLACK_CLIENT_ID"
@@ -76,10 +77,16 @@ func (p *DiscordBotProvider) GetAuthURL(cfg *config.Config, state string) (strin
 	if clientID == "" {
 		return "", fmt.Errorf("DISCORD_CLIENT_ID not set")
 	}
+	redirectURI := os.Getenv(discordRedirectURI)
+	if redirectURI == "" {
+		return "", fmt.Errorf("DISCORD_REDIRECT_URI not set")
+	}
 	params := url.Values{
 		"client_id":     {clientID},
+		"redirect_uri":  {redirectURI},
 		"scope":         {discordBotAPIScopes},
 		"response_type": {"code"},
+		"permissions":   {"8"},
 	}
 	if state != "" {
 		params.Set("state", state)
@@ -90,8 +97,12 @@ func (p *DiscordBotProvider) GetAuthURL(cfg *config.Config, state string) (strin
 func (p *DiscordBotProvider) ExchangeCode(ctx context.Context, cfg *config.Config, code string) error {
 	clientID := os.Getenv(discordBotClientID)
 	clientSec := os.Getenv(discordBotClientSec)
+	redirectURI := os.Getenv(discordRedirectURI)
 	if clientID == "" || clientSec == "" {
 		return fmt.Errorf("DISCORD_CLIENT_ID or DISCORD_CLIENT_SECRET not set")
+	}
+	if redirectURI == "" {
+		return fmt.Errorf("DISCORD_REDIRECT_URI not set")
 	}
 
 	data := url.Values{
@@ -99,6 +110,7 @@ func (p *DiscordBotProvider) ExchangeCode(ctx context.Context, cfg *config.Confi
 		"client_secret": {clientSec},
 		"grant_type":    {"authorization_code"},
 		"code":          {code},
+		"redirect_uri":  {redirectURI},
 	}
 
 	resp, err := http.PostForm(discordBotTokenURL, data)

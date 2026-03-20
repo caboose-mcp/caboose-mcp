@@ -59,13 +59,15 @@ func main() {
 		label := fs.String("label", "", "Friendly name for the token (required)")
 		toolsFlag := fs.String("tools", "", "Comma-separated tool names (empty = all)")
 		scopes := fs.String("google-scopes", "", "Comma-separated Google scopes")
+		discordScopes := fs.String("discord-scopes", "", "Comma-separated Discord scopes")
+		slackScopes := fs.String("slack-scopes", "", "Comma-separated Slack scopes")
 		expires := fs.Int("expires", 30, "Days until token expires")
 		_ = fs.Parse(os.Args[2:])
 		if *label == "" {
-			fmt.Fprintln(os.Stderr, "usage: caboose-mcp auth:create --label <name> [--tools ...] [--google-scopes ...] [--expires N]")
+			fmt.Fprintln(os.Stderr, "usage: caboose-mcp auth:create --label <name> [--tools ...] [--google-scopes ...] [--discord-scopes ...] [--slack-scopes ...] [--expires N]")
 			os.Exit(1)
 		}
-		if err := tools.CreateTokenCLI(cfg, *label, *toolsFlag, *scopes, *expires); err != nil {
+		if err := tools.CreateTokenCLI(cfg, *label, *toolsFlag, *scopes, *discordScopes, *slackScopes, *expires); err != nil {
 			log.Fatal(err)
 		}
 

@@ -17,6 +17,7 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/caboose-mcp/server/config"
@@ -81,14 +82,14 @@ func dadJokeHandler(cfg *config.Config) func(context.Context, mcp.CallToolReques
 }
 
 type ChuckNorrisJoke struct {
-	Value    string `json:"value"`
-	ID       string `json:"id"`
-	URL      string `json:"url"`
-	Category string `json:"category,omitempty"`
+	Value      string   `json:"value"`
+	ID         string   `json:"id"`
+	URL        string   `json:"url"`
+	Categories []string `json:"categories"`
 }
 
 func chuckNorrisJokeHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		category := req.GetString("category", "")
 
 		// Build the API URL
@@ -98,35 +99,40 @@ func chuckNorrisJokeHandler(cfg *config.Config) func(context.Context, mcp.CallTo
 			apiURL = fmt.Sprintf("https://api.chucknorris.io/jokes/random?category=%s", url.QueryEscape(category))
 		}
 
-		// Make the HTTP request
-		resp, err := http.Get(apiURL)
+		// Make the HTTP request using context with timeout
+		httpClient := &http.Client{Timeout: 10 * time.Second}
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
 		if err != nil {
-			return mcp.NewToolResultText(fmt.Sprintf("Error fetching joke: %v", err)), nil
+			return mcp.NewToolResultError(fmt.Sprintf("Error building request: %v", err)), nil
+		}
+		resp, err := httpClient.Do(httpReq)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Error fetching joke: %v", err)), nil
 		}
 		defer resp.Body.Close()
 
 		// Check response status
 		if resp.StatusCode != http.StatusOK {
 			body, _ := io.ReadAll(resp.Body)
-			return mcp.NewToolResultText(fmt.Sprintf("API error (status %d): %s", resp.StatusCode, string(body))), nil
+			return mcp.NewToolResultError(fmt.Sprintf("API error (status %d): %s", resp.StatusCode, string(body))), nil
 		}
 
 		// Read the response body
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return mcp.NewToolResultText(fmt.Sprintf("Error reading response: %v", err)), nil
+			return mcp.NewToolResultError(fmt.Sprintf("Error reading response: %v", err)), nil
 		}
 
 		// Parse the JSON response
 		var joke ChuckNorrisJoke
 		if err := json.Unmarshal(body, &joke); err != nil {
-			return mcp.NewToolResultText(fmt.Sprintf("Error parsing joke: %v", err)), nil
+			return mcp.NewToolResultError(fmt.Sprintf("Error parsing joke: %v", err)), nil
 		}
 
 		// Return the joke
 		result := fmt.Sprintf("Chuck Norris Joke:\n\n%s", joke.Value)
-		if joke.Category != "" {
-			result = fmt.Sprintf("Chuck Norris Joke (%s):\n\n%s", joke.Category, joke.Value)
+		if len(joke.Categories) > 0 {
+			result = fmt.Sprintf("Chuck Norris Joke (%s):\n\n%s", strings.Join(joke.Categories, ", "), joke.Value)
 		}
 
 		return mcp.NewToolResultText(result), nil
