@@ -22,10 +22,10 @@ import (
 )
 
 type ChuckNorrisJoke struct {
-	Value    string `json:"value"`
-	ID       string `json:"id"`
-	URL      string `json:"url"`
-	Category string `json:"category,omitempty"`
+	Value      string   `json:"value"`
+	ID         string   `json:"id"`
+	URL        string   `json:"url"`
+	Categories []string `json:"categories"`
 }
 
 func RegisterChuckNorrisJoke(s *server.MCPServer, cfg *config.Config) {
@@ -73,8 +73,8 @@ func chuckNorrisJokeHandler(cfg *config.Config) func(context.Context, mcp.CallTo
 
 		// Return the joke
 		result := fmt.Sprintf("Chuck Norris Joke:\n\n%s", joke.Value)
-		if joke.Category != "" {
-			result = fmt.Sprintf("Chuck Norris Joke (%s):\n\n%s", joke.Category, joke.Value)
+		if len(joke.Categories) > 0 {
+			result = fmt.Sprintf("Chuck Norris Joke (%s):\n\n%s", joke.Categories[0], joke.Value)
 		}
 
 		return mcp.NewToolResultText(result), nil
