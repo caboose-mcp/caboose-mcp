@@ -141,6 +141,11 @@ func serveHTTP(cfg *config.Config, addr string, s *server.MCPServer) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
+	mux.HandleFunc("/api/stats", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		total := len(s.ListTools())
+		fmt.Fprintf(w, `{"total":%d}`, total)
+	})
 	// Authenticated routes
 	mux.Handle("/", authedMCP)
 
