@@ -21,6 +21,8 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 )
 
+const chuckNorrisBaseURL = "https://api.chucknorris.io"
+
 type ChuckNorrisJoke struct {
 	Value    string `json:"value"`
 	ID       string `json:"id"`
@@ -32,22 +34,21 @@ func RegisterChuckNorrisJoke(s *server.MCPServer, cfg *config.Config) {
 	s.AddTool(mcp.NewTool("chuck_norris_joke",
 		mcp.WithDescription("Fetch a random Chuck Norris joke from the api.chucknorris.io API"),
 		mcp.WithString("category", mcp.Description("Optional category of joke (e.g. 'career', 'celebrity', 'explicit'). If not specified, returns a random joke.")),
-	), chuckNorrisJokeHandler(cfg))
+	), chuckNorrisJokeHandler(http.DefaultClient, chuckNorrisBaseURL))
 }
 
-func chuckNorrisJokeHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func chuckNorrisJokeHandler(client *http.Client, baseURL string) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		category := req.GetString("category", "")
 
 		// Build the API URL
-		apiURL := "https://api.chucknorris.io/jokes/random"
+		apiURL := baseURL + "/jokes/random"
 		if category != "" {
-			// URL encode the category parameter
-			apiURL = fmt.Sprintf("https://api.chucknorris.io/jokes/random?category=%s", url.QueryEscape(category))
+			apiURL = fmt.Sprintf("%s/jokes/random?category=%s", baseURL, url.QueryEscape(category))
 		}
 
 		// Make the HTTP request
-		resp, err := http.Get(apiURL)
+		resp, err := client.Get(apiURL)
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Error fetching joke: %v", err)), nil
 		}
