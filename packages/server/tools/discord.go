@@ -31,7 +31,7 @@ const discordAPIBase = "https://discord.com/api/v10"
 // Called by EmitEvent for push notifications and by the discord_webhook_post tool.
 func DiscordWebhookPost(webhookURL, content string) error {
 	if webhookURL == "" {
-		return fmt.Errorf("Discord webhook URL not configured")
+		return fmt.Errorf("`discord_webhook_post` is not yet set up.\n\nTo configure it, set DISCORD_WEBHOOK_URL=<your-webhook-url> in your environment or .env file.")
 	}
 	body, _ := json.Marshal(map[string]string{"content": content})
 	resp, err := http.Post(webhookURL, "application/json", bytes.NewReader(body))
@@ -68,7 +68,7 @@ func RegisterDiscord(s *server.MCPServer, cfg *config.Config) {
 		content := req.GetString("content", "")
 		url := req.GetString("webhook_url", cfg.DiscordWebhookURL)
 		if err := DiscordWebhookPost(url, content); err != nil {
-			return mcp.NewToolResultText("error: " + err.Error()), nil
+			return mcp.NewToolResultError(err.Error()), nil
 		}
 		return mcp.NewToolResultText("Message posted via webhook."), nil
 	})
@@ -82,7 +82,7 @@ func RegisterDiscord(s *server.MCPServer, cfg *config.Config) {
 
 func discordDo(cfg *config.Config, method, path string, body any) ([]byte, error) {
 	if cfg.DiscordToken == "" {
-		return nil, fmt.Errorf("Discord token not configured")
+		return nil, fmt.Errorf("`discord_post_message`, `discord_list_channels`, and `discord_read_messages` are not yet set up.\n\nTo configure them, set DISCORD_TOKEN=<your-bot-token> in your environment or .env file.")
 	}
 	var reqBody io.Reader
 	if body != nil {
