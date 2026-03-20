@@ -183,6 +183,7 @@ func registerHostedTools(s *server.MCPServer, cfg *config.Config) {
 	tools.RegisterPersona(s, cfg)
 	tools.RegisterFocus(s, cfg)
 	tools.RegisterJokes(s, cfg)
+	tools.RegisterChuckNorrisJoke(s, cfg)
 	tools.RegisterCalendar(s, cfg)
 	tools.RegisterNotes(s, cfg)
 	tools.RegisterSources(s, cfg)
