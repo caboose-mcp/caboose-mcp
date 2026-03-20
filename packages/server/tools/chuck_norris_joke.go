@@ -15,6 +15,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
+	"time"
 
 	"github.com/caboose-mcp/server/config"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -24,10 +26,10 @@ import (
 const chuckNorrisBaseURL = "https://api.chucknorris.io"
 
 type ChuckNorrisJoke struct {
-	Value    string `json:"value"`
-	ID       string `json:"id"`
-	URL      string `json:"url"`
-	Category string `json:"category,omitempty"`
+	Value      string   `json:"value"`
+	ID         string   `json:"id"`
+	URL        string   `json:"url"`
+	Categories []string `json:"categories"`
 }
 
 func RegisterChuckNorrisJoke(s *server.MCPServer, cfg *config.Config) {
@@ -37,8 +39,15 @@ func RegisterChuckNorrisJoke(s *server.MCPServer, cfg *config.Config) {
 	), chuckNorrisJokeHandler(http.DefaultClient, chuckNorrisBaseURL))
 }
 
+<<<<<<< HEAD
 func chuckNorrisJokeHandler(client *http.Client, baseURL string) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+=======
+var chuckNorrisHTTPClient = &http.Client{Timeout: 10 * time.Second}
+
+func chuckNorrisJokeHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+>>>>>>> origin/main
 		category := req.GetString("category", "")
 
 		// Build the API URL
@@ -47,8 +56,17 @@ func chuckNorrisJokeHandler(client *http.Client, baseURL string) func(context.Co
 			apiURL = fmt.Sprintf("%s/jokes/random?category=%s", baseURL, url.QueryEscape(category))
 		}
 
+<<<<<<< HEAD
 		// Make the HTTP request
 		resp, err := client.Get(apiURL)
+=======
+		// Make the HTTP request using the caller's context so it can be cancelled
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+		if err != nil {
+			return mcp.NewToolResultText(fmt.Sprintf("Error creating request: %v", err)), nil
+		}
+		resp, err := chuckNorrisHTTPClient.Do(httpReq)
+>>>>>>> origin/main
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Error fetching joke: %v", err)), nil
 		}
@@ -74,8 +92,8 @@ func chuckNorrisJokeHandler(client *http.Client, baseURL string) func(context.Co
 
 		// Return the joke
 		result := fmt.Sprintf("Chuck Norris Joke:\n\n%s", joke.Value)
-		if joke.Category != "" {
-			result = fmt.Sprintf("Chuck Norris Joke (%s):\n\n%s", joke.Category, joke.Value)
+		if len(joke.Categories) > 0 {
+			result = fmt.Sprintf("Chuck Norris Joke (%s):\n\n%s", strings.Join(joke.Categories, ", "), joke.Value)
 		}
 
 		return mcp.NewToolResultText(result), nil
