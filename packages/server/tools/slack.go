@@ -47,7 +47,7 @@ func RegisterSlack(s *server.MCPServer, cfg *config.Config) {
 
 func slackAPICall(cfg *config.Config, method, endpoint string, body any) (map[string]any, error) {
 	if cfg.SlackToken == "" {
-		return nil, fmt.Errorf("Slack token not configured")
+		return nil, fmt.Errorf("Slack integration is not set up (SLACK_TOKEN missing).\n\nTo configure it, set SLACK_TOKEN=<xoxb-your-token> in your environment or .env file.")
 	}
 	var reqBody io.Reader
 	if body != nil {
@@ -107,7 +107,7 @@ func slackPostMessageHandler(cfg *config.Config) func(context.Context, mcp.CallT
 func slackListChannelsHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		if cfg.SlackToken == "" {
-			return mcp.NewToolResultError("Slack token not configured"), nil
+			return mcp.NewToolResultError("`slack_list_channels` is not yet set up.\n\nTo configure it, set SLACK_TOKEN=<xoxb-your-token> in your environment or .env file."), nil
 		}
 		limit := req.GetInt("limit", 100)
 		u := fmt.Sprintf("https://slack.com/api/conversations.list?limit=%d&types=public_channel,private_channel", limit)
@@ -133,7 +133,7 @@ func slackListChannelsHandler(cfg *config.Config) func(context.Context, mcp.Call
 func slackReadMessagesHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		if cfg.SlackToken == "" {
-			return mcp.NewToolResultError("Slack token not configured"), nil
+			return mcp.NewToolResultError("`slack_read_messages` is not yet set up.\n\nTo configure it, set SLACK_TOKEN=<xoxb-your-token> in your environment or .env file."), nil
 		}
 		channel, err := req.RequireString("channel")
 		if err != nil {

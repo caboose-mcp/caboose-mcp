@@ -63,7 +63,7 @@ func validateSecretName(name string) error {
 func secretSetHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		if cfg.GPGKeyID == "" {
-			return mcp.NewToolResultError("GPG_KEY_ID is not set. Set it to your GPG key ID to enable secrets."), nil
+			return mcp.NewToolResultError("`secret_set` is not yet set up.\n\nTo configure it, set GPG_KEY_ID=<your-key-id> in your environment or .env file."), nil
 		}
 		name, err := req.RequireString("name")
 		if err != nil {
@@ -93,7 +93,7 @@ func secretSetHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequ
 func secretGetHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		if cfg.GPGKeyID == "" {
-			return mcp.NewToolResultError("GPG_KEY_ID is not set. Set it to your GPG key ID to enable secrets."), nil
+			return mcp.NewToolResultError("`secret_get` is not yet set up.\n\nTo configure it, set GPG_KEY_ID=<your-key-id> in your environment or .env file."), nil
 		}
 		name, err := req.RequireString("name")
 		if err != nil {

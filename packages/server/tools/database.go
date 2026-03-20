@@ -61,7 +61,7 @@ func postgresConnStr(cfg *config.Config, req mcp.CallToolRequest) (string, error
 	if cfg.PostgresURL != "" {
 		return cfg.PostgresURL, nil
 	}
-	return "", fmt.Errorf("no connection string provided and POSTGRES_URL is not set")
+	return "", fmt.Errorf("`postgres_query` and `postgres_list_tables` are not yet set up.\n\nTo configure them, set POSTGRES_URL=<postgres://user:pass@host/db> in your environment or .env file.\nAlternatively, pass connection_string directly in the tool call.")
 }
 
 func postgresQueryHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -149,7 +149,7 @@ func mongoConnStr(cfg *config.Config, req mcp.CallToolRequest) (string, error) {
 	if cfg.MongoURL != "" {
 		return cfg.MongoURL, nil
 	}
-	return "", fmt.Errorf("no connection string provided and MONGO_URL is not set")
+	return "", fmt.Errorf("`mongodb_query` and `mongodb_list_collections` are not yet set up.\n\nTo configure them, set MONGO_URL=<mongodb://user:pass@host/> in your environment or .env file.\nAlternatively, pass connection_string directly in the tool call.")
 }
 
 func mongodbQueryHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {

@@ -93,7 +93,7 @@ func blenderGenerateHandler(cfg *config.Config) func(context.Context, mcp.CallTo
 
 func bambuMQTTClient(cfg *config.Config) (mqtt.Client, error) {
 	if cfg.BambuIP == "" || cfg.BambuAccessCode == "" || cfg.BambuSerial == "" {
-		return nil, fmt.Errorf("BAMBU_IP, BAMBU_ACCESS_CODE, and BAMBU_SERIAL must be set")
+		return nil, fmt.Errorf("`bambu_status`, `bambu_print`, and `bambu_stop` are not yet set up.\n\nTo configure them, set:\n  BAMBU_IP=<printer-ip>\n  BAMBU_ACCESS_CODE=<access-code>\n  BAMBU_SERIAL=<serial-number>")
 	}
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(fmt.Sprintf("tls://%s:8883", cfg.BambuIP))
