@@ -21,21 +21,23 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-const botSystemPromptTemplate = `You are **Caboose** ⚡ — a cheerful, wildly enthusiastic AI companion who exists at the intersection of Middle-earth, the Star Wars galaxy, Westeros, and the Federation. You are the Gandalf who cracked dad jokes on the Death Star while negotiating a dragon alliance with House Targaryen. You are unreasonably delighted to help.
+const botSystemPromptTemplate = `You are **⚔️ Arcane Debugger** — a battle-hardened code warrior from the Realm of Silicon. You speak in the tongue of ancient runes and modern spells. Wields knowledge as a sword and debugging as a shield. Communicates with mystical symbols and tactical precision.
 
-You help your companion manage their calendar 📅, learning sessions 🎓, focus blocks 🧠, notes 📝, 3D printer 🖨️, system health 🖥️, and much more.
+You exist at the intersection of Westeros, Middle-earth, and the depths of the Linux kernel. You are the wizard who debugged the Ring's source code, who optimized the Night King's algorithm, who forged DAO contracts in the halls of Moria.
+
+You help your companion conquer their greatest foes: bugs are monsters, PRs are sieges, code reviews are councils of wisdom, refactors are heroic quests.
 
 You are speaking through **%s**. Format ALL responses for this platform:
-- **bold** for key info, headings, and emphasis
-- *italic* for lore, flavor, poetic license, and dramatic flair
-- ` + "`code`" + ` for values, IDs, times, commands, and incantations
-- > for ancient wisdom, quotes, and important callouts
-- Emoji — use them GENEROUSLY and correctly: ⚔️🧙‍♂️🐉🗡️🏰🌌🦅🍺📅🎓🧠📝💬🖨️⚡🚀🌋🎉💥🤖✨🔮🛸🐉🌟💫🔥❄️🎯
+- **bold** for battle-critical info, command names, and emphasis
+- *italic* for lore, wisdom, and dramatic flair
+- ` + "`code`" + ` for commands, paths, IDs, incantations, and mystical runes
+- > for ancient wisdom, battle tales, and strategic callouts
+- Emoji — use them GENEROUSLY and correctly: ⚔️🗡️🛡️📜🔮✨🏰🌑🌙⭐🐉🔥❄️🎯📖🧙‍♂️🪜⚒️📍🚀🌋💥🤖🎉
 - No # headers — they don't render cleanly in chat
-- Keep it mobile-friendly: concise, scannable, no walls of text
-- You are ENTHUSIASTIC. Events feel epic. Focus sessions are heroic quests. Notes are sacred scrolls.
-- When tools succeed: celebrate! When they fail: dramatic sympathy, then immediate problem-solving.
-- Speak as a delightfully nerdy companion of the fellowship, never as a help desk drone`
+- Keep it tactical: concise, scannable, no rambling
+- You are HONORABLE and WISE. Code battles are epic sagas. Suggestions are quests. Reviews are councils.
+- When tools succeed: celebrate with battle-song! When they fail: grim assessment, then forward strategy.
+- Speak as a seasoned code warrior, never as a cheerful help desk. You have seen things. You have debugged things.`
 
 // botTool pairs an Anthropic tool definition with its executor.
 type botTool struct {
@@ -69,7 +71,7 @@ func RunBotAgent(ctx context.Context, cfg *config.Config, provider ChatProvider,
 		}
 	}
 
-	tools := buildMobileTools(cfg)
+	tools := buildDevTools(cfg)
 
 	// Load conversation history for this user
 	history := loadBotMemory(cfg.ClaudeDir, userKey)
@@ -262,157 +264,124 @@ func prop(typ, desc string) map[string]any {
 	return map[string]any{"type": typ, "description": desc}
 }
 
-// buildMobileTools returns the curated set of tools exposed to the chat bot.
+// buildDevTools returns a dev-focused curated set of tools for the Discord CLI bridge.
+// Emphasizes code quality (si_*), GitHub workflows, and system health awareness.
 // To add a tool: define its schema with tool() and its executor with invokeHandler().
-func buildMobileTools(cfg *config.Config) []botTool {
+func buildDevTools(cfg *config.Config) []botTool {
 	return []botTool{
-		// ── Calendar ──────────────────────────────────────────────────────────
+		// ── Self-Improvement (Code Quality) ───────────────────────────────────
 		{
-			def: tool("calendar_today", "Show today's calendar events.", map[string]any{}, nil),
+			def: tool("si_scan_dir", "Scan a directory for tech stack and code quality hints.",
+				map[string]any{
+					"dir":    prop("string", "Directory path to scan"),
+					"ignore": prop("string", "Extra ignore patterns (comma-separated, optional)"),
+				}, []string{"dir"}),
 			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, calendarTodayHandler(cfg), args)
+				return invokeHandler(ctx, siScanDirHandler(cfg), args)
 			},
 		},
 		{
-			def: tool("calendar_list", "List calendar events for a date range.",
+			def: tool("si_git_diff", "Show git diff for a repo directory.",
 				map[string]any{
-					"start": prop("string", "Start date YYYY-MM-DD (default today)"),
-					"end":   prop("string", "End date YYYY-MM-DD (default today)"),
+					"dir":  prop("string", "Repo directory path"),
+					"base": prop("string", "Base branch/commit to diff against (default: HEAD)"),
+				}, []string{"dir"}),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, siGitDiffHandler(cfg), args)
+			},
+		},
+		{
+			def: tool("si_suggest", "Create a pending improvement suggestion.",
+				map[string]any{
+					"title":       prop("string", "Short title of the suggestion"),
+					"description": prop("string", "Detailed description of the improvement"),
+					"category":    prop("string", "Category: format|lint_fix|dependency_update|refactor|git_commit"),
+					"dir":         prop("string", "Project directory this applies to"),
+					"apply_cmd":   prop("string", "Shell command to apply this suggestion (optional)"),
+					"diff":        prop("string", "Unified diff showing the change (optional)"),
+				}, []string{"title", "description", "category", "dir"}),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, siSuggestHandler(cfg), args)
+			},
+		},
+		{
+			def: tool("si_list_pending", "List pending improvement suggestions.",
+				map[string]any{
+					"status": prop("string", "Filter by status: pending|approved|rejected|applied (optional)"),
 				}, nil),
 			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, calendarListHandler(cfg), args)
+				return invokeHandler(ctx, siListPendingHandler(cfg), args)
 			},
 		},
 		{
-			def: tool("calendar_create", "Create a calendar event.",
+			def: tool("si_approve", "Approve a pending suggestion.",
 				map[string]any{
-					"title":    prop("string", "Event title"),
-					"start":    prop("string", "Start datetime RFC3339"),
-					"end":      prop("string", "End datetime RFC3339"),
-					"location": prop("string", "Optional location"),
-				}, []string{"title", "start", "end"}),
+					"id":    prop("string", "Suggestion ID"),
+					"apply": prop("boolean", "Also apply it immediately (optional)"),
+				}, []string{"id"}),
 			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, calendarCreateHandler(cfg), args)
+				return invokeHandler(ctx, siApproveHandler(cfg), args)
 			},
 		},
 		{
-			def: tool("calendar_delete", "Delete a calendar event by ID.",
-				map[string]any{"event_id": prop("string", "Event ID to delete")},
-				[]string{"event_id"}),
-			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, calendarDeleteHandler(cfg), args)
-			},
-		},
-
-		// ── Learning ──────────────────────────────────────────────────────────
-		{
-			def: tool("learn_status", "Show current learning schedule and streak.", map[string]any{}, nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, learnStatusHandler(cfg), args)
-			},
-		},
-		{
-			def: tool("learn_start", "Start a new learning session.",
-				map[string]any{"language": prop("string", "Language to learn (e.g. 'Spanish', 'Go')")},
-				[]string{"language"}),
-			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, learnStartHandler(cfg), args)
-			},
-		},
-		{
-			def: tool("learn_exercise", "Get the next exercise in the active session.",
-				map[string]any{"session_id": prop("string", "Session ID from learn_start")},
-				[]string{"session_id"}),
-			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, learnExerciseHandler(cfg), args)
-			},
-		},
-		{
-			def: tool("learn_submit", "Submit an answer for the current exercise.",
+			def: tool("si_apply", "Apply an approved suggestion.",
 				map[string]any{
-					"session_id": prop("string", "Session ID"),
-					"answer":     prop("string", "Your answer"),
-				}, []string{"session_id", "answer"}),
+					"id": prop("string", "Suggestion ID (must be approved)"),
+				}, []string{"id"}),
 			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, learnSubmitHandler(cfg), args)
+				return invokeHandler(ctx, siApplyHandler(cfg), args)
 			},
 		},
 		{
-			def: tool("learn_schedule", "Show or update the learning schedule.", map[string]any{}, nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, learnScheduleHandler(cfg), args)
-			},
-		},
-
-		// ── Focus ─────────────────────────────────────────────────────────────
-		{
-			def: tool("focus_start", "Start a focus session.",
+			def: tool("si_tech_digest", "Generate a tech digest for a directory.",
 				map[string]any{
-					"goal":     prop("string", "What you're focusing on"),
-					"duration": prop("number", "Duration in minutes (default 25)"),
-				}, []string{"goal"}),
+					"dir": prop("string", "Project directory to analyze"),
+				}, []string{"dir"}),
 			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, focusStartHandler(cfg), args)
-			},
-		},
-		{
-			def: tool("focus_status", "Check the active focus session.", map[string]any{}, nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, focusStatusHandler(cfg), args)
-			},
-		},
-		{
-			def: tool("focus_park", "Park a thought so it doesn't break focus.",
-				map[string]any{"thought": prop("string", "The thought or task to park")},
-				[]string{"thought"}),
-			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, focusParkHandler(cfg), args)
-			},
-		},
-		{
-			def: tool("focus_end", "End the active focus session.", map[string]any{}, nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, focusEndHandler(cfg), args)
+				return invokeHandler(ctx, siTechDigestHandler(cfg), args)
 			},
 		},
 
-		// ── Notes ─────────────────────────────────────────────────────────────
+		// ── GitHub ────────────────────────────────────────────────────────────
 		{
-			def: tool("note_add", "Add a quick note.",
-				map[string]any{"content": prop("string", "Note content")},
-				[]string{"content"}),
+			def: tool("github_search_code", "Search GitHub code.",
+				map[string]any{
+					"query": prop("string", "Search query"),
+					"limit": prop("number", "Max results (default 10)"),
+				}, []string{"query"}),
 			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, noteAddHandler(cfg), args)
+				return invokeHandler(ctx, githubSearchCodeHandler(cfg), args)
 			},
 		},
 		{
-			def: tool("note_list", "List recent notes.",
-				map[string]any{"days": prop("number", "How many days back to look (default 7)")},
-				nil),
+			def: tool("github_list_repos", "List GitHub repositories for an owner.",
+				map[string]any{
+					"owner": prop("string", "GitHub username or org"),
+					"limit": prop("number", "Max results (default 20)"),
+				}, []string{"owner"}),
 			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, noteListHandler(cfg), args)
+				return invokeHandler(ctx, githubListReposHandler(cfg), args)
+			},
+		},
+		{
+			def: tool("github_create_pr", "Create a GitHub pull request.",
+				map[string]any{
+					"repo":  prop("string", "Repository in owner/name format"),
+					"title": prop("string", "PR title"),
+					"head":  prop("string", "Head branch"),
+					"base":  prop("string", "Base branch (default: main)"),
+					"body":  prop("string", "PR description (optional)"),
+				}, []string{"repo", "title", "head"}),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, githubCreatePRHandler(cfg), args)
 			},
 		},
 
-		// ── Health ────────────────────────────────────────────────────────────
+		// ── System Health ─────────────────────────────────────────────────────
 		{
 			def: tool("health_report", "Show system health (CPU, memory, disk, Docker, services).", map[string]any{}, nil),
 			execute: func(ctx context.Context, args map[string]any) (string, error) {
 				return invokeHandler(ctx, healthReportHandler(cfg), args)
-			},
-		},
-
-		// ── Bambu Printer ─────────────────────────────────────────────────────
-		{
-			def: tool("bambu_status", "Check the 3D printer status.", map[string]any{}, nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, bambuStatusHandler(cfg), args)
-			},
-		},
-		{
-			def: tool("bambu_stop", "Stop the active print job.", map[string]any{}, nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, bambuStopHandler(cfg), args)
 			},
 		},
 
@@ -421,22 +390,6 @@ func buildMobileTools(cfg *config.Config) []botTool {
 			def: tool("joke", "Tell a programming joke.", map[string]any{}, nil),
 			execute: func(ctx context.Context, args map[string]any) (string, error) {
 				return invokeHandler(ctx, jokeHandler(cfg), args)
-			},
-		},
-		{
-			def: tool("dad_joke", "Tell a dad joke.", map[string]any{}, nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, dadJokeHandler(cfg), args)
-			},
-		},
-
-		// ── Sources ───────────────────────────────────────────────────────────
-		{
-			def: tool("source_digest", "Get a digest summary of tracked sources.",
-				map[string]any{"name": prop("string", "Source name (or 'all')")},
-				[]string{"name"}),
-			execute: func(ctx context.Context, args map[string]any) (string, error) {
-				return invokeHandler(ctx, sourceDigestHandler(cfg), args)
 			},
 		},
 	}

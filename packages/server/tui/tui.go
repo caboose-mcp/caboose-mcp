@@ -30,6 +30,7 @@ import (
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/fsnotify/fsnotify"
 
 	"github.com/caboose-mcp/server/config"
 )
@@ -143,6 +144,7 @@ type model struct {
 type loadedMsg struct{}
 type statusMsg string
 type detailMsg string
+type tickMsg struct{} // file watcher tick to refresh data
 
 // ---- init ----
 
@@ -170,7 +172,7 @@ func newModel(cfg *config.Config) model {
 }
 
 func (m model) Init() tea.Cmd {
-	return m.loadAll()
+	return tea.Batch(m.loadAll(), m.watchDirs())
 }
 
 // ---- load data from disk ----
@@ -178,6 +180,49 @@ func (m model) Init() tea.Cmd {
 func (m model) loadAll() tea.Cmd {
 	return func() tea.Msg {
 		return loadedMsg{}
+	}
+}
+
+// watchDirs monitors the state directories for changes and triggers refresh on file events.
+func (m model) watchDirs() tea.Cmd {
+	return func() tea.Msg {
+		watcher, err := fsnotify.NewWatcher()
+		if err != nil {
+			return statusMsg("Watch error: " + err.Error())
+		}
+		defer watcher.Close()
+
+		// Watch state directories
+		dirs := []string{
+			filepath.Join(m.cfg.ClaudeDir, "pending"),
+			filepath.Join(m.cfg.ClaudeDir, "sources"),
+			filepath.Join(m.cfg.ClaudeDir, "learning"),
+		}
+		for _, dir := range dirs {
+			// Silently skip if directory doesn't exist yet
+			if _, err := os.Stat(dir); err == nil {
+				_ = watcher.Add(dir)
+			}
+		}
+
+		// Block until an event occurs
+		for {
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					return tickMsg{}
+				}
+				// Only respond to write, create, or remove events
+				if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Remove) != 0 {
+					return tickMsg{}
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					return tickMsg{}
+				}
+				_ = err // silently ignore errors
+			}
+		}
 	}
 }
 
@@ -309,6 +354,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case loadedMsg:
 		m.refreshData()
 		return m, nil
+
+	case tickMsg:
+		m.refreshData()
+		return m, m.watchDirs() // re-arm the watcher
 
 	case statusMsg:
 		m.statusMsg = string(msg)
