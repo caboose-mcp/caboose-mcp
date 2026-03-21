@@ -17,7 +17,7 @@ variable "iam_user_name" {
 }
 
 variable "cloudsync_bucket_name" {
-  description = "S3 bucket name for caboose-mcp cloudsync backups. Must be globally unique."
+  description = "S3 bucket name for fafb cloudsync backups. Must be globally unique."
   type        = string
   # Override in terraform.tfvars:  cloudsync_bucket_name = "my-caboose-cloudsync"
 }

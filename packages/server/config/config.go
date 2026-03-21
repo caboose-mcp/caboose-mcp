@@ -40,7 +40,7 @@ type Config struct {
 	// Release stage flag — controls experimental banner and MCP disclaimer.
 	// "experimental" (default) → warnings shown everywhere.
 	// "stable" → all warnings suppressed.
-	ReleaseStage string // CABOOSE_ENV
+	ReleaseStage string // FAFB_ENV
 	// UIOrigin is the allowed CORS origin for the standalone UI.
 	UIOrigin string // MCP_UI_ORIGIN (default: https://ui.mcp.chrismarasco.io)
 	// Discord OAuth2 — for user authentication via Discord login
@@ -73,7 +73,7 @@ func Load() *Config {
 
 	greptileRepo := os.Getenv("GREPTILE_REPO")
 	if greptileRepo == "" {
-		greptileRepo = "github/caboose/caboose-mcp"
+		greptileRepo = "github/caboose/fafb"
 	}
 
 	// GitHub token: env var first, then fall back to `gh auth token`
@@ -140,9 +140,9 @@ func uiOrigin() string {
 	return v
 }
 
-// releaseStage reads CABOOSE_ENV and normalises to "experimental" or "stable".
+// releaseStage reads FAFB_ENV and normalises to "experimental" or "stable".
 func releaseStage() string {
-	v := strings.ToLower(strings.TrimSpace(os.Getenv("CABOOSE_ENV")))
+	v := strings.ToLower(strings.TrimSpace(os.Getenv("FAFB_ENV")))
 	if v == "stable" {
 		return "stable"
 	}

@@ -10,7 +10,7 @@
 #   TF_VAR_CLOUDSYNC_BUCKET_NAME  — globally unique S3 bucket name
 #   TF_VAR_ROUTE53_ZONE_ID        — Route53 zone ID (leave empty if not using Route53)
 #
-# App secrets pushed to Secrets Manager (caboose-mcp/env):
+# App secrets pushed to Secrets Manager (fafb/env):
 #   SECRET_ANTHROPIC_API_KEY
 #   SECRET_SLACK_TOKEN
 #   SECRET_SLACK_APP_TOKEN
@@ -54,10 +54,10 @@ jobs:
       - name: Sync secrets to AWS Secrets Manager
         run: |
           aws secretsmanager create-secret \
-            --name caboose-mcp/env \
-            --description "caboose-mcp runtime secrets" 2>/dev/null || true
+            --name fafb/env \
+            --description "fafb runtime secrets" 2>/dev/null || true
           aws secretsmanager put-secret-value \
-            --secret-id caboose-mcp/env \
+            --secret-id fafb/env \
             --secret-string "{
               \"ANTHROPIC_API_KEY\": \"${{ secrets.SECRET_ANTHROPIC_API_KEY }}\",
               \"SLACK_TOKEN\": \"${{ secrets.SECRET_SLACK_TOKEN }}\",

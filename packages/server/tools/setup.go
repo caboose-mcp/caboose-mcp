@@ -24,15 +24,15 @@ func RegisterSetup(s *server.MCPServer, cfg *config.Config) {
 		mcp.WithString("platform", mcp.Required(), mcp.Description("Platform to configure: 'discord', 'slack', or 'both'")),
 	), setupBotConfigureHandler(cfg))
 	s.AddTool(mcp.NewTool("setup_github_mcp_info",
-		mcp.WithDescription("Explains how to use GitHub's official MCP server alongside caboose-mcp, and when each approach is better."),
+		mcp.WithDescription("Explains how to use GitHub's official MCP server alongside fafb, and when each approach is better."),
 	), setupGitHubMCPInfoHandler(cfg))
 	s.AddTool(mcp.NewTool("setup_check",
-		mcp.WithDescription("Check the current caboose-mcp configuration and report which features are enabled, disabled, or misconfigured."),
+		mcp.WithDescription("Check the current fafb configuration and report which features are enabled, disabled, or misconfigured."),
 	), setupCheckHandler(cfg))
 
 	s.AddTool(mcp.NewTool("setup_write_env",
 		mcp.WithDescription("Write a .env file with the provided key=value pairs to a given path."),
-		mcp.WithString("path", mcp.Required(), mcp.Description("Absolute path to write (e.g. /home/user/dev/caboose-mcp/.env)")),
+		mcp.WithString("path", mcp.Required(), mcp.Description("Absolute path to write (e.g. /home/user/dev/fafb/.env)")),
 		mcp.WithString("vars", mcp.Required(), mcp.Description("Newline-separated KEY=VALUE pairs")),
 	), setupWriteEnvHandler(cfg))
 
@@ -41,8 +41,8 @@ func RegisterSetup(s *server.MCPServer, cfg *config.Config) {
 	), setupInitDirsHandler(cfg))
 
 	s.AddTool(mcp.NewTool("setup_n8n_workflows",
-		mcp.WithDescription("Return example n8n workflow JSON for scheduling recurring caboose-mcp tasks (tech digest, learning sessions, self-scan)."),
-		mcp.WithString("binary_path", mcp.Description("Path to caboose-mcp binary (default: /home/caboose/dev/caboose-mcp/caboose-mcp)")),
+		mcp.WithDescription("Return example n8n workflow JSON for scheduling recurring fafb tasks (tech digest, learning sessions, self-scan)."),
+		mcp.WithString("binary_path", mcp.Description("Path to fafb binary (default: /home/caboose/dev/fafb/fafb)")),
 	), setupN8nWorkflowsHandler(cfg))
 }
 
@@ -147,7 +147,7 @@ func setupCheckHandler(cfg *config.Config) func(context.Context, mcp.CallToolReq
 
 		// Format output
 		var lines []string
-		lines = append(lines, "=== caboose-mcp Setup Check ===\n")
+		lines = append(lines, "=== fafb Setup Check ===\n")
 		ok, warn, missing := 0, 0, 0
 		for _, c := range checks {
 			icon := "✓"
@@ -230,7 +230,7 @@ func setupN8nWorkflowsHandler(cfg *config.Config) func(context.Context, mcp.Call
 		// Returns three importable n8n v1.x workflow JSON objects.
 		// Import via: n8n UI → Settings → Import Workflow (paste each JSON separately).
 		//
-		// Set CABOOSE_BIN as an n8n environment variable (Settings → Environment Variables)
+		// Set FAFB_BIN as an n8n environment variable (Settings → Environment Variables)
 		// or as a system env var visible to the n8n worker process.
 
 		result := map[string]any{
@@ -246,7 +246,7 @@ func setupN8nWorkflowsHandler(cfg *config.Config) func(context.Context, mcp.Call
 
 		header := "=== n8n Importable Workflows ===\n" +
 			"Import each workflow individually: n8n → Settings → Import Workflow.\n" +
-			"Set CABOOSE_BIN env var to the caboose-mcp binary path in n8n settings.\n\n"
+			"Set FAFB_BIN env var to the fafb binary path in n8n settings.\n\n"
 
 		return mcp.NewToolResultText(header + string(b)), nil
 	}
@@ -269,14 +269,14 @@ func n8nConn(targetNode string) map[string]any {
 	return map[string]any{"node": targetNode, "type": "main", "index": 0}
 }
 
-// mcpCmd builds the shell command to call a caboose-mcp tool via stdio.
-// Uses $CABOOSE_BIN with a fallback to the default binary path.
+// mcpCmd builds the shell command to call a fafb tool via stdio.
+// Uses $FAFB_BIN with a fallback to the default binary path.
 func mcpCmd(toolName string, args map[string]any) string {
 	argsJSON, _ := json.Marshal(args)
 	payload := fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":%q,"arguments":%s}}`,
 		toolName, string(argsJSON))
 	return fmt.Sprintf(
-		`CABOOSE_BIN="${CABOOSE_BIN:-/home/caboose/dev/caboose-mcp/caboose-mcp}"; echo '%s' | "$CABOOSE_BIN"`,
+		`FAFB_BIN="${FAFB_BIN:-/home/caboose/dev/fafb/fafb}"; echo '%s' | "$FAFB_BIN"`,
 		payload,
 	)
 }
@@ -455,11 +455,11 @@ func setupGitHubMCPInfoHandler(cfg *config.Config) func(context.Context, mcp.Cal
 	return func(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		info := `=== GitHub MCP Integration Options ===
 
-caboose-mcp wraps the gh CLI for GitHub operations. GitHub also publishes an
+fafb wraps the gh CLI for GitHub operations. GitHub also publishes an
 official MCP server (github/github-mcp-server) that exposes richer GitHub
 functionality directly. Here's how they compare and how to run both:
 
---- caboose-mcp github_* tools (current) ---
+--- fafb github_* tools (current) ---
   Uses: gh CLI subprocess calls
   Covered: search_code, list_repos, create_pr
   Pros: no extra setup beyond gh auth login, same binary
@@ -477,9 +477,9 @@ Claude supports multiple MCP servers simultaneously. Add both to .mcp.json:
 
   {
     "mcpServers": {
-      "caboose-mcp": {
+      "fafb": {
         "type": "stdio",
-        "command": "/home/caboose/dev/caboose-mcp/caboose-mcp"
+        "command": "/home/caboose/dev/fafb/fafb"
       },
       "github": {
         "type": "stdio",
@@ -497,12 +497,12 @@ Required PAT scopes for github-mcp-server:
   repo, read:org, read:user, gist, notifications
 
 --- When to use which ---
-  caboose-mcp github_* : quick PR creation, code search during normal workflow
+  fafb github_* : quick PR creation, code search during normal workflow
   github-mcp-server    : deep GitHub work — managing issues, projects, actions,
                          reviewing PRs, browsing file trees, managing releases
 
 --- Future plan ---
-caboose-mcp could optionally bridge to github-mcp-server by spawning it as a
+fafb could optionally bridge to github-mcp-server by spawning it as a
 subprocess and proxying tool calls — giving you one server to configure while
 getting the full GitHub surface. This would be implemented in a future
 tools/github_bridge.go using the MCP client protocol.
@@ -570,7 +570,7 @@ STEP 5: Set Environment Variables
   ANTHROPIC_API_KEY=sk-proj-...         # required for all platforms
 
 STEP 6: Test
-  Run: caboose-mcp --bots
+  Run: fafb --bots
   Send a message to the bot in Discord (or DM)
   Expected: Bot responds with setup confirmation
 
@@ -634,7 +634,7 @@ STEP 7: Set Environment Variables
   ANTHROPIC_API_KEY=sk-proj-...         # required for all platforms
 
 STEP 8: Test
-  Run: caboose-mcp --bots
+  Run: fafb --bots
   @mention the bot in Slack or send a DM
   Expected: Bot responds with setup confirmation
 
@@ -670,7 +670,7 @@ ELEVENLABS_VOICE_ID=
 🚀 === NEXT STEPS ===
 
 1. Fill in the env vars above in your .env file (or export them in your shell)
-2. Run: caboose-mcp --bots
+2. Run: fafb --bots
 3. Test by sending a message to the bot
 4. Use setup_check to verify all settings
 5. Check logs for any errors and troubleshoot
@@ -680,6 +680,8 @@ Invite links (after setup):
   Slack: https://api.slack.com/apps
 
 > Something selfishly for me but hopefully useful for others.
+>
+> Thanks bear for the name idea!
 `
 
 		result := instructions + "\n" + envTemplate

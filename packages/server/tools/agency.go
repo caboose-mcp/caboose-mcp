@@ -34,7 +34,7 @@ type AgentSpec struct {
 	Content     string // full markdown
 }
 
-// agentToolMap maps category keywords (matched against spec title) to preferred caboose-mcp tools.
+// agentToolMap maps category keywords (matched against spec title) to preferred fafb tools.
 var agentToolMap = []struct {
 	keywords []string
 	prefer   []string

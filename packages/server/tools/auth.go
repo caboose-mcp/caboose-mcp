@@ -1,6 +1,6 @@
 package tools
 
-// auth.go — JWT RBAC + Magic Link authentication for caboose-mcp.
+// auth.go — JWT RBAC + Magic Link authentication for fafb.
 //
 // Per-token access control: each JWT carries a tool allowlist and Google OAuth
 // scope list. The static MCP_AUTH_TOKEN remains as a superuser bypass.

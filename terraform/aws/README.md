@@ -1,6 +1,6 @@
 # terraform/aws
 
-Provisions AWS resources used by caboose-mcp.
+Provisions AWS resources used by fafb.
 
 ## Resources
 

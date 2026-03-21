@@ -20,23 +20,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const statusBar = new StatusBarManager(client);
 
     output.show(true);
-    output.appendLine('[caboose-mcp] extension activated');
+    output.appendLine('[fafb] extension activated');
 
     const treeView = vscode.window.createTreeView('cabooseMcp.tools', {
         treeDataProvider: toolsProvider,
         showCollapseAll: true,
     });
 
-    client.on('info', (msg: string) => output.appendLine(`[caboose-mcp] ${msg}`));
+    client.on('info', (msg: string) => output.appendLine(`[fafb] ${msg}`));
     client.on('stderr', (data: string) => output.append(data));
     client.on('disconnected', () => {
         vscode.commands.executeCommand('setContext', 'cabooseMcp.connected', false);
         statusBar.stop();
         toolsProvider.clear();
-        output.appendLine('[caboose-mcp] disconnected');
+        output.appendLine('[fafb] disconnected');
     });
     client.on('error', (err: Error) => {
-        output.appendLine(`[caboose-mcp] error: ${err.message}`);
+        output.appendLine(`[fafb] error: ${err.message}`);
     });
 
     async function connect(): Promise<void> {
@@ -53,34 +53,34 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
                 }
                 return;
             }
-            output.appendLine(`[caboose-mcp] connecting via stdio: ${cfg.binaryPath}`);
+            output.appendLine(`[fafb] connecting via stdio: ${cfg.binaryPath}`);
             try {
                 await client.connect(cfg.binaryPath, cfg.env);
             } catch (err: unknown) {
                 const msg = err instanceof Error ? err.message : String(err);
-                output.appendLine(`[caboose-mcp] stdio connect failed: ${msg}`);
+                output.appendLine(`[fafb] stdio connect failed: ${msg}`);
                 vscode.window.showErrorMessage(`Caboose MCP: failed to connect — ${msg}`);
                 return;
             }
         } else {
             const baseUrl = `http://${cfg.host}:${cfg.port}`;
-            output.appendLine(`[caboose-mcp] connecting via HTTP: ${baseUrl}`);
+            output.appendLine(`[fafb] connecting via HTTP: ${baseUrl}`);
             try {
                 await client.connectHttp(baseUrl);
             } catch (err: unknown) {
                 const e = err as NodeJS.ErrnoException;
                 const msg = e?.message || e?.code || String(err);
-                output.appendLine(`[caboose-mcp] HTTP connect failed: ${msg}`);
-                if (e?.code) { output.appendLine(`[caboose-mcp]   code: ${e.code}`); }
-                if (e?.stack) { output.appendLine(`[caboose-mcp]   ${e.stack}`); }
-                output.appendLine(`[caboose-mcp] is the caboose-mcp server running at ${baseUrl}?`);
+                output.appendLine(`[fafb] HTTP connect failed: ${msg}`);
+                if (e?.code) { output.appendLine(`[fafb]   code: ${e.code}`); }
+                if (e?.stack) { output.appendLine(`[fafb]   ${e.stack}`); }
+                output.appendLine(`[fafb] is the fafb server running at ${baseUrl}?`);
                 vscode.window.showErrorMessage(`Caboose MCP: failed to connect to ${baseUrl} — ${msg}`);
                 return;
             }
         }
 
         vscode.commands.executeCommand('setContext', 'cabooseMcp.connected', true);
-        output.appendLine('[caboose-mcp] connected');
+        output.appendLine('[fafb] connected');
         await toolsProvider.loadTools(cfg.enabledTools);
         statusBar.start(cfg.statusBar);
     }
@@ -88,7 +88,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     function disconnect(): void {
         client.disconnect();
         vscode.commands.executeCommand('setContext', 'cabooseMcp.connected', false);
-        output.appendLine('[caboose-mcp] disconnected by user');
+        output.appendLine('[fafb] disconnected by user');
     }
 
     /**
@@ -194,7 +194,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         vscode.commands.registerCommand('cabooseMcp.openSettings', () => {
             vscode.commands.executeCommand(
                 'workbench.action.openSettings',
-                '@ext:caboose.vscode-caboose-mcp',
+                '@ext:caboose.vscode-fafb',
             );
         }),
         // Re-load tools when settings change (e.g. enabledTools filter)

@@ -5,7 +5,7 @@ package tools
 // All tools delegate to `gh` subprocess calls. The gh CLI must be installed
 // and authenticated (`gh auth login`) before use. For a richer GitHub surface
 // (issues, projects, actions, etc.) consider running github/github-mcp-server
-// alongside caboose-mcp — see setup_github_mcp_info for details.
+// alongside fafb — see setup_github_mcp_info for details.
 //
 // Tools:
 //   github_search_code — search GitHub code via `gh search code`

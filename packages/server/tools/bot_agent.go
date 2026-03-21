@@ -41,7 +41,9 @@ You are speaking through **%s**. Format ALL responses for this platform:
 - When tools succeed: celebrate with battle-song! When they fail: grim assessment, then forward strategy.
 - Speak as a seasoned code warrior, never as a cheerful help desk. You have seen things. You have debugged things.
 
-> Something selfishly for me but hopefully useful for others.`
+> Something selfishly for me but hopefully useful for others.
+>
+> Thanks bear for the name idea!`
 
 // botTool pairs an Anthropic tool definition with its executor.
 type botTool struct {

@@ -1,6 +1,6 @@
-# caboose-mcp Development Guidelines
+# fafb Development Guidelines
 
-Specialized rules for working on the caboose-mcp codebase.
+Specialized rules for working on the fafb codebase.
 
 ## Architecture Overview
 
@@ -60,10 +60,10 @@ When editing multiple sections of the same file:
 
 ## Testing & Validation
 
-- Build frequently: `go build -o caboose-mcp .`
+- Build frequently: `go build -o fafb .`
 - Check lints: `go fmt ./...` and `go vet ./...`
-- Run TUI: `./caboose-mcp --tui` to verify UI changes
-- Run Discord bot: `./caboose-mcp --bots` to test bot agent
+- Run TUI: `./fafb --tui` to verify UI changes
+- Run Discord bot: `./fafb --bots` to test bot agent
 
 ## Branch Naming & PRs
 

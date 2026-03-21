@@ -1,13 +1,13 @@
-# caboose-mcp
+# fafb
 
 Personal AI toolserver — 118 MCP tools exposed to Claude, VS Code, and chat bots via a Go server hosted on AWS ECS.
 
 > Something selfishly for me but hopefully useful for others.
 
-[![Deploy Infra](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-infra.yml/badge.svg)](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-infra.yml)
-[![Deploy Bots](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-bots.yml/badge.svg)](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-bots.yml)
-[![Deploy App](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-app.yml/badge.svg)](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-app.yml)
-[![Release](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/release.yml/badge.svg)](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/release.yml)
+[![Deploy Infra](https://github.com/fafb/fafb/actions/workflows/deploy-infra.yml/badge.svg)](https://github.com/fafb/fafb/actions/workflows/deploy-infra.yml)
+[![Deploy Bots](https://github.com/fafb/fafb/actions/workflows/deploy-bots.yml/badge.svg)](https://github.com/fafb/fafb/actions/workflows/deploy-bots.yml)
+[![Deploy App](https://github.com/fafb/fafb/actions/workflows/deploy-app.yml/badge.svg)](https://github.com/fafb/fafb/actions/workflows/deploy-app.yml)
+[![Release](https://github.com/fafb/fafb/actions/workflows/release.yml/badge.svg)](https://github.com/fafb/fafb/actions/workflows/release.yml)
 [![Go 1.24](https://img.shields.io/badge/go-1.24-00ADD8?logo=go)](https://go.dev)
 [![MCP Live](https://img.shields.io/website?url=https%3A%2F%2Fmcp.chrismarasco.io%2Fhealth&label=mcp.chrismarasco.io&up_message=live&logo=amazonaws)](https://mcp.chrismarasco.io/ui/)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
@@ -23,7 +23,7 @@ Personal AI toolserver — 118 MCP tools exposed to Claude, VS Code, and chat bo
 
 ```mermaid
 graph TD
-    Claude["Claude Code (stdio)"] -->|all 118 tools| Binary["caboose-mcp (Pi)"]
+    Claude["Claude Code (stdio)"] -->|all 118 tools| Binary["fafb (Pi)"]
     VSCode["VS Code / Bruno"] -->|HTTPS| ALB["ALB · mcp.chrismarasco.io"]
     ALB --> Serve["ECS · --serve-hosted\n68 hosted tools"]
     Slack["Slack"] --> Bots["ECS · --bots\nSlack + Discord gateway"]
@@ -31,7 +31,7 @@ graph TD
     Bots -->|Claude Haiku| Agent["Bot agent loop"]
     Binary -->|LAN MQTT| Bambu["Bambu A1 Printer"]
     Binary -->|socket| DockerD["Docker daemon"]
-    Serve & Bots --> SM["AWS Secrets Manager\ncaboose-mcp/env"]
+    Serve & Bots --> SM["AWS Secrets Manager\nfafb/env"]
 ```
 
 ---
@@ -67,7 +67,7 @@ claude mcp add --transport http --scope user MCP_CABOOSE https://mcp.chrismarasc
 ```json
 {
   "servers": {
-    "caboose-mcp": {
+    "fafb": {
       "type": "http",
       "url": "https://mcp.chrismarasco.io/mcp"
     }
@@ -80,33 +80,33 @@ claude mcp add --transport http --scope user MCP_CABOOSE https://mcp.chrismarasc
 ### Run locally (Claude Code on Pi)
 
 ```bash
-cd packages/server && go build -o caboose-mcp .
+cd packages/server && go build -o fafb .
 
 # Interactive setup wizard — writes .env
-./caboose-mcp --setup
+./fafb --setup
 
 # Terminal UI dashboard
-./caboose-mcp --tui
+./fafb --tui
 
-./caboose-mcp                # stdio — all tools (Claude Code)
-./caboose-mcp --serve        # HTTP :8080 — all tools
-./caboose-mcp --serve-hosted # HTTP :8080 — hosted tools only
-./caboose-mcp --serve-local  # HTTP :8080 — local tools only
-./caboose-mcp --bots         # Slack + Discord bots (blocks)
+./fafb                # stdio — all tools (Claude Code)
+./fafb --serve        # HTTP :8080 — all tools
+./fafb --serve-hosted # HTTP :8080 — hosted tools only
+./fafb --serve-local  # HTTP :8080 — local tools only
+./fafb --bots         # Slack + Discord bots (blocks)
 ```
 
 `.mcp.json` for Claude Code:
 ```json
 {
   "mcpServers": {
-    "caboose": { "command": "/path/to/packages/server/caboose-mcp", "type": "stdio" }
+    "caboose": { "command": "/path/to/packages/server/fafb", "type": "stdio" }
   }
 }
 ```
 
 Or via CLI:
 ```bash
-claude mcp add MCP_CABOOSE -- /path/to/caboose-mcp
+claude mcp add MCP_CABOOSE -- /path/to/fafb
 ```
 
 ### Run with Docker Compose (server + n8n)
@@ -131,8 +131,8 @@ Full setup instructions for both local and hosted deploys: [docs/setup.md](docs/
 |----------|---------|--------|
 | `ci.yml` | PR / push to main | Lint, test, build (amd64+arm64), e2e, UI build + changelog generation |
 | `deploy-infra.yml` | Push to `terraform/aws/**` or manual | `tofu apply` + sync secrets to AWS Secrets Manager |
-| `deploy-bots.yml` | Push to `packages/server/**` on main | Build image → ECR → redeploy `caboose-mcp-bots` |
-| `deploy-app.yml` | Push to `packages/server/**` or `docker/Dockerfile` on main | Build image → ECR → redeploy `caboose-mcp-serve` → index Greptile |
+| `deploy-bots.yml` | Push to `packages/server/**` on main | Build image → ECR → redeploy `fafb-bots` |
+| `deploy-app.yml` | Push to `packages/server/**` or `docker/Dockerfile` on main | Build image → ECR → redeploy `fafb-serve` → index Greptile |
 | `release.yml` | Push to main or `v*.*.*` tag | Build linux/amd64 + linux/arm64 → GitHub Release (auto date-tag on merge) |
 
 ### Releases
@@ -150,11 +150,11 @@ git push origin v1.2.0
 
 AWS resources managed by OpenTofu in `terraform/aws/`:
 
-- **ECS Fargate** — `caboose-mcp-bots` (`--bots`) + `caboose-mcp-serve` (`--serve-hosted`)
+- **ECS Fargate** — `fafb-bots` (`--bots`) + `fafb-serve` (`--serve-hosted`)
 - **ALB** — HTTPS 443, HTTP→HTTPS redirect, `mcp.chrismarasco.io`
 - **ACM** — TLS cert, DNS-validated via Route53
 - **ECR** — Docker image registry (lifecycle: keep last 5)
-- **Secrets Manager** — `caboose-mcp/env` — secrets injected into ECS tasks at startup
+- **Secrets Manager** — `fafb/env` — secrets injected into ECS tasks at startup
 - **S3** — encrypted config sync bucket
 - **CloudWatch Logs** — 30-day retention per service
 
@@ -199,7 +199,7 @@ docs/
 
 ## Disclaimer
 
-**caboose-mcp is experimental software provided "as is", without warranty of any kind, express or implied.**
+**fafb is experimental software provided "as is", without warranty of any kind, express or implied.**
 
 By using this software you acknowledge and agree that:
 
@@ -211,7 +211,7 @@ By using this software you acknowledge and agree that:
 
 This disclaimer is in addition to and does not limit the terms of the [MIT License](LICENSE).
 
-The `CABOOSE_ENV=stable` flag may be set to suppress experimental warnings once a deployment has been reviewed and accepted for a given use case — this does not alter or waive any of the above terms.
+The `FAFB_ENV=stable` flag may be set to suppress experimental warnings once a deployment has been reviewed and accepted for a given use case — this does not alter or waive any of the above terms.
 
 ---
 
@@ -231,3 +231,7 @@ Built with love, chaos, and coffee by:
 | [Claude](https://claude.ai) (Anthropic) | AI pair programmer and code generation |
 | [Claude Code](https://claude.ai/claude-code) | Agentic CLI — implementation, refactoring, debugging |
 | [GitHub Copilot](https://github.com/features/copilot) | Inline completion and suggestions |
+
+---
+
+Thanks bear for the name idea!

@@ -161,7 +161,7 @@ jobs:
         with:
           payload: |
             {
-              "text": "🚨 caboose-mcp Security Scan Failed",
+              "text": "🚨 fafb Security Scan Failed",
               "blocks": [
                 {
                   "type": "section",

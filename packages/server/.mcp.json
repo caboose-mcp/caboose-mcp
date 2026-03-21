@@ -1,10 +1,10 @@
 {
   "mcpServers": {
-    "caboose-mcp": {
+    "fafb": {
       "type": "stdio",
-      "command": "/home/caboose/dev/caboose-mcp/caboose-mcp",
+      "command": "/home/caboose/dev/fafb/fafb",
       "args": [],
-      "cwd": "/home/caboose/dev/caboose-mcp"
+      "cwd": "/home/caboose/dev/fafb"
     }
   }
 }

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Security scanning script for caboose-mcp
+# Security scanning script for fafb
 # Runs all security checks and generates a report
 
 set -e
@@ -10,7 +10,7 @@ RESULTS_DIR="${REPO_ROOT}/security-results-${TIMESTAMP}"
 
 mkdir -p "$RESULTS_DIR"
 
-echo "🔒 caboose-mcp Security Scanner"
+echo "🔒 fafb Security Scanner"
 echo "================================"
 echo "Results directory: $RESULTS_DIR"
 echo ""

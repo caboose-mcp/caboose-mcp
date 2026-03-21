@@ -91,7 +91,7 @@ func greptileQueryHandler(cfg *config.Config) func(context.Context, mcp.CallTool
 			"repositories": []map[string]string{
 				{"remote": "github", "repository": repo, "branch": "main"},
 			},
-			"sessionId": "caboose-mcp",
+			"sessionId": "fafb",
 		}
 
 		data, err := greptileHTTP(cfg, "POST", "/query", payload)

@@ -116,12 +116,12 @@ jobs:
           cache-dependency-path: packages/server/go.sum
 
       - name: Build binary
-        run: CGO_ENABLED=0 go build -o caboose-mcp .
+        run: CGO_ENABLED=0 go build -o fafb .
 
       - name: Smoke test — auth:create
         run: |
           export CLAUDE_DIR=$(mktemp -d)
-          OUTPUT=$(./caboose-mcp auth:create --label "e2e-smoke" --tools "note_add,focus_start" --expires 1)
+          OUTPUT=$(./fafb auth:create --label "e2e-smoke" --tools "note_add,focus_start" --expires 1)
           echo "$OUTPUT"
           echo "$OUTPUT" | grep -q "Magic link" || (echo "FAIL: no magic link in output" && exit 1)
           echo "$OUTPUT" | grep -q "e2e-smoke"  || (echo "FAIL: label not in output" && exit 1)
@@ -130,7 +130,7 @@ jobs:
       - name: Smoke test — auth:create all tools (no --tools flag)
         run: |
           export CLAUDE_DIR=$(mktemp -d)
-          OUTPUT=$(./caboose-mcp auth:create --label "e2e-all-tools")
+          OUTPUT=$(./fafb auth:create --label "e2e-all-tools")
           echo "$OUTPUT"
           echo "$OUTPUT" | grep -q "Tools:   all" || (echo "FAIL: expected 'Tools: all'" && exit 1)
 

@@ -1,10 +1,10 @@
 # n8n Integration
 
-caboose-mcp and n8n work together in two directions:
+fafb and n8n work together in two directions:
 
 ```
-caboose-mcp  ──push events──►  n8n webhooks
-n8n          ──HTTP Request──►  caboose-mcp /mcp
+fafb  ──push events──►  n8n webhooks
+n8n          ──HTTP Request──►  fafb /mcp
 ```
 
 ## Setup

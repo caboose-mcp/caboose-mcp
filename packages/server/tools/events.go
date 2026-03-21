@@ -20,7 +20,7 @@ type Event struct {
 	Type      string         `json:"type"`
 	ID        string         `json:"id"`
 	Timestamp time.Time      `json:"ts"`
-	Source    string         `json:"source"` // always "caboose-mcp"
+	Source    string         `json:"source"` // always "fafb"
 	Data      map[string]any `json:"data"`
 }
 
@@ -31,7 +31,7 @@ func EmitEvent(cfg *config.Config, ev Event) {
 		return
 	}
 	if ev.Source == "" {
-		ev.Source = "caboose-mcp"
+		ev.Source = "fafb"
 	}
 	if ev.Timestamp.IsZero() {
 		ev.Timestamp = time.Now()

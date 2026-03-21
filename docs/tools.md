@@ -163,7 +163,7 @@
 | `setup_init_dirs` | Initialize `~/.claude/` subdirectories |
 | `setup_write_env` | Write a `.env` file with provided key=value pairs |
 | `setup_n8n_workflows` | Return example n8n workflow JSON |
-| `setup_github_mcp_info` | Explain GitHub MCP server vs caboose-mcp |
+| `setup_github_mcp_info` | Explain GitHub MCP server vs fafb |
 | `setup_bot_configure` | Configure Slack/Discord bot settings |
 
 ---

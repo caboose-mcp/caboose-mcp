@@ -140,7 +140,7 @@ echo "  ✓ Created: environments/production.bru"
 cat > "$OUTDIR/bruno.json" << EOF
 {
   "version": "1",
-  "name": "caboose-mcp-generated",
+  "name": "fafb-generated",
   "type": "collection"
 }
 EOF

@@ -24,15 +24,15 @@ gpg --version
 ### 2. Clone and build
 
 ```bash
-git clone https://github.com/caboose-mcp/caboose-mcp.git
-cd caboose-mcp/packages/server
-go build -o caboose-mcp .
+git clone https://github.com/fafb/fafb.git
+cd fafb/packages/server
+go build -o fafb .
 ```
 
 ### 3. Configure with the setup wizard
 
 ```bash
-./caboose-mcp --setup
+./fafb --setup
 ```
 
 This interactive wizard walks through every config option and writes a `.env` file. Press Enter to keep any default, type `-` to clear a value.
@@ -50,7 +50,7 @@ This interactive wizard walks through every config option and writes a `.env` fi
 ### 4. Initialize data directories
 
 ```bash
-./caboose-mcp --tui
+./fafb --tui
 # → Setup → Initialize directories
 ```
 
@@ -68,7 +68,7 @@ Add to `.mcp.json` in your project root (or `~/.claude/mcp.json` globally):
 {
   "mcpServers": {
     "caboose": {
-      "command": "/path/to/packages/server/caboose-mcp",
+      "command": "/path/to/packages/server/fafb",
       "type": "stdio"
     }
   }
@@ -80,22 +80,22 @@ Claude Code will launch the binary automatically. All 108 tools are available.
 ### 6. Run as HTTP server (optional)
 
 ```bash
-./caboose-mcp --serve        # all 108 tools on :8080
-./caboose-mcp --serve-hosted # 88 hosted tools only
-./caboose-mcp --serve-local  # 20 local tools only
-./caboose-mcp --serve :9090  # custom port
+./fafb --serve        # all 108 tools on :8080
+./fafb --serve-hosted # 88 hosted tools only
+./fafb --serve-local  # 20 local tools only
+./fafb --serve :9090  # custom port
 ```
 
 Set `MCP_AUTH_TOKEN` to optionally require bearer auth (recommended for network-exposed instances):
 ```bash
 export MCP_AUTH_TOKEN=$(openssl rand -hex 32)
-./caboose-mcp --serve
+./fafb --serve
 ```
 
 ### 7. Run with Docker Compose (server + n8n)
 
 ```bash
-cd /path/to/caboose-mcp
+cd /path/to/fafb
 
 cp .env.example .env
 # edit .env — fill in secrets
@@ -106,7 +106,7 @@ docker compose -f docker/docker-compose.yml up -d
 **Services:**
 | Service | URL | Purpose |
 |---------|-----|---------|
-| `caboose-mcp` | `http://localhost:8080/mcp` | MCP server (all tools) |
+| `fafb` | `http://localhost:8080/mcp` | MCP server (all tools) |
 | `n8n` | `http://localhost:5678` | Workflow automation |
 
 n8n is pre-wired to call the MCP server at `http://server:8080/mcp`. Import example workflows with `setup_n8n_workflows`.
@@ -115,11 +115,11 @@ n8n is pre-wired to call the MCP server at `http://server:8080/mcp`. Import exam
 
 ```bash
 # Both bots concurrently (blocks)
-./caboose-mcp --bots
+./fafb --bots
 
 # Individual bots
-./caboose-mcp --slack-bot
-./caboose-mcp --discord-bot
+./fafb --slack-bot
+./fafb --discord-bot
 ```
 
 Requires: `ANTHROPIC_API_KEY`, `SLACK_TOKEN` + `SLACK_APP_TOKEN`, `DISCORD_TOKEN`.
@@ -162,10 +162,10 @@ tofu apply
 ```
 
 This creates:
-- ECS Fargate cluster + two services (`caboose-mcp-serve`, `caboose-mcp-bots`)
+- ECS Fargate cluster + two services (`fafb-serve`, `fafb-bots`)
 - ALB with HTTPS (ACM cert, Route53 DNS)
 - ECR repository
-- Secrets Manager secret (`caboose-mcp/env`)
+- Secrets Manager secret (`fafb/env`)
 - S3 bucket (cloud sync)
 - CloudWatch log groups
 
@@ -173,7 +173,7 @@ This creates:
 
 ```bash
 aws secretsmanager put-secret-value \
-  --secret-id caboose-mcp/env \
+  --secret-id fafb/env \
   --secret-string '{
     "ANTHROPIC_API_KEY":  "sk-ant-...",
     "SLACK_TOKEN":        "xoxb-...",
@@ -194,7 +194,7 @@ docker buildx create --name multiarch --driver docker-container --use
 # Build and push AMD64 image to ECR
 AWS_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 AWS_REGION=us-east-1
-ECR_REPO=$AWS_ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com/caboose-mcp
+ECR_REPO=$AWS_ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com/fafb
 
 aws ecr get-login-password --region $AWS_REGION | \
   docker login --username AWS --password-stdin $ECR_REPO
@@ -212,13 +212,13 @@ The `deploy-app` and `deploy-bots` CI workflows do this automatically on push to
 
 ```bash
 aws ecs update-service \
-  --cluster caboose-mcp \
-  --service caboose-mcp-serve \
+  --cluster fafb \
+  --service fafb-serve \
   --force-new-deployment
 
 aws ecs update-service \
-  --cluster caboose-mcp \
-  --service caboose-mcp-bots \
+  --cluster fafb \
+  --service fafb-bots \
   --force-new-deployment
 ```
 
@@ -229,7 +229,7 @@ Add to `.vscode/mcp.json`:
 ```json
 {
   "servers": {
-    "caboose-mcp": {
+    "fafb": {
       "type": "http",
       "url": "https://mcp.yourdomain.com/mcp"
     }
@@ -287,7 +287,7 @@ Per-token access control with magic link exchange. Each JWT carries a tool allow
 ### 1. Create a token (CLI or via Claude)
 
 ```bash
-./caboose-mcp auth:create \
+./fafb auth:create \
   --label "vscode-alice" \
   --tools "calendar_list,calendar_create,note_add,focus_start,focus_status" \
   --google-scopes "calendar" \
@@ -351,12 +351,12 @@ auth_revoke_token(jti="6ba7b810-...")
 
 ## AWS Cost Estimates
 
-Running the full caboose-mcp stack on AWS ECS Fargate (hosted tier only):
+Running the full fafb stack on AWS ECS Fargate (hosted tier only):
 
 | Service | Spec | Est. monthly cost |
 |---------|------|-------------------|
-| ECS Fargate — `caboose-mcp-serve` | 0.25 vCPU / 0.5 GB | ~$8–12 |
-| ECS Fargate — `caboose-mcp-bots` | 0.25 vCPU / 0.5 GB | ~$8–12 |
+| ECS Fargate — `fafb-serve` | 0.25 vCPU / 0.5 GB | ~$8–12 |
+| ECS Fargate — `fafb-bots` | 0.25 vCPU / 0.5 GB | ~$8–12 |
 | ALB (Application Load Balancer) | base + ~0.008/LCU-hr | ~$18 |
 | ACM (TLS certificate) | managed cert | free |
 | ECR (container registry) | 5-image lifecycle policy | ~$0.10/GB/month |
@@ -371,7 +371,7 @@ Running the full caboose-mcp stack on AWS ECS Fargate (hosted tier only):
 aws budgets create-budget \
   --account-id "$(aws sts get-caller-identity --query Account --output text)" \
   --budget '{
-    "BudgetName": "caboose-mcp-monthly",
+    "BudgetName": "fafb-monthly",
     "BudgetLimit": {"Amount": "60", "Unit": "USD"},
     "TimeUnit": "MONTHLY",
     "BudgetType": "COST"

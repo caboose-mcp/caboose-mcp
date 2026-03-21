@@ -30,7 +30,7 @@ output "acm_certificate_arn" {
 }
 
 output "route53_zone_id" {
-  description = "Route53 hosted zone ID — consumed by caboose-mcp-ui terraform via remote_state."
+  description = "Route53 hosted zone ID — consumed by fafb-ui terraform via remote_state."
   value       = var.route53_zone_id
 }
 

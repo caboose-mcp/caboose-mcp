@@ -68,7 +68,7 @@ func main() {
 		expires := fs.Int("expires", 30, "Days until token expires")
 		_ = fs.Parse(os.Args[2:])
 		if *label == "" {
-			fmt.Fprintln(os.Stderr, "usage: caboose-mcp auth:create --label <name> [--tools ...] [--google-scopes ...] [--discord-scopes ...] [--slack-scopes ...] [--expires N]")
+			fmt.Fprintln(os.Stderr, "usage: fafb auth:create --label <name> [--tools ...] [--google-scopes ...] [--discord-scopes ...] [--slack-scopes ...] [--expires N]")
 			os.Exit(1)
 		}
 		if err := tools.CreateTokenCLI(cfg, *label, *toolsFlag, *scopes, *discordScopes, *slackScopes, *expires); err != nil {
@@ -158,9 +158,9 @@ func serveHTTP(cfg *config.Config, addr string, s *server.MCPServer) {
 	mux.Handle("/", authedMCP)
 
 	if adminToken != "" {
-		log.Printf("caboose-mcp HTTP server on %s (admin token + JWT auth)", addr)
+		log.Printf("fafb HTTP server on %s (admin token + JWT auth)", addr)
 	} else {
-		log.Printf("caboose-mcp HTTP server on %s (JWT auth only — set MCP_AUTH_TOKEN for admin bypass)", addr)
+		log.Printf("fafb HTTP server on %s (JWT auth only — set MCP_AUTH_TOKEN for admin bypass)", addr)
 	}
 	log.Printf("UI:      %s", cfg.UIOrigin)
 	log.Printf("MCP:     http://%s/mcp", addr)
@@ -221,11 +221,11 @@ func mcpServerOptions(cfg *config.Config) []server.ServerOption {
 	if cfg.ReleaseStage != "stable" {
 		opts = append(opts, server.WithInstructions(
 			"⚠️  EXPERIMENTAL SOFTWARE — USE AT YOUR OWN RISK\n\n"+
-				"caboose-mcp is under active development and has not been fully tested. "+
+				"fafb is under active development and has not been fully tested. "+
 				"Tools may behave unexpectedly, produce incorrect results, modify data, or fail without warning. "+
 				"No warranty is provided, express or implied. "+
 				"Do not use this server for critical workflows, production systems, or sensitive data without understanding the risks.\n\n"+
-				"Set CABOOSE_ENV=stable to suppress this message once the deployment is considered production-ready.",
+				"Set FAFB_ENV=stable to suppress this message once the deployment is considered production-ready.",
 		))
 	}
 	return opts
@@ -234,7 +234,7 @@ func mcpServerOptions(cfg *config.Config) []server.ServerOption {
 // buildHostedMCPServer creates a server with only cloud-safe hosted tools.
 // Used for --serve-hosted and ECS Fargate deployments.
 func buildHostedMCPServer(cfg *config.Config) *server.MCPServer {
-	s := server.NewMCPServer("caboose-mcp", "2.0.0", mcpServerOptions(cfg)...)
+	s := server.NewMCPServer("fafb", "2.0.0", mcpServerOptions(cfg)...)
 	registerHostedTools(s, cfg)
 	return s
 }
@@ -242,7 +242,7 @@ func buildHostedMCPServer(cfg *config.Config) *server.MCPServer {
 // buildLocalMCPServer creates a server with only local/hardware tools.
 // Used for --serve-local when running on the Pi alongside Claude Code.
 func buildLocalMCPServer(cfg *config.Config) *server.MCPServer {
-	s := server.NewMCPServer("caboose-mcp", "2.0.0", mcpServerOptions(cfg)...)
+	s := server.NewMCPServer("fafb", "2.0.0", mcpServerOptions(cfg)...)
 	registerLocalTools(s, cfg)
 	return s
 }
@@ -250,7 +250,7 @@ func buildLocalMCPServer(cfg *config.Config) *server.MCPServer {
 // buildMCPServer creates a server with all tools (hosted + local combined).
 // Used for --serve and stdio (default) modes.
 func buildMCPServer(cfg *config.Config) *server.MCPServer {
-	s := server.NewMCPServer("caboose-mcp", "2.0.0", mcpServerOptions(cfg)...)
+	s := server.NewMCPServer("fafb", "2.0.0", mcpServerOptions(cfg)...)
 	registerHostedTools(s, cfg)
 	registerLocalTools(s, cfg)
 	return s

@@ -1,12 +1,12 @@
 # Security Setup Guide
 
-This guide will help you set up automated security scanning for caboose-mcp.
+This guide will help you set up automated security scanning for fafb.
 
 ## Quick Start (5 minutes)
 
 ### 1. **Fix Environment File Permissions**
 ```bash
-cd /home/caboose/dev/caboose-mcp
+cd /home/caboose/dev/fafb
 chmod 600 .env
 chmod 600 packages/server/.env.example
 ```
@@ -25,7 +25,7 @@ go mod tidy
 
 ### 3. **Install Security Hooks**
 ```bash
-cd /home/caboose/dev/caboose-mcp
+cd /home/caboose/dev/fafb
 ./scripts/install-hooks.sh
 ```
 
@@ -61,7 +61,7 @@ git secrets --add 'PRIVATE_KEY|API_KEY|SECRET_KEY'
 
 #### Enable Pre-commit Hooks
 ```bash
-cd /home/caboose/dev/caboose-mcp
+cd /home/caboose/dev/fafb
 ./scripts/install-hooks.sh
 ```
 

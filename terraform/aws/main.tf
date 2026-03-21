@@ -1,6 +1,6 @@
 # terraform/aws/main.tf
 #
-# Provisions AWS resources used by caboose-mcp:
+# Provisions AWS resources used by fafb:
 #   - IAM user + policy for Bedrock access (Claude models)
 #   - S3 bucket for cloudsync (config backups)
 #   - ECR repository for the Docker image
@@ -21,8 +21,8 @@ terraform {
   }
 
   backend "s3" {
-    bucket = "caboose-mcp-tfstate"
-    key    = "caboose-mcp/terraform.tfstate"
+    bucket = "fafb-tfstate"
+    key    = "fafb/terraform.tfstate"
     region = "us-east-1"
   }
 }
@@ -42,7 +42,7 @@ resource "aws_iam_user" "caboose_cli" {
 }
 
 resource "aws_iam_user_policy" "bedrock" {
-  name = "caboose-mcp-bedrock"
+  name = "fafb-bedrock"
   user = aws_iam_user.caboose_cli.name
 
   policy = jsonencode({
@@ -67,7 +67,7 @@ resource "aws_iam_user_policy" "bedrock" {
 # ─── API Gateway: CORS proxy management ────────────────────────────────────
 
 resource "aws_iam_user_policy" "apigateway" {
-  name = "caboose-mcp-apigateway"
+  name = "fafb-apigateway"
   user = aws_iam_user.caboose_cli.name
 
   policy = jsonencode({
@@ -121,7 +121,7 @@ resource "aws_s3_bucket_public_access_block" "cloudsync" {
 }
 
 resource "aws_iam_user_policy" "s3_cloudsync" {
-  name = "caboose-mcp-cloudsync-s3"
+  name = "fafb-cloudsync-s3"
   user = aws_iam_user.caboose_cli.name
 
   policy = jsonencode({
@@ -148,7 +148,7 @@ resource "aws_iam_user_policy" "s3_cloudsync" {
 # ─── ECR: Docker image registry ───────────────────────────────────────────────
 
 resource "aws_ecr_repository" "caboose_mcp" {
-  name                 = "caboose-mcp"
+  name                 = "fafb"
   image_tag_mutability = "MUTABLE"
 
   image_scanning_configuration {
@@ -179,7 +179,7 @@ resource "aws_ecr_lifecycle_policy" "caboose_mcp" {
 
 locals {
   common_tags = {
-    Project     = "caboose-mcp"
+    Project     = "fafb"
     ManagedBy   = "terraform"
     Environment = var.environment
   }
@@ -199,25 +199,25 @@ data "aws_subnets" "default" {
 # ─── Secrets Manager ──────────────────────────────────────────────────────────
 # Create the secret, then populate it:
 #   aws secretsmanager put-secret-value \
-#     --secret-id caboose-mcp/env \
+#     --secret-id fafb/env \
 #     --secret-string '{"ANTHROPIC_API_KEY":"...","SLACK_TOKEN":"...","SLACK_APP_TOKEN":"...","DISCORD_TOKEN":"..."}'
 
 resource "aws_secretsmanager_secret" "env" {
-  name        = "caboose-mcp/env"
-  description = "caboose-mcp runtime secrets"
+  name        = "fafb/env"
+  description = "fafb runtime secrets"
   tags        = local.common_tags
 }
 
 # ─── CloudWatch log groups ────────────────────────────────────────────────────
 
 resource "aws_cloudwatch_log_group" "bots" {
-  name              = "/ecs/caboose-mcp/bots"
+  name              = "/ecs/fafb/bots"
   retention_in_days = 30
   tags              = local.common_tags
 }
 
 resource "aws_cloudwatch_log_group" "serve" {
-  name              = "/ecs/caboose-mcp/serve"
+  name              = "/ecs/fafb/serve"
   retention_in_days = 30
   tags              = local.common_tags
 }
@@ -225,14 +225,14 @@ resource "aws_cloudwatch_log_group" "serve" {
 # ─── ECS cluster ──────────────────────────────────────────────────────────────
 
 resource "aws_ecs_cluster" "main" {
-  name = "caboose-mcp"
+  name = "fafb"
   tags = local.common_tags
 }
 
 # ─── IAM: ECS execution role (agent: pull image, push logs, read secrets) ─────
 
 resource "aws_iam_role" "ecs_exec" {
-  name = "caboose-mcp-ecs-exec"
+  name = "fafb-ecs-exec"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -252,7 +252,7 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_managed" {
 }
 
 resource "aws_iam_role_policy" "ecs_exec_secrets" {
-  name = "read-caboose-mcp-secrets"
+  name = "read-fafb-secrets"
   role = aws_iam_role.ecs_exec.id
 
   policy = jsonencode({
@@ -268,7 +268,7 @@ resource "aws_iam_role_policy" "ecs_exec_secrets" {
 # ─── IAM: ECS task role (app permissions: S3 cloudsync) ──────────────────────
 
 resource "aws_iam_role" "ecs_task" {
-  name = "caboose-mcp-ecs-task"
+  name = "fafb-ecs-task"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -302,7 +302,7 @@ resource "aws_iam_role_policy" "ecs_task_s3" {
 # ─── Security groups ──────────────────────────────────────────────────────────
 
 resource "aws_security_group" "alb" {
-  name        = "caboose-mcp-alb"
+  name        = "fafb-alb"
   description = "ALB: allow inbound HTTP and HTTPS"
   vpc_id      = data.aws_vpc.default.id
 
@@ -331,7 +331,7 @@ resource "aws_security_group" "alb" {
 }
 
 resource "aws_security_group" "ecs_serve" {
-  name        = "caboose-mcp-serve"
+  name        = "fafb-serve"
   description = "ECS serve task: allow traffic from ALB on 8080"
   vpc_id      = data.aws_vpc.default.id
 
@@ -353,7 +353,7 @@ resource "aws_security_group" "ecs_serve" {
 }
 
 resource "aws_security_group" "ecs_bots" {
-  name        = "caboose-mcp-bots"
+  name        = "fafb-bots"
   description = "ECS bots task: outbound only"
   vpc_id      = data.aws_vpc.default.id
 
@@ -370,7 +370,7 @@ resource "aws_security_group" "ecs_bots" {
 # ─── ALB ──────────────────────────────────────────────────────────────────────
 
 resource "aws_lb" "serve" {
-  name               = "caboose-mcp-serve"
+  name               = "fafb-serve"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.alb.id]
@@ -379,7 +379,7 @@ resource "aws_lb" "serve" {
 }
 
 resource "aws_lb_target_group" "serve" {
-  name        = "caboose-mcp-serve"
+  name        = "fafb-serve"
   port        = 8080
   protocol    = "HTTP"
   vpc_id      = data.aws_vpc.default.id
@@ -484,7 +484,7 @@ resource "aws_lb_listener" "https" {
 # ─── ECS task definitions ─────────────────────────────────────────────────────
 
 resource "aws_ecs_task_definition" "bots" {
-  family                   = "caboose-mcp-bots"
+  family                   = "fafb-bots"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
@@ -532,7 +532,7 @@ resource "aws_ecs_task_definition" "bots" {
 }
 
 resource "aws_ecs_task_definition" "serve" {
-  family                   = "caboose-mcp-serve"
+  family                   = "fafb-serve"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = 256
@@ -582,7 +582,7 @@ resource "aws_ecs_task_definition" "serve" {
 # ─── ECS services ─────────────────────────────────────────────────────────────
 
 resource "aws_ecs_service" "bots" {
-  name            = "caboose-mcp-bots"
+  name            = "fafb-bots"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.bots.arn
   desired_count   = 1
@@ -598,7 +598,7 @@ resource "aws_ecs_service" "bots" {
 }
 
 resource "aws_ecs_service" "serve" {
-  name            = "caboose-mcp-serve"
+  name            = "fafb-serve"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.serve.arn
   desired_count   = 1

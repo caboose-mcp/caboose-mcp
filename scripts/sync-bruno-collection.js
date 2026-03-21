@@ -168,7 +168,7 @@ async function main() {
     // Create bruno.json
     fs.writeFileSync(path.join(outDir, 'bruno.json'), JSON.stringify({
       version: '1',
-      name: 'caboose-mcp-generated',
+      name: 'fafb-generated',
       type: 'collection',
     }, null, 2));
 

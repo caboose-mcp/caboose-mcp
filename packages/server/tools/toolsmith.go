@@ -1,13 +1,13 @@
 package tools
 
-// Toolsmith — meta-tools for writing new caboose-mcp tools.
+// Toolsmith — meta-tools for writing new fafb tools.
 //
 // Workflow:
 //  1. tool_scaffold  — generate boilerplate Go source for a new tool given name,
 //                      description, and parameter definitions. Returns ready-to-edit code.
 //  2. tool_write     — write arbitrary Go source to tools/<filename>.go and update
 //                      main.go to register the new Register* func.
-//  3. tool_rebuild   — run `go build -o caboose-mcp .` in the project root.
+//  3. tool_rebuild   — run `go build -o fafb .` in the project root.
 //  4. tool_list      — list existing tool source files + the tools each registers.
 
 import (
@@ -36,7 +36,7 @@ import (
 func projectRoot() (string, error) {
 	// Try well-known path first
 	candidates := []string{
-		"/home/caboose/dev/caboose-mcp",
+		"/home/caboose/dev/fafb",
 	}
 	// Walk upward from current working directory
 	cwd, err := os.Getwd()
@@ -89,7 +89,7 @@ func RegisterToolsmith(s *server.MCPServer, cfg *config.Config) {
 	), toolWriteHandler(cfg))
 
 	s.AddTool(mcp.NewTool("tool_rebuild",
-		mcp.WithDescription("Rebuild the caboose-mcp binary (go build -o caboose-mcp .). Returns compiler output."),
+		mcp.WithDescription("Rebuild the fafb binary (go build -o fafb .). Returns compiler output."),
 	), toolRebuildHandler(cfg))
 
 	s.AddTool(mcp.NewTool("tool_list",
@@ -348,7 +348,7 @@ func toolRebuildHandler(cfg *config.Config) func(context.Context, mcp.CallToolRe
 			return mcp.NewToolResultError(err.Error()), nil
 		}
 
-		cmd := exec.Command(goExe, "build", "-o", "caboose-mcp", ".")
+		cmd := exec.Command(goExe, "build", "-o", "fafb", ".")
 		cmd.Dir = root
 		// Add Go bin to PATH so `go` can find toolchain
 		cmd.Env = append(os.Environ(), "PATH="+os.Getenv("PATH")+":/usr/local/go/bin")

@@ -1,6 +1,6 @@
 # packages/n8n/Dockerfile
 #
-# Extends the official n8n image to pre-load caboose-mcp workflows on first run.
+# Extends the official n8n image to pre-load fafb workflows on first run.
 # Workflows are imported via the n8n CLI (n8n import:workflow) in the entrypoint.
 #
 # If workflows already exist (n8n_data volume populated) the import is skipped.

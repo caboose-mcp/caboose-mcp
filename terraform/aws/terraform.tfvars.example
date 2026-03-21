@@ -4,7 +4,7 @@ aws_region            = "us-east-1"
 aws_profile           = "default"        # local AWS CLI profile name
 environment           = "personal"
 iam_user_name         = "caboose_cli"
-cloudsync_bucket_name = "caboose-mcp-cloudsync-YOUR_UNIQUE_SUFFIX"
+cloudsync_bucket_name = "fafb-cloudsync-YOUR_UNIQUE_SUFFIX"
 
 # Optional: channel IDs the bots respond in (DMs always work without these)
 slack_bot_channels   = ""   # e.g. "C0123ABC,C0456DEF"
