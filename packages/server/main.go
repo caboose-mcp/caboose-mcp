@@ -192,6 +192,7 @@ func registerHostedTools(s *server.MCPServer, cfg *config.Config) {
 	tools.RegisterSandbox(s, cfg)
 	tools.RegisterAudit(s, cfg)
 	tools.RegisterAuth(s, cfg)
+	tools.RegisterSources(s, cfg)
 	registerCommonTools(s, cfg)
 }
 

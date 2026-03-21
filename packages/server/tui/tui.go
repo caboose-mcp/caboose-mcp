@@ -199,9 +199,12 @@ func (m model) watchDirs() tea.Cmd {
 			filepath.Join(m.cfg.ClaudeDir, "learning"),
 		}
 		for _, dir := range dirs {
-			// Silently skip if directory doesn't exist yet
-			if _, err := os.Stat(dir); err == nil {
-				_ = watcher.Add(dir)
+			// Ensure directory exists before watching
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				return statusMsg("Watch setup error: " + err.Error())
+			}
+			if err := watcher.Add(dir); err != nil {
+				return statusMsg("Watch error: " + err.Error())
 			}
 		}
 
@@ -220,7 +223,7 @@ func (m model) watchDirs() tea.Cmd {
 				if !ok {
 					return tickMsg{}
 				}
-				_ = err // silently ignore errors
+				return statusMsg("Watch error: " + err.Error())
 			}
 		}
 	}
