@@ -28,7 +28,8 @@ import (
 
 // DiscordSender implements PlatformSender for Discord.
 type DiscordSender struct {
-	s *discordgo.Session
+	s     *discordgo.Session
+	cache *botMsgCache // optional cache for 🔊 reaction TTS; nil if caching disabled
 }
 
 func (d DiscordSender) SendText(channelID, text string) (string, error) {
@@ -56,13 +57,27 @@ func (d DiscordSender) MaxMessageLen() int {
 
 func (d DiscordSender) StartThread(channelID, messageID, name string) (string, error) {
 	t, err := d.s.MessageThreadStartComplex(channelID, messageID, &discordgo.ThreadStart{
-		Name:                 name,
-		AutoArchiveDuration:  60,
+		Name:                name,
+		AutoArchiveDuration: 60,
 	})
 	if err != nil {
 		return "", err
 	}
 	return t.ID, nil
+}
+
+// SendTextInThread posts a message into a Discord thread.
+// In Discord, threads are channels, so we post directly to threadID.
+func (d DiscordSender) SendTextInThread(channelID, threadID, text string) (string, error) {
+	return d.SendText(threadID, text)
+}
+
+// CacheReply implements MessageCacher — stores the full reply keyed by message ID
+// so the 🔊 reaction handler can speak the full text rather than just the visible chunk.
+func (d DiscordSender) CacheReply(msgID, fullReply string) {
+	if d.cache != nil {
+		d.cache.set(msgID, fullReply)
+	}
 }
 
 // botMsgCache is a size-capped map of bot message ID → reply text for 🔊 reactions.
@@ -132,8 +147,8 @@ func RunDiscordBot(ctx context.Context, cfg *config.Config) error {
 			return
 		}
 
-		// Create sender and provider for this request
-		sender := DiscordSender{s: s}
+		// Create sender (with cache) and provider for this request
+		sender := DiscordSender{s: s, cache: cache}
 		provider := DiscordProvider{sender: sender}
 
 		if !EnqueueBotMessage(context.Background(), cfg, msg, sender, provider) {

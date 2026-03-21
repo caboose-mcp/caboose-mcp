@@ -46,11 +46,16 @@ func loadBotMemory(claudeDir, key string) botMemory {
 }
 
 // trimHistory removes the oldest turns until the total token count is within budget.
-// Estimates 1 token = 4 characters, working backwards from the most recent turns.
+// Estimates 1 token = 4 characters (ceiling division) with a minimum of 1 token per turn
+// to prevent unbounded growth from many short messages.
 func trimHistory(turns []memoryTurn) []memoryTurn {
 	total := 0
 	for i := len(turns) - 1; i >= 0; i-- {
-		total += len(turns[i].Content) / 4
+		tokens := (len(turns[i].Content) + 3) / 4 // ceiling division
+		if tokens < 1 {
+			tokens = 1 // at least 1 token per turn
+		}
+		total += tokens
 		if total > maxHistoryTokenBudget {
 			return turns[i+1:]
 		}
