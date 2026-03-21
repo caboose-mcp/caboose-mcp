@@ -56,7 +56,7 @@ func RunGoogleMessagesBot(cfg *config.Config) error
 ### New CLI flag
 
 ```bash
-./caboose-mcp --messages-bot
+./fafb --messages-bot
 # → launches Chromium, shows QR if not authenticated, then polls
 ```
 

@@ -1,5 +1,5 @@
 #!/bin/sh
-# docker-entrypoint.sh — import caboose-mcp workflows then start n8n
+# docker-entrypoint.sh — import fafb workflows then start n8n
 #
 # Workflows are imported once on first run. The sentinel file at
 # /home/node/.n8n/.caboose-imported prevents re-importing on restarts.

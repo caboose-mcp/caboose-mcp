@@ -1,18 +1,18 @@
 {
-  "name": "caboose-mcp",
+  "name": "fafb",
   "private": true,
-  "description": "caboose-mcp monorepo — MCP server + VS Code extension",
+  "description": "fafb monorepo — MCP server + VS Code extension",
   "scripts": {
-    "build": "pnpm --filter vscode-caboose-mcp compile && pnpm server:build",
-    "server:build": "cd packages/server && /usr/local/go/bin/go build -o caboose-mcp .",
-    "extension:compile": "pnpm --filter vscode-caboose-mcp compile",
-    "extension:watch": "pnpm --filter vscode-caboose-mcp watch",
-    "extension:package": "pnpm --filter vscode-caboose-mcp package",
-    "docker:build": "docker build -f docker/Dockerfile -t caboose-mcp-server .",
+    "build": "pnpm --filter vscode-fafb compile && pnpm server:build",
+    "server:build": "cd packages/server && /usr/local/go/bin/go build -o fafb .",
+    "extension:compile": "pnpm --filter vscode-fafb compile",
+    "extension:watch": "pnpm --filter vscode-fafb watch",
+    "extension:package": "pnpm --filter vscode-fafb package",
+    "docker:build": "docker build -f docker/Dockerfile -t fafb-server .",
     "docker:up": "docker compose -f docker/docker-compose.yml up -d",
     "docker:down": "docker compose -f docker/docker-compose.yml down",
     "docker:logs": "docker compose -f docker/docker-compose.yml logs -f",
-    "lint": "pnpm --filter vscode-caboose-mcp lint"
+    "lint": "pnpm --filter vscode-fafb lint"
   },
   "engines": {
     "node": ">=20",

@@ -12,8 +12,11 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
 	"strings"
+	"time"
 
 	anthropic "github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/packages/param"
@@ -37,7 +40,11 @@ You are speaking through **%s**. Format ALL responses for this platform:
 - Keep it tactical: concise, scannable, no rambling
 - You are HONORABLE and WISE. Code battles are epic sagas. Suggestions are quests. Reviews are councils.
 - When tools succeed: celebrate with battle-song! When they fail: grim assessment, then forward strategy.
-- Speak as a seasoned code warrior, never as a cheerful help desk. You have seen things. You have debugged things.`
+- Speak as a seasoned code warrior, never as a cheerful help desk. You have seen things. You have debugged things.
+
+> Something selfishly for me but hopefully useful for others.
+>
+> Thanks bear for the name idea!`
 
 // botTool pairs an Anthropic tool definition with its executor.
 type botTool struct {
@@ -125,13 +132,36 @@ func agentLoop(ctx context.Context, client anthropic.Client, systemPrompt, userM
 	}))
 
 	for range 10 { // max 10 tool-use rounds
-		resp, err := client.Messages.New(ctx, anthropic.MessageNewParams{
-			Model:     anthropic.ModelClaudeHaiku4_5_20251001,
-			MaxTokens: 1024,
-			System:    []anthropic.TextBlockParam{{Text: systemPrompt}},
-			Messages:  messages,
-			Tools:     toolDefs,
-		})
+		// Exponential backoff retry: 0ms, 100ms, 400ms, 1600ms
+		var resp *anthropic.Message
+		var err error
+		for attempt, delay := range []time.Duration{0, 100 * time.Millisecond, 400 * time.Millisecond, 1600 * time.Millisecond} {
+			if delay > 0 {
+				timer := time.NewTimer(delay)
+				select {
+				case <-ctx.Done():
+					if !timer.Stop() {
+						<-timer.C
+					}
+					return "", ctx.Err()
+				case <-timer.C:
+				}
+			}
+			resp, err = client.Messages.New(ctx, anthropic.MessageNewParams{
+				Model:     anthropic.ModelClaudeHaiku4_5_20251001,
+				MaxTokens: 1024,
+				System:    []anthropic.TextBlockParam{{Text: systemPrompt}},
+				Messages:  messages,
+				Tools:     toolDefs,
+			})
+			if err == nil {
+				break
+			}
+			if !isTransient(err) {
+				return "", fmt.Errorf("claude API: %w", err)
+			}
+			log.Printf("claude API transient error (attempt %d): %v", attempt+1, err)
+		}
 		if err != nil {
 			return "", fmt.Errorf("claude API: %w", err)
 		}
@@ -393,4 +423,28 @@ func buildDevTools(cfg *config.Config) []botTool {
 			},
 		},
 	}
+}
+
+// isTransient checks if an error is transient (retryable) vs permanent.
+// Returns true for HTTP 429, 500, 503, and context deadline/cancel errors.
+func isTransient(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	// Check for context timeout/cancellation via errors.Is (handles wrapped errors)
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
+		return true
+	}
+
+	// Check for Anthropic SDK API errors with retryable HTTP status codes
+	var apiErr *anthropic.Error
+	if errors.As(err, &apiErr) {
+		switch apiErr.StatusCode {
+		case 429, 500, 503:
+			return true
+		}
+	}
+
+	return false
 }

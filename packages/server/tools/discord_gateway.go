@@ -26,6 +26,60 @@ import (
 	"github.com/caboose-mcp/server/config"
 )
 
+// DiscordSender implements PlatformSender for Discord.
+type DiscordSender struct {
+	s     *discordgo.Session
+	cache *botMsgCache // optional cache for 🔊 reaction TTS; nil if caching disabled
+}
+
+func (d DiscordSender) SendText(channelID, text string) (string, error) {
+	msg, err := d.s.ChannelMessageSend(channelID, text)
+	if err != nil {
+		return "", err
+	}
+	return msg.ID, nil
+}
+
+func (d DiscordSender) SendAudio(channelID string, audio []byte) error {
+	_, err := d.s.ChannelMessageSendComplex(channelID, &discordgo.MessageSend{
+		Files: []*discordgo.File{{Name: "caboose.mp3", Reader: bytes.NewReader(audio)}},
+	})
+	return err
+}
+
+func (d DiscordSender) SendTyping(channelID string) {
+	d.s.ChannelTyping(channelID)
+}
+
+func (d DiscordSender) MaxMessageLen() int {
+	return 1800 // Discord's limit is 2000, we reserve 200 for safety
+}
+
+func (d DiscordSender) StartThread(channelID, messageID, name string) (string, error) {
+	t, err := d.s.MessageThreadStartComplex(channelID, messageID, &discordgo.ThreadStart{
+		Name:                name,
+		AutoArchiveDuration: 60,
+	})
+	if err != nil {
+		return "", err
+	}
+	return t.ID, nil
+}
+
+// SendTextInThread posts a message into a Discord thread.
+// In Discord, threads are channels, so we post directly to threadID.
+func (d DiscordSender) SendTextInThread(channelID, threadID, text string) (string, error) {
+	return d.SendText(threadID, text)
+}
+
+// CacheReply implements MessageCacher — stores the full reply keyed by message ID
+// so the 🔊 reaction handler can speak the full text rather than just the visible chunk.
+func (d DiscordSender) CacheReply(msgID, fullReply string) {
+	if d.cache != nil {
+		d.cache.set(msgID, fullReply)
+	}
+}
+
 // botMsgCache is a size-capped map of bot message ID → reply text for 🔊 reactions.
 type botMsgCache struct {
 	mu   sync.Mutex
@@ -67,8 +121,6 @@ func RunDiscordBot(ctx context.Context, cfg *config.Config) error {
 		return fmt.Errorf("ANTHROPIC_API_KEY is not set")
 	}
 
-	provider := DiscordProvider{}
-
 	// Build allowed channel set from config
 	allowedChannels := map[string]bool{}
 	for _, ch := range strings.Split(cfg.DiscordBotChannels, ",") {
@@ -90,86 +142,17 @@ func RunDiscordBot(ctx context.Context, cfg *config.Config) error {
 	cache := newBotMsgCache()
 
 	dg.AddHandler(func(s *discordgo.Session, m *discordgo.MessageCreate) {
-		// Ignore messages from other bots (including ourselves)
-		if m.Author != nil && m.Author.Bot {
+		msg, ok := parseDiscordMessage(s, m, allowedChannels)
+		if !ok {
 			return
 		}
 
-		// Ignore messages from self when state information is available
-		if s.State != nil && s.State.User != nil && m.Author != nil && m.Author.ID == s.State.User.ID {
-			return
-		}
+		// Create sender (with cache) and provider for this request
+		sender := DiscordSender{s: s, cache: cache}
+		provider := DiscordProvider{sender: sender}
 
-		isDM := m.GuildID == ""
-		inAllowedChannel := allowedChannels[m.ChannelID]
-
-		// Respond in DMs always; in guilds only if channel is allowed
-		if !isDM && !inAllowedChannel {
-			return
-		}
-
-		// Must mention the bot or be a DM to trigger a response
-		botMentioned := false
-		for _, u := range m.Mentions {
-			if s.State != nil && s.State.User != nil && u.ID == s.State.User.ID {
-				botMentioned = true
-				break
-			}
-		}
-		if !isDM && !botMentioned {
-			return
-		}
-
-		// Strip the @mention prefix from the message
-		content := strings.TrimSpace(m.Content)
-		if s.State != nil && s.State.User != nil {
-			content = strings.ReplaceAll(content, "<@"+s.State.User.ID+">", "")
-			content = strings.ReplaceAll(content, "<@!"+s.State.User.ID+">", "")
-			content = strings.TrimSpace(content)
-		}
-		if content == "" {
-			return
-		}
-
-		// Show typing indicator while processing
-		s.ChannelTyping(m.ChannelID)
-
-		userKey := "discord:" + m.Author.ID
-		reply, err := RunBotAgent(context.Background(), cfg, provider, userKey, content)
-		if err != nil {
-			log.Printf("discord bot agent error: %v", err)
-			s.ChannelMessageSend(m.ChannelID, "⚠️ *The ravens returned with troubling news:* `"+err.Error()+"`")
-			return
-		}
-
-		// Discord messages are capped at 2000 chars — split if needed
-		chunks := splitMessage(reply, 2000)
-
-		// Try TTS — attach MP3 to the first chunk if audio is available
-		if ShouldSpeak(reply) {
-			if audio, err := Synthesize(context.Background(), cfg, reply); err == nil && audio != nil {
-				msg, sendErr := s.ChannelMessageSendComplex(m.ChannelID, &discordgo.MessageSend{
-					Content: chunks[0],
-					Files:   []*discordgo.File{{Name: "caboose.mp3", Reader: bytes.NewReader(audio)}},
-				})
-				if sendErr == nil && msg != nil {
-					cache.set(msg.ID, reply)
-				}
-				for _, chunk := range chunks[1:] {
-					s.ChannelMessageSend(m.ChannelID, chunk)
-				}
-				return
-			} else if err != nil {
-				log.Printf("discord tts error: %v", err)
-			}
-		}
-
-		// Plain text fallback (TTS disabled, skipped, or failed)
-		for _, chunk := range chunks {
-			msg, err := s.ChannelMessageSend(m.ChannelID, chunk)
-			if err == nil && msg != nil {
-				cache.set(msg.ID, reply)
-			}
+		if !EnqueueBotMessage(context.Background(), cfg, msg, sender, provider) {
+			s.ChannelMessageSend(m.ChannelID, "⚔️ *I'm mid-battle — try again in a moment.*")
 		}
 	})
 
@@ -225,6 +208,59 @@ func RunDiscordBot(ctx context.Context, cfg *config.Config) error {
 	<-ctx.Done()
 	log.Printf("Discord bot shutting down: %v", ctx.Err())
 	return nil
+}
+
+// parseDiscordMessage extracts and validates an IncomingMessage from a Discord message.
+// Returns (msg, false) if the message should be ignored (bot, empty, etc).
+func parseDiscordMessage(s *discordgo.Session, m *discordgo.MessageCreate, allowedChannels map[string]bool) (IncomingMessage, bool) {
+	// Ignore messages from other bots (including ourselves)
+	if m.Author != nil && m.Author.Bot {
+		return IncomingMessage{}, false
+	}
+
+	// Ignore messages from self when state information is available
+	if s.State != nil && s.State.User != nil && m.Author != nil && m.Author.ID == s.State.User.ID {
+		return IncomingMessage{}, false
+	}
+
+	isDM := m.GuildID == ""
+	inAllowedChannel := allowedChannels[m.ChannelID]
+
+	// Respond in DMs always; in guilds only if channel is allowed
+	if !isDM && !inAllowedChannel {
+		return IncomingMessage{}, false
+	}
+
+	// Must mention the bot or be a DM to trigger a response
+	botMentioned := false
+	for _, u := range m.Mentions {
+		if s.State != nil && s.State.User != nil && u.ID == s.State.User.ID {
+			botMentioned = true
+			break
+		}
+	}
+	if !isDM && !botMentioned {
+		return IncomingMessage{}, false
+	}
+
+	// Strip the @mention prefix from the message
+	content := strings.TrimSpace(m.Content)
+	if s.State != nil && s.State.User != nil {
+		content = strings.ReplaceAll(content, "<@"+s.State.User.ID+">", "")
+		content = strings.ReplaceAll(content, "<@!"+s.State.User.ID+">", "")
+		content = strings.TrimSpace(content)
+	}
+	if content == "" {
+		return IncomingMessage{}, false
+	}
+
+	return IncomingMessage{
+		UserKey:           "discord:" + m.Author.ID,
+		ChannelID:         m.ChannelID,
+		OriginalMessageID: m.ID,
+		Content:           content,
+		IsDM:              isDM,
+	}, true
 }
 
 // splitMessage splits a long message into chunks of at most maxLen characters,

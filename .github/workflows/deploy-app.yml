@@ -39,7 +39,7 @@ jobs:
 
       - name: Build and push image
         env:
-          IMAGE: ${{ steps.ecr.outputs.registry }}/caboose-mcp:latest
+          IMAGE: ${{ steps.ecr.outputs.registry }}/fafb:latest
         run: |
           docker build -f docker/Dockerfile -t "$IMAGE" .
           docker push "$IMAGE"
@@ -59,12 +59,12 @@ jobs:
       - name: Force new serve deployment
         run: |
           aws ecs update-service \
-            --cluster caboose-mcp \
-            --service caboose-mcp-serve \
+            --cluster fafb \
+            --service fafb-serve \
             --force-new-deployment
 
       - name: Wait for serve service to stabilize
         run: |
           aws ecs wait services-stable \
-            --cluster caboose-mcp \
-            --services caboose-mcp-serve
+            --cluster fafb \
+            --services fafb-serve

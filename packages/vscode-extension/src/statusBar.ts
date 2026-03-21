@@ -83,7 +83,7 @@ export class StatusBarManager implements vscode.Disposable {
 
     /** Sets the item to the disconnected (click-to-connect) state. */
     private setDisconnected(): void {
-        this.item.text = '$(debug-disconnect) caboose-mcp';
+        this.item.text = '$(debug-disconnect) fafb';
         this.item.tooltip = 'Caboose MCP: disconnected — click to connect';
         this.item.backgroundColor = undefined;
         this.item.command = 'cabooseMcp.connect';
@@ -91,7 +91,7 @@ export class StatusBarManager implements vscode.Disposable {
 
     /** Sets the item to the generic connected state (no tool result yet). */
     private setConnected(): void {
-        this.item.text = '$(plug) caboose-mcp';
+        this.item.text = '$(plug) fafb';
         this.item.tooltip = 'Caboose MCP: connected';
         this.item.backgroundColor = undefined;
         this.item.command = 'cabooseMcp.disconnect';

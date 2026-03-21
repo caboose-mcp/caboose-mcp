@@ -1,4 +1,4 @@
-// Package tui provides a split-pane terminal UI for caboose-mcp.
+// Package tui provides a split-pane terminal UI for fafb.
 //
 // Layout (Option A — fixed panes):
 //
@@ -604,7 +604,7 @@ func (m model) View() string {
 }
 
 func (m model) helpView() string {
-	help := `caboose-mcp TUI — keyboard shortcuts
+	help := `fafb TUI — keyboard shortcuts
 
 Navigation
   tab / shift+tab   cycle between panels (Sources, Pending, Learning)

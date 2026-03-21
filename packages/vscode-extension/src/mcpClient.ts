@@ -40,7 +40,7 @@ interface PendingRequest {
 /**
  * Stdio-based MCP client.
  *
- * Spawns the caboose-mcp binary as a child process and communicates with it
+ * Spawns the fafb binary as a child process and communicates with it
  * using newline-delimited JSON-RPC 2.0 messages over stdin/stdout.
  *
  * **Lifecycle events** (via `EventEmitter`):
@@ -65,7 +65,7 @@ export class McpClient extends EventEmitter implements vscode.Disposable {
     /**
      * Spawns the MCP binary and communicates over stdio.
      *
-     * @param binaryPath Absolute path to the caboose-mcp executable.
+     * @param binaryPath Absolute path to the fafb executable.
      * @param env Additional environment variables merged into the child process environment.
      */
     async connect(binaryPath: string, env: Record<string, string>): Promise<void> {
@@ -98,7 +98,7 @@ export class McpClient extends EventEmitter implements vscode.Disposable {
     }
 
     /**
-     * Connects to a running caboose-mcp HTTP server.
+     * Connects to a running fafb HTTP server.
      *
      * Tries the SSE transport (`/sse`) first. If the server returns 404,
      * falls back to streamable HTTP (`/mcp`) where each JSON-RPC request
@@ -186,7 +186,7 @@ export class McpClient extends EventEmitter implements vscode.Disposable {
         await this.request('initialize', {
             protocolVersion: '2024-11-05',
             capabilities: {},
-            clientInfo: { name: 'vscode-caboose-mcp', version: '0.1.0' },
+            clientInfo: { name: 'vscode-fafb', version: '0.1.0' },
         });
         this.notify('notifications/initialized', {});
     }

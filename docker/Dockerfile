@@ -12,7 +12,7 @@ RUN go mod download
 
 COPY packages/server/ ./
 
-RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o caboose-mcp .
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o fafb .
 
 # ─── Stage 2: runtime ─────────────────────────────────────────────────────────
 FROM alpine:3.21
@@ -21,7 +21,7 @@ FROM alpine:3.21
 RUN apk add --no-cache ca-certificates gpg git
 
 WORKDIR /app
-COPY --from=builder /build/caboose-mcp .
+COPY --from=builder /build/fafb .
 
 # The server reads config from CLAUDE_DIR (default /root/.claude inside container).
 # Mount your host ~/.claude at /root/.claude and pass env vars via --env-file.
@@ -30,4 +30,4 @@ VOLUME ["/root/.claude"]
 # HTTP transport — connect MCP clients to /mcp on this port
 EXPOSE 8080
 
-ENTRYPOINT ["./caboose-mcp", "--serve", ":8080"]
+ENTRYPOINT ["./fafb", "--serve", ":8080"]

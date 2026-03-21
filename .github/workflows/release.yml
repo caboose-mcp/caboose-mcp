@@ -53,7 +53,7 @@ jobs:
           CGO_ENABLED: "0"
         run: |
           go build -ldflags="-s -w -X main.version=${{ steps.version.outputs.tag }}" \
-            -o ../../dist/caboose-mcp-linux-amd64 .
+            -o ../../dist/fafb-linux-amd64 .
 
       - name: Build linux/arm64
         working-directory: packages/server
@@ -63,7 +63,7 @@ jobs:
           CGO_ENABLED: "0"
         run: |
           go build -ldflags="-s -w -X main.version=${{ steps.version.outputs.tag }}" \
-            -o ../../dist/caboose-mcp-linux-arm64 .
+            -o ../../dist/fafb-linux-arm64 .
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -73,5 +73,5 @@ jobs:
           prerelease: ${{ steps.version.outputs.prerelease }}
           generate_release_notes: true
           files: |
-            dist/caboose-mcp-linux-amd64
-            dist/caboose-mcp-linux-arm64
+            dist/fafb-linux-amd64
+            dist/fafb-linux-arm64

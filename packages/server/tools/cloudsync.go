@@ -1,6 +1,6 @@
 package tools
 
-// Cloud config sync — encrypt and store caboose-mcp config remotely so you can
+// Cloud config sync — encrypt and store fafb config remotely so you can
 // restore it on any machine after cloning the repo and authenticating with GitHub.
 //
 // Encryption: AES-256-GCM with a key derived via scrypt from a user passphrase.
@@ -76,9 +76,9 @@ func RegisterCloudSync(s *server.MCPServer, cfg *config.Config) {
 	s.AddTool(mcp.NewTool("cloudsync_setup",
 		mcp.WithDescription("First-time cloud sync setup. Provisions storage (creates S3 bucket or GitHub Gist) and writes sync state. Requires gh CLI (for gist) or aws CLI (for s3)."),
 		mcp.WithString("backend", mcp.Required(), mcp.Description("Storage backend: gist (GitHub private Gist, uses `gh` CLI) or s3 (creates S3 bucket with `aws` CLI)")),
-		mcp.WithString("s3_bucket", mcp.Description("S3 bucket name for s3 backend. If omitted, auto-generates 'caboose-mcp-config-<account-id>'. Created if it doesn't exist.")),
+		mcp.WithString("s3_bucket", mcp.Description("S3 bucket name for s3 backend. If omitted, auto-generates 'fafb-config-<account-id>'. Created if it doesn't exist.")),
 		mcp.WithString("s3_region", mcp.Description("AWS region for new bucket (default: us-east-1)")),
-		mcp.WithString("s3_key", mcp.Description("S3 object key (default: caboose-mcp/config.enc)")),
+		mcp.WithString("s3_key", mcp.Description("S3 object key (default: fafb/config.enc)")),
 		mcp.WithString("gist_id", mcp.Description("Existing Gist ID to reuse (leave empty to create a new one on first push)")),
 	), cloudsyncSetupHandler(cfg))
 
@@ -341,12 +341,12 @@ func gistPush(cfg *config.Config, encoded string, existingGistID string) (string
 		return "", fmt.Errorf("no GitHub token available — run `gh auth login` or set GITHUB_TOKEN")
 	}
 
-	filename := "caboose-mcp-config.enc"
+	filename := "fafb-config.enc"
 	files := map[string]map[string]string{
 		filename: {"content": encoded},
 	}
 	payload := map[string]any{
-		"description": "caboose-mcp encrypted config — do not edit manually",
+		"description": "fafb encrypted config — do not edit manually",
 		"public":      false,
 		"files":       files,
 	}
@@ -520,14 +520,14 @@ func cloudsyncSetupHandler(cfg *config.Config) func(context.Context, mcp.CallToo
 			// Determine bucket name
 			bucket := req.GetString("s3_bucket", "")
 			if bucket == "" && accountID != "" {
-				bucket = "caboose-mcp-config-" + accountID
+				bucket = "fafb-config-" + accountID
 			}
 			if bucket == "" {
 				return mcp.NewToolResultError("could not determine account ID — pass s3_bucket explicitly"), nil
 			}
 
 			region := req.GetString("s3_region", "us-east-1")
-			key := req.GetString("s3_key", "caboose-mcp/config.enc")
+			key := req.GetString("s3_key", "fafb/config.enc")
 
 			// Create bucket if it doesn't exist
 			checkOut, checkErr := exec.Command("aws", "s3api", "head-bucket", "--bucket", bucket).CombinedOutput()
@@ -589,7 +589,7 @@ func cloudsyncSetupHandler(cfg *config.Config) func(context.Context, mcp.CallToo
 		msg.WriteString("  2. Push config:   cloudsync_push passphrase=<your-passphrase>\n")
 		msg.WriteString("  3. On new machine:\n")
 		msg.WriteString("       git clone https://github.com/caboose-mcp/server\n")
-		msg.WriteString("       export PATH=$PATH:/usr/local/go/bin && go build -o caboose-mcp .\n")
+		msg.WriteString("       export PATH=$PATH:/usr/local/go/bin && go build -o fafb .\n")
 		switch backend {
 		case "gist":
 			msg.WriteString(fmt.Sprintf("       gh auth login\n"))
@@ -739,7 +739,7 @@ func cloudsyncPullHandler(cfg *config.Config) func(context.Context, mcp.CallTool
 		state.LastPull = time.Now().Format(time.RFC3339)
 		saveSyncState(cfg, state)
 
-		return mcp.NewToolResultText(summary + "\n\nRestart caboose-mcp (or reload Claude) to pick up new env vars from .env"), nil
+		return mcp.NewToolResultText(summary + "\n\nRestart fafb (or reload Claude) to pick up new env vars from .env"), nil
 	}
 }
 

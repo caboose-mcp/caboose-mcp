@@ -1,4 +1,4 @@
-# caboose-mcp
+# fafb
 
 A personal MCP (Model Context Protocol) server written in Go. Runs as a stdio process alongside Claude, exposing 105 tools across 25 feature groups — from source monitoring and self-improvement suggestions to 3D printing, focus sessions, and n8n workflow automation.
 
@@ -20,7 +20,7 @@ A personal MCP (Model Context Protocol) server written in Go. Runs as a stdio pr
 
 ## VS Code Extension
 
-A companion VS Code extension is available at [caboose-mcp/vscode-extension](https://github.com/caboose-mcp/vscode-extension). It connects to this server over stdio or HTTP and provides:
+A companion VS Code extension is available at [fafb/vscode-extension](https://github.com/fafb/vscode-extension). It connects to this server over stdio or HTTP and provides:
 
 - Sidebar panel with all tools grouped by category
 - One-click tool execution with parameter prompts
@@ -45,7 +45,7 @@ A companion VS Code extension is available at [caboose-mcp/vscode-extension](htt
 git clone https://github.com/caboose-mcp/server
 cd server
 export PATH=$PATH:/usr/local/go/bin
-go build -o caboose-mcp .
+go build -o fafb .
 ```
 
 Then add to your Claude `.mcp.json`:
@@ -53,9 +53,9 @@ Then add to your Claude `.mcp.json`:
 ```json
 {
   "mcpServers": {
-    "caboose-mcp": {
+    "fafb": {
       "type": "stdio",
-      "command": "/home/caboose/dev/caboose-mcp/caboose-mcp"
+      "command": "/home/caboose/dev/fafb/fafb"
     }
   }
 }
@@ -68,7 +68,7 @@ Then add to your Claude `.mcp.json`:
 Run the interactive setup wizard to configure all env vars and write a `.env` file:
 
 ```bash
-./caboose-mcp --setup
+./fafb --setup
 ```
 
 The wizard walks through every setting section by section, shows current values (secrets masked), and writes a `0600`-mode `.env` file when done.
@@ -92,7 +92,7 @@ setup_check
 ### Stdio (default — used by Claude)
 
 ```bash
-./caboose-mcp
+./fafb
 ```
 
 Claude communicates with the server over stdin/stdout using the MCP protocol. This is the standard mode when configured in `.mcp.json`.
@@ -100,19 +100,19 @@ Claude communicates with the server over stdin/stdout using the MCP protocol. Th
 ### HTTP / Streamable HTTP transport
 
 ```bash
-./caboose-mcp --serve :8080
+./fafb --serve :8080
 ```
 
 Runs on `/mcp`. Optionally set `MCP_AUTH_TOKEN` to require bearer auth:
 
 ```bash
-MCP_AUTH_TOKEN=secret ./caboose-mcp --serve :8080
+MCP_AUTH_TOKEN=secret ./fafb --serve :8080
 ```
 
 ### TUI (split-pane terminal dashboard)
 
 ```bash
-./caboose-mcp --tui
+./fafb --tui
 ```
 
 Browse sources, pending suggestions, and learning sessions. Key bindings:
@@ -132,7 +132,7 @@ Browse sources, pending suggestions, and learning sessions. Key bindings:
 ### Setup wizard
 
 ```bash
-./caboose-mcp --setup
+./fafb --setup
 ```
 
 See [First-time Setup](#first-time-setup).
@@ -160,7 +160,7 @@ All configuration is via environment variables. Copy `.env.example` to `.env` an
 | `BAMBU_BED_TEMP` | No | Default bed temp °C (default: 55) |
 | `BAMBU_NOZZLE_TEMP` | No | Default nozzle temp °C (default: 220) |
 | `GREPTILE_API_KEY` | For Greptile | From app.greptile.com |
-| `GREPTILE_REPO` | No | Default repo to query. Default: `github/caboose-mcp/server` |
+| `GREPTILE_REPO` | No | Default repo to query. Default: `github/fafb/server` |
 | `CLOUDSYNC_S3_BUCKET` | For S3 sync | S3 bucket for config sync (Gist backend uses `GITHUB_TOKEN`) |
 | `MCP_AUTH_TOKEN` | No | Optional bearer token for `--serve` HTTP transport (open/unauthenticated if unset) |
 
@@ -411,7 +411,7 @@ Preview file changes in a temporary copy of a directory before applying them.
 | `setup_init_dirs` | Create required `CLAUDE_DIR` subdirectories |
 | `setup_write_env` | Write a `.env` file from provided key=value pairs |
 | `setup_n8n_workflows` | Return three importable n8n workflow JSON objects |
-| `setup_github_mcp_info` | Explain when to use caboose-mcp vs github/github-mcp-server |
+| `setup_github_mcp_info` | Explain when to use fafb vs github/github-mcp-server |
 
 ---
 
@@ -505,7 +505,7 @@ Tools for building and extending the MCP server itself.
 
 ## n8n Integration
 
-caboose-mcp can push real-time events to n8n when key things happen. Set `N8N_WEBHOOK_URL` to your n8n Webhook node URL.
+fafb can push real-time events to n8n when key things happen. Set `N8N_WEBHOOK_URL` to your n8n Webhook node URL.
 
 ### Events pushed
 
@@ -525,7 +525,7 @@ All events share the same payload shape:
   "type": "gate_fired",
   "id": "1234567890",
   "ts": "2026-03-18T08:00:00Z",
-  "source": "caboose-mcp",
+  "source": "fafb",
   "data": { ... }
 }
 ```
@@ -542,15 +542,15 @@ Returns three importable n8n v1.x workflow JSON objects:
 - **Caboose Daily Digest** — Schedule (8am) → `source_digest` + `si_tech_digest` via Execute Command.
 - **Caboose Nightly Scan** — Schedule (midnight) → `si_scan_dir` + `source_check` via Execute Command.
 
-Import via: n8n → Settings → Import Workflow. Set `CABOOSE_BIN` as an n8n environment variable pointing to the binary.
+Import via: n8n → Settings → Import Workflow. Set `FAFB_BIN` as an n8n environment variable pointing to the binary.
 
-### Pull-based usage (n8n → caboose-mcp)
+### Pull-based usage (n8n → fafb)
 
 n8n Execute Command node pipes MCP JSON to the binary:
 
 ```bash
-CABOOSE_BIN="${CABOOSE_BIN:-/home/caboose/dev/caboose-mcp/caboose-mcp}"
-echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"source_digest","arguments":{}}}' | "$CABOOSE_BIN"
+FAFB_BIN="${FAFB_BIN:-/home/caboose/dev/fafb/fafb}"
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"source_digest","arguments":{}}}' | "$FAFB_BIN"
 ```
 
 ---
@@ -632,3 +632,7 @@ tui/
 ## License
 
 MIT
+
+---
+
+Thanks bear for the name idea!

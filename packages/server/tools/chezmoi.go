@@ -19,7 +19,7 @@ package tools
 //
 // Note: `amauryconstant/chezmoi-mcp` is a separate TypeScript/Bun MCP server
 // with 25+ tools and structured parsers. If you need full chezmoi coverage,
-// add it alongside caboose-mcp in .mcp.json (see setup_github_mcp_info for
+// add it alongside fafb in .mcp.json (see setup_github_mcp_info for
 // the multi-server pattern). These native tools cover the core daily workflow
 // without requiring Bun.
 

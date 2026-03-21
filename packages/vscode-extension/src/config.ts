@@ -12,15 +12,15 @@ export interface StatusBarConfig {
 
 /** Resolved extension configuration read from VS Code workspace settings. */
 export interface CabooseConfig {
-    /** Absolute path to the caboose-mcp binary (stdio transport only). */
+    /** Absolute path to the fafb binary (stdio transport only). */
     binaryPath: string;
     /** Extra environment variables forwarded to the binary process. */
     env: Record<string, string>;
     /** Transport to use: `http` (default) connects to a running server; `stdio` spawns the binary. */
     transport: 'http' | 'stdio';
-    /** Hostname of the caboose-mcp HTTP server (http transport only). */
+    /** Hostname of the fafb HTTP server (http transport only). */
     host: string;
-    /** Port of the caboose-mcp HTTP server (http transport only). */
+    /** Port of the fafb HTTP server (http transport only). */
     port: number;
     /**
      * Tool allowlist. Use `["*"]` to load all tools, or list specific tool

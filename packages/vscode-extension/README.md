@@ -1,6 +1,6 @@
 # vscode-extension
 
-A VS Code extension that connects to a running [caboose-mcp](https://github.com/caboose-mcp/server) binary over stdio and exposes its tools directly inside the editor.
+A VS Code extension that connects to a running [fafb](https://github.com/caboose-mcp/server) binary over stdio and exposes its tools directly inside the editor.
 
 ## Features
 
@@ -12,7 +12,7 @@ A VS Code extension that connects to a running [caboose-mcp](https://github.com/
 
 ## Prerequisites
 
-- [caboose-mcp](https://github.com/caboose-mcp/server) binary built and available on your system
+- [fafb](https://github.com/caboose-mcp/server) binary built and available on your system
 - VS Code 1.85+
 
 ## Installation
@@ -35,7 +35,7 @@ All settings live under the `cabooseMcp` namespace.
 
 | Setting | Default | Description |
 |---|---|---|
-| `cabooseMcp.binaryPath` | `""` | Absolute path to the `caboose-mcp` binary |
+| `cabooseMcp.binaryPath` | `""` | Absolute path to the `fafb` binary |
 | `cabooseMcp.env` | `{}` | Extra environment variables passed to the binary (e.g. `SLACK_TOKEN`, `DISCORD_TOKEN`) |
 | `cabooseMcp.enabledTools` | `["*"]` | Tool allowlist. Use `["*"]` to load all tools, or list specific names like `["focus_start", "focus_end"]` |
 | `cabooseMcp.autoConnect` | `true` | Connect automatically when VS Code starts |
@@ -47,7 +47,7 @@ All settings live under the `cabooseMcp` namespace.
 
 ```json
 {
-  "cabooseMcp.binaryPath": "/home/you/go/bin/caboose-mcp",
+  "cabooseMcp.binaryPath": "/home/you/go/bin/fafb",
   "cabooseMcp.env": {
     "SLACK_TOKEN": "xoxb-...",
     "DISCORD_TOKEN": "...",

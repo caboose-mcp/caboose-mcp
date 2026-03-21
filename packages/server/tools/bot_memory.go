@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 )
 
-const maxHistoryTurns = 20
+const maxHistoryTokenBudget = 8000 // ~32k chars at 4 chars/token
 
 // memoryTurn is a single message turn stored in history.
 type memoryTurn struct {
@@ -45,12 +45,28 @@ func loadBotMemory(claudeDir, key string) botMemory {
 	return m
 }
 
-// saveBotMemory writes the history to disk, capping at maxHistoryTurns.
-func saveBotMemory(claudeDir, key string, m botMemory) {
-	// Cap to last maxHistoryTurns turns
-	if len(m.Turns) > maxHistoryTurns {
-		m.Turns = m.Turns[len(m.Turns)-maxHistoryTurns:]
+// trimHistory removes the oldest turns until the total token count is within budget.
+// Estimates 1 token = 4 characters (ceiling division) with a minimum of 1 token per turn
+// to prevent unbounded growth from many short messages.
+func trimHistory(turns []memoryTurn) []memoryTurn {
+	total := 0
+	for i := len(turns) - 1; i >= 0; i-- {
+		tokens := (len(turns[i].Content) + 3) / 4 // ceiling division
+		if tokens < 1 {
+			tokens = 1 // at least 1 token per turn
+		}
+		total += tokens
+		if total > maxHistoryTokenBudget {
+			return turns[i+1:]
+		}
 	}
+	return turns
+}
+
+// saveBotMemory writes the history to disk, trimming to stay within token budget.
+func saveBotMemory(claudeDir, key string, m botMemory) {
+	// Trim to stay within token budget
+	m.Turns = trimHistory(m.Turns)
 
 	path := botMemoryPath(claudeDir, key)
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {

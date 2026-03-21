@@ -31,6 +31,59 @@ import (
 	"github.com/slack-go/slack/socketmode"
 )
 
+// SlackSender implements PlatformSender for Slack.
+type SlackSender struct {
+	api *slack.Client
+}
+
+func (s SlackSender) SendText(channelID, text string) (string, error) {
+	_, ts, err := s.api.PostMessage(channelID, slack.MsgOptionText(text, false))
+	if err != nil {
+		return "", err
+	}
+	return ts, nil
+}
+
+func (s SlackSender) SendAudio(channelID string, audio []byte) error {
+	_, err := s.api.UploadFileV2(slack.UploadFileV2Parameters{
+		Channel:  channelID,
+		Filename: "caboose.mp3",
+		FileSize: len(audio),
+		Reader:   bytes.NewReader(audio),
+		Title:    "Voice response",
+	})
+	return err
+}
+
+func (s SlackSender) SendTyping(channelID string) {
+	// Slack Socket Mode has no typing indicator API — no-op
+}
+
+func (s SlackSender) MaxMessageLen() int {
+	return 2800 // Slack's limit is 4000, we reserve 1200 for safety
+}
+
+func (s SlackSender) StartThread(channelID, messageID, name string) (string, error) {
+	// Slack threads are anchored by message timestamp (thread_ts), not a separate channel.
+	// The PlatformSender abstraction treats threadID as a channel for SendText, which is
+	// invalid for Slack. Return the message timestamp here so SendTextInThread can use it
+	// as thread_ts when posting replies.
+	return messageID, nil
+}
+
+// SendTextInThread posts a message into a Slack thread.
+// In Slack, threads require posting to the same channelID with a thread_ts option.
+func (s SlackSender) SendTextInThread(channelID, threadTS, text string) (string, error) {
+	_, ts, err := s.api.PostMessage(channelID,
+		slack.MsgOptionText(text, false),
+		slack.MsgOptionTS(threadTS),
+	)
+	if err != nil {
+		return "", err
+	}
+	return ts, nil
+}
+
 // RunSlackBot starts the Slack Socket Mode bot and blocks until a fatal error.
 func RunSlackBot(cfg *config.Config) error {
 	if cfg.SlackToken == "" {
@@ -42,8 +95,6 @@ func RunSlackBot(cfg *config.Config) error {
 	if cfg.AnthropicAPIKey == "" {
 		return fmt.Errorf("ANTHROPIC_API_KEY is not set")
 	}
-
-	provider := SlackProvider{}
 
 	allowedChannels := map[string]bool{}
 	for _, ch := range strings.Split(cfg.SlackBotChannels, ",") {
@@ -77,7 +128,7 @@ func RunSlackBot(cfg *config.Config) error {
 					continue
 				}
 				log.Printf("[slack debug] events api event type: %s", eventsAPIEvent.Type)
-				go handleSlackMessage(cfg, api, provider, allowedChannels, eventsAPIEvent)
+				go handleSlackMessage(cfg, api, SlackSender{api: api}, SlackProvider{sender: SlackSender{api: api}}, allowedChannels, eventsAPIEvent)
 			}
 		}
 	}()
@@ -86,66 +137,85 @@ func RunSlackBot(cfg *config.Config) error {
 	return client.Run()
 }
 
-func handleSlackMessage(cfg *config.Config, api *slack.Client, provider SlackProvider, allowedChannels map[string]bool, event slackevents.EventsAPIEvent) {
-	ev, ok := event.InnerEvent.Data.(*slackevents.MessageEvent)
+func handleSlackMessage(cfg *config.Config, api *slack.Client, sender SlackSender, provider SlackProvider, allowedChannels map[string]bool, event slackevents.EventsAPIEvent) {
+	var msg IncomingMessage
+	var ok bool
+	var channelForBusy string
+
+	switch ev := event.InnerEvent.Data.(type) {
+	case *slackevents.MessageEvent:
+		msg, ok = parseSlackMessage(ev, allowedChannels)
+		channelForBusy = ev.Channel
+	case *slackevents.AppMentionEvent:
+		msg, ok = parseSlackAppMention(ev)
+		channelForBusy = ev.Channel
+	default:
+		return
+	}
+
 	if !ok {
 		return
 	}
 
+	if !EnqueueBotMessage(context.Background(), cfg, msg, sender, provider) {
+		api.PostMessage(channelForBusy, slack.MsgOptionText("⚔️ I'm mid-battle — try again in a moment.", false))
+	}
+}
+
+// parseSlackAppMention extracts and validates an IncomingMessage from a Slack app_mention event.
+// App mention events fire when someone @-mentions the bot in a channel.
+func parseSlackAppMention(ev *slackevents.AppMentionEvent) (IncomingMessage, bool) {
+	if ev.BotID != "" {
+		return IncomingMessage{}, false
+	}
+
+	// Strip the @mention prefix (e.g. "<@U012AB3CD> ")
+	text := strings.TrimSpace(ev.Text)
+	// Remove any <@USERID> mention tokens from the start of the message
+	for strings.HasPrefix(text, "<@") {
+		end := strings.Index(text, ">")
+		if end < 0 {
+			break
+		}
+		text = strings.TrimSpace(text[end+1:])
+	}
+	if text == "" {
+		return IncomingMessage{}, false
+	}
+
+	return IncomingMessage{
+		UserKey:           "slack:" + ev.User,
+		ChannelID:         ev.Channel,
+		OriginalMessageID: ev.TimeStamp,
+		Content:           text,
+		IsDM:              false, // app_mention only fires in channels
+	}, true
+}
+
+// parseSlackMessage extracts and validates an IncomingMessage from a Slack event.
+// Returns (msg, false) if the message should be ignored (bot, empty, etc).
+func parseSlackMessage(ev *slackevents.MessageEvent, allowedChannels map[string]bool) (IncomingMessage, bool) {
 	// Ignore bots and message edits/deletes
 	if ev.BotID != "" || ev.SubType != "" {
-		return
+		return IncomingMessage{}, false
 	}
 
 	isDM := ev.ChannelType == "im"
 	inAllowedChannel := allowedChannels[ev.Channel]
 	if !isDM && !inAllowedChannel {
-		return
+		return IncomingMessage{}, false
 	}
 
 	text := strings.TrimSpace(ev.Text)
 	if text == "" {
-		return
+		return IncomingMessage{}, false
 	}
 
-	userKey := "slack:" + ev.User
-	reply, err := RunBotAgent(context.Background(), cfg, provider, userKey, text)
-	if err != nil {
-		log.Printf("slack bot agent error for channel %s: %v", ev.Channel, err)
-		// Send a generic error message to the user and log any failure to post it.
-		_, ts, postErr := api.PostMessage(ev.Channel, slack.MsgOptionText("Sorry, something went wrong while processing your request.", false))
-		if postErr != nil {
-			log.Printf("failed to post Slack error message to channel %s: %v", ev.Channel, postErr)
-		} else {
-			log.Printf("posted Slack error message to channel %s at %s", ev.Channel, ts)
-		}
-		return
-	}
-
-	for _, chunk := range splitMessage(reply, 3000) {
-		channelID, ts, postErr := api.PostMessage(ev.Channel, slack.MsgOptionText(chunk, false))
-		if postErr != nil {
-			log.Printf("failed to post Slack message to channel %s: %v", ev.Channel, postErr)
-			continue
-		}
-		log.Printf("posted Slack message to channel %s at %s", channelID, ts)
-	}
-
-	// Attach TTS audio if the reply warrants it
-	if ShouldSpeak(reply) {
-		if audio, err := Synthesize(context.Background(), cfg, reply); err == nil && audio != nil {
-			_, err := api.UploadFileV2(slack.UploadFileV2Parameters{
-				Channel:  ev.Channel,
-				Filename: "caboose.mp3",
-				FileSize: len(audio),
-				Reader:   bytes.NewReader(audio),
-				Title:    "Voice response",
-			})
-			if err != nil {
-				log.Printf("slack tts upload error for channel %s: %v", ev.Channel, err)
-			}
-		} else if err != nil {
-			log.Printf("slack tts synthesize error: %v", err)
-		}
-	}
+	return IncomingMessage{
+		UserKey:           "slack:" + ev.User,
+		ChannelID:         ev.Channel,
+		OriginalMessageID: ev.TimeStamp,
+		Content:           text,
+		IsDM:              isDM,
+	}, true
 }

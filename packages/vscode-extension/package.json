@@ -1,12 +1,12 @@
 {
-  "name": "vscode-caboose-mcp",
+  "name": "vscode-fafb",
   "displayName": "Caboose MCP",
-  "description": "VS Code sidebar and status bar for the caboose-mcp personal AI toolserver",
+  "description": "VS Code sidebar and status bar for the fafb personal AI toolserver",
   "version": "0.1.0",
   "publisher": "caboose",
   "repository": {
     "type": "git",
-    "url": "https://github.com/caboose-mcp/vscode-extension"
+    "url": "https://github.com/fafb/vscode-extension"
   },
   "engines": { "vscode": "^1.85.0" },
   "categories": ["Other"],
@@ -20,27 +20,27 @@
           "type": "string",
           "enum": ["http", "stdio"],
           "default": "http",
-          "description": "Transport used to connect to caboose-mcp. Use 'http' (default) for a running server, or 'stdio' to spawn the binary directly."
+          "description": "Transport used to connect to fafb. Use 'http' (default) for a running server, or 'stdio' to spawn the binary directly."
         },
         "cabooseMcp.host": {
           "type": "string",
           "default": "localhost",
-          "description": "Hostname of the caboose-mcp HTTP server (http transport only)."
+          "description": "Hostname of the fafb HTTP server (http transport only)."
         },
         "cabooseMcp.port": {
           "type": "number",
           "default": 3000,
-          "description": "Port of the caboose-mcp HTTP server (http transport only)."
+          "description": "Port of the fafb HTTP server (http transport only)."
         },
         "cabooseMcp.binaryPath": {
           "type": "string",
           "default": "",
-          "description": "Absolute path to the caboose-mcp binary (e.g. /home/caboose/dev/caboose-mcp/caboose-mcp)."
+          "description": "Absolute path to the fafb binary (e.g. /home/caboose/dev/fafb/fafb)."
         },
         "cabooseMcp.env": {
           "type": "object",
           "default": {},
-          "description": "Environment variables passed to the caboose-mcp process (e.g. SLACK_TOKEN, DISCORD_TOKEN, GPG_KEY_ID).",
+          "description": "Environment variables passed to the fafb process (e.g. SLACK_TOKEN, DISCORD_TOKEN, GPG_KEY_ID).",
           "additionalProperties": { "type": "string" }
         },
         "cabooseMcp.enabledTools": {
@@ -52,12 +52,12 @@
         "cabooseMcp.autoConnect": {
           "type": "boolean",
           "default": true,
-          "description": "Automatically connect to caboose-mcp on VS Code startup if binaryPath is set."
+          "description": "Automatically connect to fafb on VS Code startup if binaryPath is set."
         },
         "cabooseMcp.statusBar.enabled": {
           "type": "boolean",
           "default": true,
-          "description": "Show a status bar item for caboose-mcp."
+          "description": "Show a status bar item for fafb."
         },
         "cabooseMcp.statusBar.tool": {
           "type": "string",
@@ -75,14 +75,14 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "caboose-mcp",
+          "id": "fafb",
           "title": "Caboose MCP",
           "icon": "media/icon.svg"
         }
       ]
     },
     "views": {
-      "caboose-mcp": [
+      "fafb": [
         {
           "id": "cabooseMcp.tools",
           "name": "Tools",

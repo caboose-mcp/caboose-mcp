@@ -99,7 +99,7 @@ func bambuMQTTClient(cfg *config.Config) (mqtt.Client, error) {
 	}
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(fmt.Sprintf("tls://%s:8883", cfg.BambuIP))
-	opts.SetClientID("caboose-mcp")
+	opts.SetClientID("fafb")
 	opts.SetUsername("bblp")
 	opts.SetPassword(cfg.BambuAccessCode)
 

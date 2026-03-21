@@ -2,13 +2,17 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/caboose-mcp/server/config"
 	"github.com/caboose-mcp/server/tools"
@@ -64,7 +68,7 @@ func main() {
 		expires := fs.Int("expires", 30, "Days until token expires")
 		_ = fs.Parse(os.Args[2:])
 		if *label == "" {
-			fmt.Fprintln(os.Stderr, "usage: caboose-mcp auth:create --label <name> [--tools ...] [--google-scopes ...] [--discord-scopes ...] [--slack-scopes ...] [--expires N]")
+			fmt.Fprintln(os.Stderr, "usage: fafb auth:create --label <name> [--tools ...] [--google-scopes ...] [--discord-scopes ...] [--slack-scopes ...] [--expires N]")
 			os.Exit(1)
 		}
 		if err := tools.CreateTokenCLI(cfg, *label, *toolsFlag, *scopes, *discordScopes, *slackScopes, *expires); err != nil {
@@ -147,13 +151,16 @@ func serveHTTP(cfg *config.Config, addr string, s *server.MCPServer) {
 		total := len(s.ListTools())
 		fmt.Fprintf(w, `{"total":%d}`, total)
 	})
+	// Discord OAuth routes (unauthenticated)
+	mux.HandleFunc("/auth/discord/start", discordOAuthStart(cfg))
+	mux.HandleFunc("/auth/discord/callback", discordOAuthCallback(cfg, jwtSecret))
 	// Authenticated routes
 	mux.Handle("/", authedMCP)
 
 	if adminToken != "" {
-		log.Printf("caboose-mcp HTTP server on %s (admin token + JWT auth)", addr)
+		log.Printf("fafb HTTP server on %s (admin token + JWT auth)", addr)
 	} else {
-		log.Printf("caboose-mcp HTTP server on %s (JWT auth only — set MCP_AUTH_TOKEN for admin bypass)", addr)
+		log.Printf("fafb HTTP server on %s (JWT auth only — set MCP_AUTH_TOKEN for admin bypass)", addr)
 	}
 	log.Printf("UI:      %s", cfg.UIOrigin)
 	log.Printf("MCP:     http://%s/mcp", addr)
@@ -215,11 +222,11 @@ func mcpServerOptions(cfg *config.Config) []server.ServerOption {
 	if cfg.ReleaseStage != "stable" {
 		opts = append(opts, server.WithInstructions(
 			"⚠️  EXPERIMENTAL SOFTWARE — USE AT YOUR OWN RISK\n\n"+
-				"caboose-mcp is under active development and has not been fully tested. "+
+				"fafb is under active development and has not been fully tested. "+
 				"Tools may behave unexpectedly, produce incorrect results, modify data, or fail without warning. "+
 				"No warranty is provided, express or implied. "+
 				"Do not use this server for critical workflows, production systems, or sensitive data without understanding the risks.\n\n"+
-				"Set CABOOSE_ENV=stable to suppress this message once the deployment is considered production-ready.",
+				"Set FAFB_ENV=stable to suppress this message once the deployment is considered production-ready.",
 		))
 	}
 	return opts
@@ -228,7 +235,7 @@ func mcpServerOptions(cfg *config.Config) []server.ServerOption {
 // buildHostedMCPServer creates a server with only cloud-safe hosted tools.
 // Used for --serve-hosted and ECS Fargate deployments.
 func buildHostedMCPServer(cfg *config.Config) *server.MCPServer {
-	s := server.NewMCPServer("caboose-mcp", "2.0.0", mcpServerOptions(cfg)...)
+	s := server.NewMCPServer("fafb", "2.0.0", mcpServerOptions(cfg)...)
 	registerHostedTools(s, cfg)
 	return s
 }
@@ -236,7 +243,7 @@ func buildHostedMCPServer(cfg *config.Config) *server.MCPServer {
 // buildLocalMCPServer creates a server with only local/hardware tools.
 // Used for --serve-local when running on the Pi alongside Claude Code.
 func buildLocalMCPServer(cfg *config.Config) *server.MCPServer {
-	s := server.NewMCPServer("caboose-mcp", "2.0.0", mcpServerOptions(cfg)...)
+	s := server.NewMCPServer("fafb", "2.0.0", mcpServerOptions(cfg)...)
 	registerLocalTools(s, cfg)
 	return s
 }
@@ -244,7 +251,7 @@ func buildLocalMCPServer(cfg *config.Config) *server.MCPServer {
 // buildMCPServer creates a server with all tools (hosted + local combined).
 // Used for --serve and stdio (default) modes.
 func buildMCPServer(cfg *config.Config) *server.MCPServer {
-	s := server.NewMCPServer("caboose-mcp", "2.0.0", mcpServerOptions(cfg)...)
+	s := server.NewMCPServer("fafb", "2.0.0", mcpServerOptions(cfg)...)
 	registerHostedTools(s, cfg)
 	registerLocalTools(s, cfg)
 	return s
@@ -279,4 +286,147 @@ func runBots(cfg *config.Config) {
 		}()
 	}
 	wg.Wait()
+}
+
+// ---- Discord OAuth Handlers ----
+
+// discordOAuthStart generates a Discord OAuth consent URL and redirects the user.
+// Query parameters:
+//   - redirect_uri (optional): where to send the user after auth (default: cfg.UIOrigin)
+func discordOAuthStart(cfg *config.Config) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if cfg.DiscordOAuthClientID == "" {
+			http.Error(w, "Discord OAuth not configured", http.StatusInternalServerError)
+			return
+		}
+
+		// Generate CSRF state token (opaque 16-byte random string)
+		stateBytes := make([]byte, 16)
+		if _, err := rand.Read(stateBytes); err != nil {
+			http.Error(w, "Failed to generate state token", http.StatusInternalServerError)
+			return
+		}
+		state := hex.EncodeToString(stateBytes)
+
+		// Store state in session cookie (expires in 10 minutes)
+		http.SetCookie(w, &http.Cookie{
+			Name:     "discord_oauth_state",
+			Value:    state,
+			Path:     "/",
+			MaxAge:   600,
+			HttpOnly: true,
+			SameSite: http.SameSiteLaxMode,
+		})
+
+		// Get redirect_uri from query params or use UI origin
+		redirectURI := r.URL.Query().Get("redirect_uri")
+		if redirectURI == "" {
+			redirectURI = cfg.DiscordOAuthRedirectURI
+		}
+
+		// Validate redirect_uri against allowed origins (only UI origin allowed)
+		if !isAllowedRedirectURI(redirectURI, cfg.UIOrigin) {
+			http.Error(w, "Invalid redirect_uri", http.StatusBadRequest)
+			return
+		}
+
+		// Build Discord auth URL
+		authURL := fmt.Sprintf(
+			"https://discord.com/api/oauth2/authorize?client_id=%s&redirect_uri=%s&response_type=code&scope=identify%%20email&state=%s",
+			url.QueryEscape(cfg.DiscordOAuthClientID),
+			url.QueryEscape(redirectURI),
+			url.QueryEscape(state),
+		)
+
+		http.Redirect(w, r, authURL, http.StatusFound)
+	}
+}
+
+// discordOAuthCallback handles the Discord OAuth callback.
+// Query parameters:
+//   - code: authorization code from Discord
+//   - state: CSRF token (must match cookie)
+//   - error: if authorization was denied
+func discordOAuthCallback(cfg *config.Config, jwtSecret []byte) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Check for OAuth errors
+		if err := r.URL.Query().Get("error"); err != "" {
+			errDesc := r.URL.Query().Get("error_description")
+			http.Error(w, fmt.Sprintf("Authorization denied: %s", errDesc), http.StatusUnauthorized)
+			return
+		}
+
+		code := r.URL.Query().Get("code")
+		state := r.URL.Query().Get("state")
+
+		if code == "" || state == "" {
+			http.Error(w, "Missing code or state parameter", http.StatusBadRequest)
+			return
+		}
+
+		// Verify CSRF state
+		cookie, err := r.Cookie("discord_oauth_state")
+		if err != nil || cookie.Value != state {
+			http.Error(w, "Invalid state token (CSRF check failed)", http.StatusUnauthorized)
+			return
+		}
+
+		// Exchange code for token
+		ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+		defer cancel()
+
+		err = tools.GetDiscordOAuthProvider().ExchangeCode(ctx, cfg, code)
+		if err != nil {
+			log.Printf("Discord OAuth code exchange failed: %v", err)
+			http.Error(w, "Failed to exchange authorization code", http.StatusInternalServerError)
+			return
+		}
+
+		// Fetch Discord user info
+		user, err := tools.GetDiscordUser(ctx, cfg)
+		if err != nil {
+			log.Printf("Failed to fetch Discord user info: %v", err)
+			http.Error(w, "Failed to fetch user info", http.StatusInternalServerError)
+			return
+		}
+
+		// Create or link JWT token for this Discord user
+		token, err := tools.LinkDiscordIdentity(cfg, jwtSecret, user.ID, user.Username)
+		if err != nil {
+			log.Printf("Failed to link Discord identity: %v", err)
+			http.Error(w, "Failed to create token", http.StatusInternalServerError)
+			return
+		}
+
+		// Calculate expiry time
+		expiresAt := token.ExpiresAt.Format("2006-01-02T15:04:05Z")
+
+		// Redirect to UI callback with token and metadata
+		callbackURL := fmt.Sprintf(
+			"%s/auth/callback?token=%s&expires_at=%s&username=%s&discord_id=%s",
+			cfg.UIOrigin,
+			url.QueryEscape(token.JWT),
+			url.QueryEscape(expiresAt),
+			url.QueryEscape(user.Username),
+			url.QueryEscape(user.ID),
+		)
+
+		http.Redirect(w, r, callbackURL, http.StatusFound)
+	}
+}
+
+// isAllowedRedirectURI validates that the redirect_uri is safe (i.e., points to the UI origin).
+func isAllowedRedirectURI(redirectURI, uiOrigin string) bool {
+	if redirectURI == "" {
+		return false
+	}
+	u, err := url.Parse(redirectURI)
+	if err != nil {
+		return false
+	}
+	uiURL, err := url.Parse(uiOrigin)
+	if err != nil {
+		return false
+	}
+	return u.Scheme == uiURL.Scheme && u.Host == uiURL.Host
 }

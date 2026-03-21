@@ -1,5 +1,40 @@
 package tools
 
+// MessageCacher is an optional interface that PlatformSender implementations may satisfy
+// to cache the full bot reply keyed by message ID (e.g. for on-demand TTS via reactions).
+type MessageCacher interface {
+	CacheReply(msgID, fullReply string)
+}
+
+// IncomingMessage is a platform-normalized inbound message.
+// Used by dispatchMessage to orchestrate bot responses across platforms.
+type IncomingMessage struct {
+	UserKey           string // "<platform>:<userID>" — used as bot_memory key
+	ChannelID         string // reply destination (channel ID, DM ID, thread ID)
+	OriginalMessageID string // used by StartThread to anchor the reply thread
+	Content           string // cleaned text with mentions stripped
+	IsDM              bool   // true if this is a direct message
+}
+
+// PlatformSender abstracts reply delivery for any chat platform.
+// Implemented by DiscordSender and SlackSender; used by dispatchMessage.
+type PlatformSender interface {
+	// SendText posts a text message to a channel and returns the message ID.
+	SendText(channelID, text string) (messageID string, err error)
+	// SendTextInThread posts a text message into an existing thread.
+	// For Discord, threadID is the thread channel ID (threads are channels).
+	// For Slack, channelID is the parent channel and threadID is the thread_ts timestamp.
+	SendTextInThread(channelID, threadID, text string) (messageID string, err error)
+	// SendAudio posts an audio file (MP3) to a channel.
+	SendAudio(channelID string, audio []byte) error
+	// SendTyping shows a typing indicator; platforms may implement as no-op if unsupported.
+	SendTyping(channelID string)
+	// MaxMessageLen returns the maximum characters per message for this platform.
+	MaxMessageLen() int
+	// StartThread creates a thread anchored to a message (optional; return "" if unsupported).
+	StartThread(channelID, messageID, name string) (threadID string, err error)
+}
+
 // ChatProvider is the abstraction layer for chat platform integrations.
 // Implement this interface to add new providers (Discord, Slack, Telegram, etc.)
 // without changing the shared bot agent logic.
@@ -7,20 +42,26 @@ package tools
 // Each provider is responsible for:
 //   - Identifying itself by name (used in system prompt formatting hints)
 //   - Adapting standard markdown to whatever the platform renders
+//   - Providing a PlatformSender for reply delivery (used by dispatchMessage)
 type ChatProvider interface {
 	// Name returns the provider identifier, e.g. "discord" or "slack".
 	Name() string
 	// FormatText adapts a response string for the platform's markdown renderer.
 	FormatText(text string) string
+	// Sender returns the PlatformSender for this provider (used by dispatchMessage).
+	Sender() PlatformSender
 }
 
 // DiscordProvider implements ChatProvider for Discord.
 // Discord renders **bold**, *italic*, `code`, ```blocks```, > quotes, and emoji.
 // It does NOT render # headers — we strip those.
-type DiscordProvider struct{}
+type DiscordProvider struct {
+	sender PlatformSender
+}
 
-func (DiscordProvider) Name() string { return "discord" }
-func (DiscordProvider) FormatText(text string) string {
+func (d DiscordProvider) Name() string           { return "discord" }
+func (d DiscordProvider) Sender() PlatformSender { return d.sender }
+func (d DiscordProvider) FormatText(text string) string {
 	// Discord renders most standard markdown natively.
 	// Strip leading # headers — replace with **bold** equivalent.
 	var out []string
@@ -41,10 +82,13 @@ func (DiscordProvider) FormatText(text string) string {
 // SlackProvider implements ChatProvider for Slack.
 // Slack uses mrkdwn: *bold*, _italic_, `code`, > quotes.
 // Standard **bold** and *italic* do not render — we convert them.
-type SlackProvider struct{}
+type SlackProvider struct {
+	sender PlatformSender
+}
 
-func (SlackProvider) Name() string { return "slack" }
-func (SlackProvider) FormatText(text string) string {
+func (s SlackProvider) Name() string           { return "slack" }
+func (s SlackProvider) Sender() PlatformSender { return s.sender }
+func (s SlackProvider) FormatText(text string) string {
 	// Convert Discord/standard markdown → Slack mrkdwn
 	// **bold** → *bold*   *italic* → _italic_   # Header → *Header*
 	result := slackConvertMarkdown(text)

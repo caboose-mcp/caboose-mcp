@@ -1,5 +1,5 @@
 # Go
-packages/server/caboose-mcp
+packages/server/fafb
 packages/server/*.patch
 *.patch
 

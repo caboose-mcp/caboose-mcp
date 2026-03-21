@@ -1,6 +1,6 @@
 # packages/n8n
 
-Custom n8n image that pre-loads the three caboose-mcp workflows on first run.
+Custom n8n image that pre-loads the three fafb workflows on first run.
 
 ## Workflows
 
@@ -22,7 +22,7 @@ re-importing on subsequent restarts.
 docker compose up -d
 # → n8n starts at http://localhost:5678
 # → complete owner account setup in the UI
-# → go to Workflows — three caboose-mcp workflows are already imported
+# → go to Workflows — three fafb workflows are already imported
 # → activate each workflow to enable it
 ```
 

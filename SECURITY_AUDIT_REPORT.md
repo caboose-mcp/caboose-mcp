@@ -1,4 +1,4 @@
-# caboose-mcp Security Audit Report
+# fafb Security Audit Report
 
 **Generated:** 2026-03-20
 **Scope:** Static code analysis + configuration review
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-Your caboose-mcp server has **good foundational security practices**, but contains **several actionable security concerns** that should be addressed:
+Your fafb server has **good foundational security practices**, but contains **several actionable security concerns** that should be addressed:
 
 - ✅ **Strong:** Auth middleware, CORS controls, JWT-based access control
 - ⚠️ **Medium:** Weak RNG usage, unhandled errors, TLS verification bypass
@@ -218,7 +218,7 @@ socketmode.OptionDebug(debug),
 
 **Action:**
 ```bash
-cd /home/caboose/dev/caboose-mcp
+cd /home/caboose/dev/fafb
 pnpm update esbuild@^0.25.0
 pnpm audit  # Verify fix
 ```
@@ -353,7 +353,7 @@ jobs:
 ### 3. **Local Scanning Commands**
 ```bash
 # Full security audit
-cd /home/caboose/dev/caboose-mcp
+cd /home/caboose/dev/fafb
 
 # Go security
 echo "=== Go Security Scan ==="

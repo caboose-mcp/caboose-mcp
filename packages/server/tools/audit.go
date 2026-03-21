@@ -518,7 +518,7 @@ func dispatchGatedTool(cfg *config.Config, pg PendingGate) (string, error) {
 		return text, nil
 
 	default:
-		return fmt.Sprintf("Tool %q was approved. Please now call it directly — caboose-mcp cannot re-dispatch this tool type automatically.", pg.Tool), nil
+		return fmt.Sprintf("Tool %q was approved. Please now call it directly — fafb cannot re-dispatch this tool type automatically.", pg.Tool), nil
 	}
 }
 

@@ -1,8 +1,8 @@
 # docker.yml — builds and pushes the MCP server Docker image to GHCR
 #
 # Triggers:
-#   - push to main                 → tag: ghcr.io/caboose-mcp/caboose-mcp:latest
-#   - push of tag server/v*        → tag: ghcr.io/caboose-mcp/caboose-mcp:<version>
+#   - push to main                 → tag: ghcr.io/fafb/fafb:latest
+#   - push of tag server/v*        → tag: ghcr.io/fafb/fafb:<version>
 #
 # The image is built for linux/amd64 and linux/arm64 (Raspberry Pi compatible).
 #
@@ -45,7 +45,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/caboose-mcp/caboose-mcp
+          images: ghcr.io/fafb/fafb
           tags: |
             # main branch → :latest
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}

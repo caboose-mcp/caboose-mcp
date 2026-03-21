@@ -884,7 +884,7 @@ func httpGet(url string) (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "caboose-mcp/2.0")
+	req.Header.Set("User-Agent", "fafb/2.0")
 	req.Header.Set("Accept", "application/json, application/xml, text/xml, */*")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

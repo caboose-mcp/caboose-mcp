@@ -1,7 +1,7 @@
 # docker-compose.yml — local dev / self-hosted deployment
 #
 # Services:
-#   server    — caboose-mcp HTTP mode  →  http://localhost:8080/mcp
+#   server    — fafb HTTP mode  →  http://localhost:8080/mcp
 #   n8n       — workflow automation    →  http://localhost:5678
 #
 # Quick start:
@@ -20,9 +20,9 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
-    image: ghcr.io/caboose-mcp/caboose-mcp:latest
+    image: ghcr.io/fafb/fafb:latest
     pull_policy: build   # always build locally; GHCR image used only by CI
-    container_name: caboose-mcp
+    container_name: fafb
     restart: unless-stopped
 
     ports:
@@ -82,7 +82,7 @@ services:
       N8N_PORT: 5678
       N8N_PROTOCOL: "${N8N_PROTOCOL:-http}"
       WEBHOOK_URL: "${N8N_PUBLIC_URL:-http://localhost:5678}"
-      # Used by HTTP Request nodes in all caboose-mcp workflows
+      # Used by HTTP Request nodes in all fafb workflows
       CABOOSE_MCP_URL: "http://server:8080/mcp"
       CABOOSE_MCP_TOKEN: "${MCP_AUTH_TOKEN:-}"
       # Basic auth — enable for non-local deployments

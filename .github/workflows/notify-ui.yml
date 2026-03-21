@@ -1,11 +1,11 @@
-# notify-ui.yml — fires a repository_dispatch to caboose-mcp/ui on every push to main.
+# notify-ui.yml — fires a repository_dispatch to fafb/ui on every push to main.
 #
-# The UI repo's update-pr.yml workflow listens for the "caboose-mcp-updated" event,
+# The UI repo's update-pr.yml workflow listens for the "fafb-updated" event,
 # clones this repo at the provided SHA, regenerates changelog.json, and opens a PR.
 #
 # Required GitHub secret:
 #   UI_DISPATCH_TOKEN — fine-grained PAT with Contents: write + Actions: write
-#                       scoped to caboose-mcp/ui
+#                       scoped to fafb/ui
 
 name: Notify UI
 
@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send repository_dispatch to caboose-mcp/ui
+      - name: Send repository_dispatch to fafb/ui
         env:
           TOKEN: ${{ secrets.UI_DISPATCH_TOKEN }}
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
@@ -29,14 +29,14 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer $TOKEN" \
             -H "X-GitHub-Api-Version: 2022-11-28" \
-            https://api.github.com/repos/caboose-mcp/ui/dispatches \
+            https://api.github.com/repos/fafb/ui/dispatches \
             -d @-
           import json
           import os
           import sys
 
           payload = {
-              "event_type": "caboose-mcp-updated",
+              "event_type": "fafb-updated",
               "client_payload": {
                   "sha": os.environ.get("GITHUB_SHA", ""),
                   "ref": os.environ.get("GITHUB_REF_NAME", ""),
