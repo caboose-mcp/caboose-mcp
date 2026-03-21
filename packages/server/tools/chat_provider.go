@@ -67,6 +67,7 @@ func (SlackProvider) FormatText(text string) string {
 // It converts:
 //   - **bold** → *bold*  (Slack bold)
 //   - *italic* → _italic_ (Slack italic)
+//
 // It preserves list bullets like "* item" at the start of a line.
 func slackConvertMarkdown(text string) string {
 	result := ""

@@ -100,10 +100,11 @@ func main() {
 // serveHTTP runs the MCP server over HTTP using the Streamable HTTP transport.
 //
 // Route map:
-//   /ui/*         → embedded React UI (unauthenticated, static files)
-//   /api/sandbox  → public sandbox tool execution (unauthenticated, rate-limited)
-//   /auth/verify  → magic link → JWT exchange (unauthenticated, handled in authMiddleware)
-//   /*            → authMiddleware → MCP server (bearer token or JWT required)
+//
+//	/ui/*         → embedded React UI (unauthenticated, static files)
+//	/api/sandbox  → public sandbox tool execution (unauthenticated, rate-limited)
+//	/auth/verify  → magic link → JWT exchange (unauthenticated, handled in authMiddleware)
+//	/*            → authMiddleware → MCP server (bearer token or JWT required)
 func serveHTTP(cfg *config.Config, addr string, s *server.MCPServer) {
 	jwtSecret := tools.LoadAuthStore(cfg)
 
@@ -283,4 +284,3 @@ func runBots(cfg *config.Config) {
 	}
 	wg.Wait()
 }
-

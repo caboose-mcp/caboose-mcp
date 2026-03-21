@@ -12,10 +12,11 @@ package tools
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"io"
-	"math/rand"
+	"math/big"
 	"net/http"
 	"net/url"
 	"os"
@@ -54,8 +55,11 @@ func jokeHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) 
 			"Why did the developer go broke? Because he used up all his cache.",
 			"Real programmers count from 0.",
 		}
-		r := rand.New(rand.NewSource(time.Now().UnixNano()))
-		return mcp.NewToolResultText(jokes[r.Intn(len(jokes))]), nil
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(jokes))))
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("error generating random number: %v", err)), nil
+		}
+		return mcp.NewToolResultText(jokes[n.Int64()]), nil
 	}
 }
 
@@ -78,8 +82,11 @@ func dadJokeHandler(cfg *config.Config) func(context.Context, mcp.CallToolReques
 			"What do you call a fake noodle? An impasta.",
 			"How do you organize a space party? You planet.",
 		}
-		r := rand.New(rand.NewSource(time.Now().UnixNano()))
-		return mcp.NewToolResultText(jokes[r.Intn(len(jokes))]), nil
+		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(jokes))))
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("error generating random number: %v", err)), nil
+		}
+		return mcp.NewToolResultText(jokes[n.Int64()]), nil
 	}
 }
 

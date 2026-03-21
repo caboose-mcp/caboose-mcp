@@ -21,7 +21,7 @@ type wizardField struct {
 	label       string
 	description string
 	current     string
-	secret      bool   // mask value in display
+	secret      bool // mask value in display
 	optional    bool
 }
 

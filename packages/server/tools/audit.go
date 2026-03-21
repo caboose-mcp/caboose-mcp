@@ -43,13 +43,13 @@ import (
 
 // AuditEntry is one line in audit.log.
 type AuditEntry struct {
-	ID          string    `json:"id"`
-	Timestamp   time.Time `json:"ts"`
-	Tool        string    `json:"tool"`
-	Params      any       `json:"params,omitempty"`
-	Status      string    `json:"status"` // "ok" | "error" | "gated" | "approved" | "denied"
-	ResultSnip  string    `json:"result_snip,omitempty"`
-	DurationMS  int64     `json:"duration_ms,omitempty"`
+	ID         string    `json:"id"`
+	Timestamp  time.Time `json:"ts"`
+	Tool       string    `json:"tool"`
+	Params     any       `json:"params,omitempty"`
+	Status     string    `json:"status"` // "ok" | "error" | "gated" | "approved" | "denied"
+	ResultSnip string    `json:"result_snip,omitempty"`
+	DurationMS int64     `json:"duration_ms,omitempty"`
 }
 
 // GateConfig controls which tools are gated and whether gating is active.

@@ -44,25 +44,25 @@ import (
 type Source struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
-	Type        string    `json:"type"`        // github_repo | github_user | rss | url | npm | pypi
-	URL         string    `json:"url"`         // canonical URL or identifier (e.g. "owner/repo" for github)
+	Type        string    `json:"type"` // github_repo | github_user | rss | url | npm | pypi
+	URL         string    `json:"url"`  // canonical URL or identifier (e.g. "owner/repo" for github)
 	Tags        []string  `json:"tags"`
 	Description string    `json:"description"`
-	WatchMode   string    `json:"watch_mode"`  // for github_repo: commits | releases | issues | all
+	WatchMode   string    `json:"watch_mode"` // for github_repo: commits | releases | issues | all
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 // CheckResult is returned by source_check.
 type CheckResult struct {
-	SourceID   string `json:"source_id"`
-	SourceName string `json:"source_name"`
-	Type       string `json:"type"`
-	HasUpdates bool   `json:"has_updates"`
-	Summary    string `json:"summary"`
+	SourceID   string   `json:"source_id"`
+	SourceName string   `json:"source_name"`
+	Type       string   `json:"type"`
+	HasUpdates bool     `json:"has_updates"`
+	Summary    string   `json:"summary"`
 	Items      []string `json:"items,omitempty"`
-	Error      string `json:"error,omitempty"`
-	CheckedAt  string `json:"checked_at"`
+	Error      string   `json:"error,omitempty"`
+	CheckedAt  string   `json:"checked_at"`
 }
 
 func RegisterSources(s *server.MCPServer, cfg *config.Config) {
@@ -114,8 +114,8 @@ func RegisterSources(s *server.MCPServer, cfg *config.Config) {
 
 // ---- storage helpers ----
 
-func sourcesDir(cfg *config.Config) string    { return filepath.Join(cfg.ClaudeDir, "sources") }
-func seenDir(cfg *config.Config) string       { return filepath.Join(cfg.ClaudeDir, "sources", ".seen") }
+func sourcesDir(cfg *config.Config) string { return filepath.Join(cfg.ClaudeDir, "sources") }
+func seenDir(cfg *config.Config) string    { return filepath.Join(cfg.ClaudeDir, "sources", ".seen") }
 
 func saveSource(cfg *config.Config, src Source) error {
 	dir := sourcesDir(cfg)

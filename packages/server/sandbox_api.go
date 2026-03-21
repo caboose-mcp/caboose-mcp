@@ -28,11 +28,11 @@ type sandboxResponse struct {
 // sandboxAllowlist defines the tools that are callable without authentication.
 // These tools are read-only with CORS support via AWS API Gateway proxy.
 var sandboxAllowlist = map[string]bool{
-	"calendar_today":      true,
-	"joke":                true,
-	"dad_joke":            true,
-	"chuck_norris_joke":   true,
-	"mermaid_generate":    true,
+	"calendar_today":    true,
+	"joke":              true,
+	"dad_joke":          true,
+	"chuck_norris_joke": true,
+	"mermaid_generate":  true,
 }
 
 // ---- Simple in-memory rate limiter ----

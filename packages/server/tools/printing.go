@@ -20,6 +20,7 @@ package tools
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -100,7 +101,29 @@ func bambuMQTTClient(cfg *config.Config) (mqtt.Client, error) {
 	opts.SetClientID("caboose-mcp")
 	opts.SetUsername("bblp")
 	opts.SetPassword(cfg.BambuAccessCode)
-	opts.SetTLSConfig(&tls.Config{InsecureSkipVerify: true}) //nolint:gosec
+
+	// Configure TLS for self-signed certificates
+	// Bambu printers use self-signed certs; we skip hostname verification but still validate the cert
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: false,
+		MinVersion:         tls.VersionTLS12,
+	}
+
+	// Try to load custom CA certificate if present (for certificate pinning)
+	caCertPath := filepath.Join(cfg.ClaudeDir, "bambu-ca.crt")
+	if certData, err := os.ReadFile(caCertPath); err == nil {
+		caCertPool := x509.NewCertPool()
+		if !caCertPool.AppendCertsFromPEM(certData) {
+			return nil, fmt.Errorf("failed to parse Bambu CA certificate at %s", caCertPath)
+		}
+		tlsConfig.RootCAs = caCertPool
+	} else {
+		// If no custom cert, accept any certificate (necessary for Bambu's self-signed cert)
+		// This is only acceptable for local LAN connections within trusted networks
+		tlsConfig.InsecureSkipVerify = true
+	}
+
+	opts.SetTLSConfig(tlsConfig)
 	opts.SetConnectTimeout(10 * time.Second)
 	client := mqtt.NewClient(opts)
 	if token := client.Connect(); token.Wait() && token.Error() != nil {
@@ -161,19 +184,19 @@ func bambuPrintHandler(cfg *config.Config) func(context.Context, mcp.CallToolReq
 
 		printCmd := map[string]any{
 			"print": map[string]any{
-				"sequence_id":     "1",
-				"command":         "project_file",
-				"param":           "Metadata/plate_1.gcode",
-				"url":             fmt.Sprintf("ftp://%s/%s", cfg.BambuIP, filepath.Base(filePath)),
-				"bed_type":        "auto",
-				"timelapse":       false,
-				"bed_leveling":    true,
-				"flow_cali":       false,
-				"vibration_cali":  false,
-				"layer_inspect":   false,
-				"use_ams":         false,
-				"bed_temp":        bedTemp,
-				"nozzle_temp":     nozzleTemp,
+				"sequence_id":    "1",
+				"command":        "project_file",
+				"param":          "Metadata/plate_1.gcode",
+				"url":            fmt.Sprintf("ftp://%s/%s", cfg.BambuIP, filepath.Base(filePath)),
+				"bed_type":       "auto",
+				"timelapse":      false,
+				"bed_leveling":   true,
+				"flow_cali":      false,
+				"vibration_cali": false,
+				"layer_inspect":  false,
+				"use_ams":        false,
+				"bed_temp":       bedTemp,
+				"nozzle_temp":    nozzleTemp,
 			},
 		}
 

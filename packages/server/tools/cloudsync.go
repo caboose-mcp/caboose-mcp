@@ -55,21 +55,21 @@ import (
 
 // syncState is persisted to CLAUDE_DIR/cloudsync.json
 type syncState struct {
-	Backend  string `json:"backend"`            // "gist" | "s3"
+	Backend  string `json:"backend"` // "gist" | "s3"
 	GistID   string `json:"gist_id,omitempty"`
-	S3Path   string `json:"s3_path,omitempty"`  // s3://bucket/key
+	S3Path   string `json:"s3_path,omitempty"` // s3://bucket/key
 	LastPush string `json:"last_push,omitempty"`
 	LastPull string `json:"last_pull,omitempty"`
 }
 
 // configBundle is what we encrypt and store
 type configBundle struct {
-	Version  int               `json:"version"`
-	BundleAt string            `json:"bundle_at"`
-	EnvVars  map[string]string `json:"env_vars"`  // from cloudsync-env.json
-	Sources  []json.RawMessage `json:"sources"`
-	Allowlist json.RawMessage  `json:"allowlist,omitempty"`
-	Schedule json.RawMessage   `json:"schedule,omitempty"`
+	Version   int               `json:"version"`
+	BundleAt  string            `json:"bundle_at"`
+	EnvVars   map[string]string `json:"env_vars"` // from cloudsync-env.json
+	Sources   []json.RawMessage `json:"sources"`
+	Allowlist json.RawMessage   `json:"allowlist,omitempty"`
+	Schedule  json.RawMessage   `json:"schedule,omitempty"`
 }
 
 func RegisterCloudSync(s *server.MCPServer, cfg *config.Config) {
@@ -146,7 +146,9 @@ func loadSyncEnv(cfg *config.Config) map[string]string {
 		return map[string]string{}
 	}
 	var m map[string]string
-	json.Unmarshal(data, &m)
+	if err := json.Unmarshal(data, &m); err != nil {
+		return map[string]string{}
+	}
 	return m
 }
 
@@ -288,7 +290,7 @@ func restoreBundle(cfg *config.Config, plaintext []byte, dryRun bool) (string, e
 			os.MkdirAll(sourcesDir(cfg), 0755)
 			for _, raw := range bundle.Sources {
 				var src Source
-				if json.Unmarshal(raw, &src) == nil && src.ID != "" {
+				if err := json.Unmarshal(raw, &src); err == nil && src.ID != "" {
 					os.WriteFile(filepath.Join(sourcesDir(cfg), src.ID+".json"), raw, 0644)
 				}
 			}
@@ -368,7 +370,9 @@ func gistPush(cfg *config.Config, encoded string, existingGistID string) (string
 	}
 
 	var gist map[string]any
-	json.Unmarshal(respData, &gist)
+	if err := json.Unmarshal(respData, &gist); err != nil {
+		return "", fmt.Errorf("failed to parse GitHub API response: %v", err)
+	}
 	id, _ := gist["id"].(string)
 	return id, nil
 }
@@ -398,7 +402,9 @@ func gistPull(cfg *config.Config, gistID string) (string, error) {
 	}
 
 	var gist map[string]any
-	json.Unmarshal(respData, &gist)
+	if err := json.Unmarshal(respData, &gist); err != nil {
+		return "", fmt.Errorf("failed to parse GitHub API response: %v", err)
+	}
 
 	files, _ := gist["files"].(map[string]any)
 	for _, v := range files {
@@ -492,7 +498,9 @@ func cloudsyncSetupHandler(cfg *config.Config) func(context.Context, mcp.CallToo
 				), nil
 			}
 			var identity map[string]any
-			json.Unmarshal(whoami, &identity)
+			if err := json.Unmarshal(whoami, &identity); err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("failed to parse AWS identity: %v", err)), nil
+			}
 			accountID, _ := identity["Account"].(string)
 			userARN, _ := identity["Arn"].(string)
 			log = append(log, fmt.Sprintf("AWS identity: %s (account %s)", userARN, accountID))
