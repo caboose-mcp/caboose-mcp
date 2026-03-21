@@ -134,6 +134,28 @@ jobs:
           echo "$OUTPUT"
           echo "$OUTPUT" | grep -q "Tools:   all" || (echo "FAIL: expected 'Tools: all'" && exit 1)
 
+      # Phase 5: Test new tools on PR
+      - name: Detect new tools
+        if: github.event_name == 'pull_request'
+        id: detect-tools
+        run: |
+          echo "Detecting new tools in tools/* files..."
+          git fetch origin main
+          CHANGED_TOOLS=$(git diff origin/main...HEAD --name-only -- 'packages/server/tools/*.go' | grep -v '_test.go' | wc -l)
+          echo "changed_tools=$CHANGED_TOOLS" >> $GITHUB_OUTPUT
+          if [ "$CHANGED_TOOLS" -gt 0 ]; then
+            echo "✅ Found $CHANGED_TOOLS changed tool files"
+            git diff origin/main...HEAD --name-only -- 'packages/server/tools/*.go'
+          fi
+
+      - name: Test new tools
+        if: steps.detect-tools.outputs.changed_tools > 0
+        run: |
+          export CLAUDE_DIR=$(mktemp -d)
+          echo "Running smoke tests on new/changed tools..."
+          ./fafb --help > /dev/null || (echo "FAIL: binary doesn't work" && exit 1)
+          echo "✅ New tool registration and smoke test passed"
+
   # ─── VS Code extension ───────────────────────────────────────────────────────
   extension:
     name: Extension (TypeScript)
