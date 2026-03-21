@@ -678,6 +678,8 @@ ELEVENLABS_VOICE_ID=
 Invite links (after setup):
   Discord: https://discord.com/developers/applications
   Slack: https://api.slack.com/apps
+
+> Something selfishly for me but hopefully useful for others.
 `
 
 		result := instructions + "\n" + envTemplate

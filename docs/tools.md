@@ -1,6 +1,11 @@
 # Tool Reference
 
-117 tools across two tiers. **Hosted** tools run on ECS (`--serve-hosted`). **Local** tools require the Pi (`--serve-local`). Both tiers together = `--serve` / stdio.
+118 tools across three tiers:
+- **Hosted** (68 tools) — Cloud-safe, run on ECS (`--serve-hosted`)
+- **Local** (25 tools) — Require the Pi (`--serve-local`) for hardware/Docker access
+- **Common** (3 tools) — Available everywhere (jokes)
+
+**Combined** (all 118) — `--serve` / stdio modes.
 
 ---
 
@@ -159,6 +164,7 @@
 | `setup_write_env` | Write a `.env` file with provided key=value pairs |
 | `setup_n8n_workflows` | Return example n8n workflow JSON |
 | `setup_github_mcp_info` | Explain GitHub MCP server vs caboose-mcp |
+| `setup_bot_configure` | Configure Slack/Discord bot settings |
 
 ---
 
@@ -258,11 +264,12 @@
 
 ---
 
-### Fun
+### Fun (Common Tools)
 | Tool | Description |
 |------|-------------|
 | `joke` | Tell a programming joke |
 | `dad_joke` | Tell a dad joke |
+| `chuck_norris_joke` | Fetch a random Chuck Norris joke from the API |
 
 ---
 

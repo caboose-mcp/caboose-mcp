@@ -1,6 +1,8 @@
 # caboose-mcp
 
-Personal AI toolserver — 117 MCP tools exposed to Claude, VS Code, and chat bots via a Go server hosted on AWS ECS.
+Personal AI toolserver — 118 MCP tools exposed to Claude, VS Code, and chat bots via a Go server hosted on AWS ECS.
+
+> Something selfishly for me but hopefully useful for others.
 
 [![Deploy Infra](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-infra.yml/badge.svg)](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-infra.yml)
 [![Deploy Bots](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-bots.yml/badge.svg)](https://github.com/caboose-mcp/caboose-mcp/actions/workflows/deploy-bots.yml)
@@ -21,9 +23,9 @@ Personal AI toolserver — 117 MCP tools exposed to Claude, VS Code, and chat bo
 
 ```mermaid
 graph TD
-    Claude["Claude Code (stdio)"] -->|all 117 tools| Binary["caboose-mcp (Pi)"]
+    Claude["Claude Code (stdio)"] -->|all 118 tools| Binary["caboose-mcp (Pi)"]
     VSCode["VS Code / Bruno"] -->|HTTPS| ALB["ALB · mcp.chrismarasco.io"]
-    ALB --> Serve["ECS · --serve-hosted\n92 hosted tools"]
+    ALB --> Serve["ECS · --serve-hosted\n68 hosted tools"]
     Slack["Slack"] --> Bots["ECS · --bots\nSlack + Discord gateway"]
     Discord["Discord"] --> Bots
     Bots -->|Claude Haiku| Agent["Bot agent loop"]
@@ -40,9 +42,9 @@ Tools are split so the cloud server only exposes what's safe remotely.
 
 | Tier | Flag | Count | What's included |
 |------|------|-------|-----------------|
-| **Hosted** | `--serve-hosted` | 92 | Calendar, Slack, Discord, GitHub, Notes, Focus, Learning, Sources, CloudSync, Audit, Auth, Health, Secrets, DB, Env, Mermaid, Greptile, Sandbox, Persona, Jokes, Setup |
+| **Hosted** | `--serve-hosted` | 68 | Calendar, Slack, Discord, GitHub, Notes, Focus, Learning, Sources, CloudSync, Audit, Auth, Health, Secrets, DB, Env, Mermaid, Greptile, Sandbox, Persona, Jokes, Setup, Claude Files, Self-Improve |
 | **Local** | `--serve-local` | 25 | Docker, execute_command, Bambu, Blender, Chezmoi, Toolsmith, Agency |
-| **Combined** | `--serve` / stdio | 117 | Everything |
+| **Combined** | `--serve` / stdio | 118 | Everything (common + hosted + local) |
 
 Full reference: [docs/tools.md](docs/tools.md)
 
