@@ -1,8 +1,10 @@
 # fafb
 
-Personal AI toolserver — 118 MCP tools exposed to Claude, VS Code, and chat bots via a Go server hosted on AWS ECS.
+Personal AI toolserver — **130 MCP tools** exposed to Claude, VS Code, and chat bots via a Go server hosted on AWS ECS, with Discord OAuth, admin approval workflows, and automatic tool synchronization.
 
 > Something selfishly for me but hopefully useful for others.
+>
+> **⚡ NEW:** Ecosystem Manager (Phases 1-6) — Discord OAuth, auto-deployment, tool creation UI, admin approval workflows, and 130+ tools extracted and synchronized.
 
 [![Deploy Infra](https://github.com/fafb/fafb/actions/workflows/deploy-infra.yml/badge.svg)](https://github.com/fafb/fafb/actions/workflows/deploy-infra.yml)
 [![Deploy Bots](https://github.com/fafb/fafb/actions/workflows/deploy-bots.yml/badge.svg)](https://github.com/fafb/fafb/actions/workflows/deploy-bots.yml)
@@ -42,11 +44,47 @@ Tools are split so the cloud server only exposes what's safe remotely.
 
 | Tier | Flag | Count | What's included |
 |------|------|-------|-----------------|
-| **Hosted** | `--serve-hosted` | 68 | Calendar, Slack, Discord, GitHub, Notes, Focus, Learning, Sources, CloudSync, Audit, Auth, Health, Secrets, DB, Env, Mermaid, Greptile, Sandbox, Persona, Jokes, Setup, Claude Files, Self-Improve |
+| **Hosted** | `--serve-hosted` | 68 | Calendar, Slack, Discord, GitHub, Notes, Focus, Learning, Sources, CloudSync, Audit, Auth, Health, Secrets, DB, Env, Mermaid, Greptile, Sandbox, Persona, Jokes, Setup, Claude Files, Self-Improve, **Repo Management** (create, test, approve, deploy), **Gamma** (presentations) |
 | **Local** | `--serve-local` | 25 | Docker, execute_command, Bambu, Blender, Chezmoi, Toolsmith, Agency |
-| **Combined** | `--serve` / stdio | 118 | Everything (common + hosted + local) |
+| **Common** | (any mode) | 3 | Jokes, Claude Files, Setup |
+| **Combined** | `--serve` / stdio | 130 | Everything (common + hosted + local + new tools) |
 
-Full reference: [docs/tools.md](docs/tools.md)
+Full reference: [docs/tools.md](docs/tools.md) · [ECOSYSTEM.md](ECOSYSTEM.md)
+
+---
+
+## ⚡ Ecosystem Manager (NEW)
+
+**Phases 1-6 Complete:** Secure, integrated toolkit for managing 130+ MCP tools with Discord OAuth, admin approval workflows, and automatic tool synchronization.
+
+### Key Features
+
+✅ **Phase 1:** Discord OAuth2 PKCE flow for user authentication
+✅ **Phase 2:** Auto-extract 130 tools + auto-sync UI on push to main
+✅ **Phase 3:** Tool creation, testing, and admin approval workflow
+✅ **Phase 4:** Auto-generate Gamma presentation decks
+✅ **Phase 5:** GitHub PR-based tool submission with CI tests
+✅ **Phase 6:** Admin UI forms + parameter validation
+
+### Create a Tool
+
+**Via Web UI:**
+```
+1. Go to https://ui.mcp.chrismarasco.io/admin/create-tool
+2. Fill in tool details (name, description, parameters)
+3. Click "Create Tool" → saved to ~/.claude/pending-tools/
+4. Test via /admin/pending-tools
+5. Admin approves → commits to main → auto-deploys
+```
+
+**Via MCP:**
+```bash
+fafb repo_create_tool --name "my_tool" --description "Does X" --tier "hosted"
+fafb repo_test_tool --tool_name "my_tool" --test_input_json '{}'
+fafb repo_approve_tool --tool_name "my_tool"
+```
+
+See [ECOSYSTEM.md](ECOSYSTEM.md) for complete workflow and API reference.
 
 ---
 
