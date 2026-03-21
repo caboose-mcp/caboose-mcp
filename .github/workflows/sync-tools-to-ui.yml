@@ -1,0 +1,111 @@
+name: Sync Tools to UI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/server/tools/**'
+      - 'packages/server/config/**'
+      - '.github/workflows/sync-tools-to-ui.yml'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync-tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Extract tools from Go code
+        id: extract
+        run: |
+          cd packages/server
+          go run ./tools/extract-tools.go > /tmp/tools.json
+          TOOL_COUNT=$(jq 'length' /tmp/tools.json)
+          echo "tool_count=$TOOL_COUNT" >> $GITHUB_OUTPUT
+          echo "Tools extracted: $TOOL_COUNT"
+
+      - name: Checkout UI repo
+        uses: actions/checkout@v4
+        with:
+          repository: caboose-mcp/ui
+          path: ui
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync tools to UI
+        working-directory: ui
+        run: |
+          node scripts/sync-tools-from-mcp.js /tmp/tools.json
+
+      - name: Check for changes
+        id: changes
+        working-directory: ui
+        run: |
+          if git diff --exit-code > /dev/null; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "=== Changes detected ==="
+            git diff --stat
+          fi
+
+      - name: Create PR if changes detected
+        if: steps.changes.outputs.has_changes == 'true'
+        working-directory: ui
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "Claude Code Bot"
+          git config user.email "claude-code@anthropic.com"
+          BRANCH="chore/sync-tools-$(date +%s)"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore: sync ${{ steps.extract.outputs.tool_count }} tools from caboose-mcp
+
+- Auto-generated from caboose-mcp tool definitions
+- Tool count: ${{ steps.extract.outputs.tool_count }}
+- Updated: $(date)
+
+🤖 Automated sync"
+          git push origin "$BRANCH"
+
+          gh pr create \
+            --title "chore: Sync ${{ steps.extract.outputs.tool_count }} tools from caboose-mcp" \
+            --body "Automatic tool synchronization from caboose-mcp
+
+**Changes:**
+- Tool count: ${{ steps.extract.outputs.tool_count }}
+- Synced at: $(date)
+- Source commit: ${{ github.sha }}
+
+This PR was auto-generated. Once CI passes, it will auto-merge and trigger deployment.
+
+🤖 Automated by Claude Code" \
+            --base main \
+            --head "$BRANCH" \
+            --label "auto-sync,tools"
+
+      - name: Report success
+        if: success()
+        run: |
+          echo "✅ Tool sync completed: ${{ steps.extract.outputs.tool_count }} tools"
+
+      - name: Report failure
+        if: failure()
+        run: |
+          echo "❌ Tool sync failed"
+          exit 1
