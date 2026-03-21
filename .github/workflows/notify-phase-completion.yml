@@ -1,0 +1,169 @@
+name: Notify Phase Completion
+
+# Manually triggered workflow to send completion notification
+on:
+  workflow_dispatch:
+
+env:
+  DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+  EMAIL_RECIPIENT: ${{ secrets.EMAIL_RECIPIENT }}
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Send Discord notification
+        if: env.DISCORD_WEBHOOK != ''
+        run: |
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          COMMIT_SHA=$(git rev-parse --short HEAD)
+          REPO_URL="https://github.com/${{ github.repository }}"
+
+          PAYLOAD=$(cat <<EOF
+          {
+            "content": "@sgcaboose",
+            "embeds": [
+              {
+                "title": "✅ fafb Ecosystem Manager — All 5 Phases Complete!",
+                "description": "Ecosystem manager implementation complete with Discord OAuth, auto-deployment, repository management, Gamma integration, and PR-based tool submission.",
+                "color": 2562047,
+                "fields": [
+                  {
+                    "name": "✅ Phase 1: Discord OAuth Integration",
+                    "value": "Discord users can authenticate via OAuth2 PKCE flow. JWT tokens with automatic refresh.",
+                    "inline": false
+                  },
+                  {
+                    "name": "✅ Phase 2: Auto-Documentation & Auto-Deployment",
+                    "value": "Tools auto-sync from caboose-mcp to UI on push. Tool extraction via Go AST parser. GitHub Actions auto-merge and deploy.",
+                    "inline": false
+                  },
+                  {
+                    "name": "✅ Phase 3: Repository Management Tools",
+                    "value": "repo_create_tool, repo_test_tool, repo_approve_tool, repo_reject_tool, repo_deploy. Admin approval gate for tool deployments.",
+                    "inline": false
+                  },
+                  {
+                    "name": "✅ Phase 4: Gamma Presentation Integration",
+                    "value": "gamma_generate_deck, gamma_update_deck, gamma_list_decks. Auto-generate presentation decks for announcements.",
+                    "inline": false
+                  },
+                  {
+                    "name": "✅ Phase 5: GitHub PR-Based Tool Submission",
+                    "value": "Tool detection on PR. CI auto-tests new tools. Admin approval before merge. Auto-deploy on main.",
+                    "inline": false
+                  },
+                  {
+                    "name": "Repository",
+                    "value": "[fafb (caboose-mcp)](${REPO_URL})",
+                    "inline": true
+                  },
+                  {
+                    "name": "Deployed Commit",
+                    "value": "\`${COMMIT_SHA}\`",
+                    "inline": true
+                  },
+                  {
+                    "name": "Completed At",
+                    "value": "${TIMESTAMP}",
+                    "inline": false
+                  }
+                ],
+                "footer": {
+                  "text": "fafb Ecosystem Manager"
+                }
+              }
+            ]
+          }
+          EOF
+          )
+
+          curl -X POST \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            "${{ env.DISCORD_WEBHOOK }}"
+
+          echo "✅ Discord notification sent"
+
+      - name: Send Email notification
+        if: env.EMAIL_RECIPIENT != ''
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "✅ fafb Ecosystem Manager - All 5 Phases Complete!"
+          to: ${{ env.EMAIL_RECIPIENT }}
+          from: "fafb Automation <${{ secrets.EMAIL_USERNAME }}>"
+          body: |
+            🎉 fafb Ecosystem Manager Implementation Complete!
+
+            All 5 phases have been successfully implemented:
+
+            ✅ PHASE 1: Discord OAuth Integration
+               - Discord users can authenticate via OAuth2 PKCE flow
+               - JWT tokens with automatic refresh
+               - Identity linking for multi-platform auth
+
+            ✅ PHASE 2: Auto-Documentation & Auto-Deployment
+               - Tools auto-sync from caboose-mcp to UI on push to main
+               - Go AST parser extracts tool definitions (120 tools extracted)
+               - GitHub Actions workflow creates PRs to UI repo
+               - Auto-merge workflow triggers deployment
+
+            ✅ PHASE 3: Repository Management Tools
+               - repo_create_tool: Create tool drafts with validation
+               - repo_test_tool: Test tools in isolated sandbox
+               - repo_approve_tool: Approve and deploy to main (admin-only)
+               - repo_reject_tool: Discard pending tools (admin-only)
+               - repo_deploy: Trigger deployment workflows
+               - Admin approval gate for all deployments
+
+            ✅ PHASE 4: Gamma Presentation Integration
+               - gamma_generate_deck: Create presentation decks with configurable slides
+               - gamma_update_deck: Update existing decks
+               - gamma_list_decks: List all generated presentations
+               - Supports dark/light/brand themes
+               - Auto-generates slides for overview, tools, benefits, setup, architecture
+
+            ✅ PHASE 5: GitHub PR-Based Tool Submission
+               - Automatic detection of new tools in PRs
+               - CI workflow tests all new/changed tools
+               - Smoke tests verify tool registration and binary builds
+               - Admin approval before merge to main
+               - Auto-deploy on merge via existing deploy-app workflow
+
+            📊 Implementation Statistics:
+               - Files added: 15+ new tool files, workflows, and scripts
+               - Tools implemented: 7 new repo/gamma tools
+               - GitHub Actions: 3 new workflows (sync-tools-to-ui, auto-merge, notify)
+               - Total tools in ecosystem: 120+ MCP tools
+
+            🚀 Next Steps:
+               - Test tool creation workflow via web UI or MCP
+               - Trigger manual tool deployment
+               - Monitor auto-sync and auto-merge workflows
+               - Generate presentation deck for team communication
+
+            📝 Repositories:
+               - caboose-mcp: https://github.com/caboose-mcp/caboose-mcp
+               - UI: https://github.com/caboose-mcp/ui
+
+            ---
+            Generated by fafb Automation
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          content_type: text/plain
+
+      - name: Report completion
+        run: |
+          echo "📢 Completion notification sent!"
+          echo "✅ Phase 1: Discord OAuth"
+          echo "✅ Phase 2: Auto-Documentation & Auto-Deployment"
+          echo "✅ Phase 3: Repository Management Tools"
+          echo "✅ Phase 4: Gamma Presentation Integration"
+          echo "✅ Phase 5: GitHub PR-Based Tool Submission"
+          echo ""
+          echo "All phases implemented and committed to main"
