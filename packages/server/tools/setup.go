@@ -19,6 +19,10 @@ import (
 )
 
 func RegisterSetup(s *server.MCPServer, cfg *config.Config) {
+	s.AddTool(mcp.NewTool("setup_bot_configure",
+		mcp.WithDescription("Guided interactive setup for Discord or Slack bot integration. Validates tokens and generates .env configuration."),
+		mcp.WithString("platform", mcp.Required(), mcp.Description("Platform to configure: 'discord', 'slack', or 'both'")),
+	), setupBotConfigureHandler(cfg))
 	s.AddTool(mcp.NewTool("setup_github_mcp_info",
 		mcp.WithDescription("Explains how to use GitHub's official MCP server alongside caboose-mcp, and when each approach is better."),
 	), setupGitHubMCPInfoHandler(cfg))
@@ -504,5 +508,179 @@ getting the full GitHub surface. This would be implemented in a future
 tools/github_bridge.go using the MCP client protocol.
 `
 		return mcp.NewToolResultText(info), nil
+	}
+}
+
+// setupBotConfigureHandler generates guided setup instructions and env template for Discord/Slack.
+// Returns a formatted response with:
+// 1. Step-by-step instructions for the selected platform(s)
+// 2. Required environment variables
+// 3. Validation guidance
+// 4. Next steps
+func setupBotConfigureHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(_ context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		args, ok := req.Params.Arguments.(map[string]any)
+		if !ok {
+			return mcp.NewToolResultText("❌ Invalid arguments"), nil
+		}
+		platform, _ := args["platform"].(string)
+		platform = strings.ToLower(strings.TrimSpace(platform))
+
+		var instructions string
+
+		if platform == "discord" || platform == "both" {
+			instructions += `
+⚔️ === DISCORD BOT SETUP ===
+
+STEP 1: Create Discord Application
+  1. Go to https://discord.com/developers/applications
+  2. Click "New Application" → name it "Caboose"
+  3. Go to "Bot" tab → click "Add Bot"
+  4. Copy the TOKEN (starts with MzA...) — save this securely
+  5. In "TOKEN", click "Copy"
+
+STEP 2: Configure Bot Permissions
+  1. Go to "OAuth2" → "URL Generator"
+  2. Scopes: check "bot"
+  3. Permissions: check these boxes:
+     ✓ Send Messages
+     ✓ Send Messages in Threads
+     ✓ Create Public Threads
+     ✓ Embed Links
+     ✓ Attach Files
+     ✓ Read Message History
+     ✓ Add Reactions
+  4. Copy the generated URL at the bottom
+
+STEP 3: Invite Bot to Your Server
+  1. Paste the URL into your browser
+  2. Select your server from the dropdown
+  3. Authorize the bot
+
+STEP 4: Get Channel IDs (optional, for private channels)
+  1. In Discord, enable "Developer Mode" (User Settings → Advanced → Developer Mode)
+  2. Right-click on any channel → "Copy Channel ID"
+  3. Store these IDs for DISCORD_BOT_CHANNELS (comma-separated)
+
+STEP 5: Set Environment Variables
+  Add to your .env file:
+
+  DISCORD_TOKEN=MzA...
+  DISCORD_BOT_CHANNELS=12345,67890      # optional (comma-separated channel IDs)
+  ANTHROPIC_API_KEY=sk-proj-...         # required for all platforms
+
+STEP 6: Test
+  Run: caboose-mcp --bots
+  Send a message to the bot in Discord (or DM)
+  Expected: Bot responds with setup confirmation
+
+STATUS: ✅ Ready to configure
+`
+		}
+
+		if platform == "slack" || platform == "both" {
+			if platform == "both" {
+				instructions += "\n\n"
+			}
+			instructions += `
+🎯 === SLACK BOT SETUP ===
+
+STEP 1: Create Slack App
+  1. Go to https://api.slack.com/apps
+  2. Click "Create New App" → "From scratch"
+  3. App name: "Caboose"
+  4. Select your workspace
+  5. Create
+
+STEP 2: Enable Socket Mode
+  1. In left sidebar: "Socket Mode" → toggle ON
+  2. Give it an app token name (e.g., "dev")
+  3. Copy the XAPP_... token — save securely
+
+STEP 3: Configure OAuth Scopes
+  1. Go to "OAuth & Permissions"
+  2. Add these Bot Token Scopes:
+     ✓ app_mentions:read
+     ✓ channels:read
+     ✓ chat:write
+     ✓ files:write
+     ✓ groups:read
+     ✓ im:read
+     ✓ im:write
+     ✓ reactions:write
+  3. Copy the "Bot User OAuth Token" (starts with xoxb-) — save securely
+
+STEP 4: Subscribe to Bot Events
+  1. Go to "Event Subscriptions" → toggle ON
+  2. Under "Subscribe to bot events", add:
+     ✓ app_mention
+     ✓ message.im
+  3. Save
+
+STEP 5: Enable Interactivity (optional, for reactions)
+  1. Go to "Interactivity & Shortcuts" → toggle ON
+  2. No URL needed (Socket Mode doesn't use webhooks)
+
+STEP 6: Get Channel IDs (optional, for private channels)
+  1. In Slack, get channel IDs from the channel URL or by right-clicking
+  2. Store these IDs for SLACK_BOT_CHANNELS (comma-separated)
+
+STEP 7: Set Environment Variables
+  Add to your .env file:
+
+  SLACK_TOKEN=xoxb-...
+  SLACK_APP_TOKEN=xapp-...
+  SLACK_BOT_CHANNELS=C123,C456         # optional (comma-separated channel IDs)
+  ANTHROPIC_API_KEY=sk-proj-...         # required for all platforms
+
+STEP 8: Test
+  Run: caboose-mcp --bots
+  @mention the bot in Slack or send a DM
+  Expected: Bot responds with setup confirmation
+
+STATUS: ✅ Ready to configure
+`
+		}
+
+		if instructions == "" {
+			return mcp.NewToolResultText("❌ Platform must be 'discord', 'slack', or 'both'"), nil
+		}
+
+		envTemplate := `
+📝 === ENVIRONMENT VARIABLES TEMPLATE ===
+
+Copy this to your .env file and fill in the values from the setup steps above:
+
+# Claude API (required)
+ANTHROPIC_API_KEY=sk-proj-...
+
+# Discord (optional)
+DISCORD_TOKEN=MzA...
+DISCORD_BOT_CHANNELS=
+
+# Slack (optional)
+SLACK_TOKEN=xoxb-...
+SLACK_APP_TOKEN=xapp-...
+SLACK_BOT_CHANNELS=
+
+# (Optional) Text-to-speech
+ELEVENLABS_API_KEY=
+ELEVENLABS_VOICE_ID=
+
+🚀 === NEXT STEPS ===
+
+1. Fill in the env vars above in your .env file (or export them in your shell)
+2. Run: caboose-mcp --bots
+3. Test by sending a message to the bot
+4. Use setup_check to verify all settings
+5. Check logs for any errors and troubleshoot
+
+Invite links (after setup):
+  Discord: https://discord.com/developers/applications
+  Slack: https://api.slack.com/apps
+`
+
+		result := instructions + "\n" + envTemplate
+		return mcp.NewToolResultText(result), nil
 	}
 }
