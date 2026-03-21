@@ -64,6 +64,27 @@ resource "aws_iam_user_policy" "bedrock" {
   })
 }
 
+# ─── API Gateway: CORS proxy management ────────────────────────────────────
+
+resource "aws_iam_user_policy" "apigateway" {
+  name = "caboose-mcp-apigateway"
+  user = aws_iam_user.caboose_cli.name
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "APIGatewayManagement"
+        Effect = "Allow"
+        Action = [
+          "apigateway:*",
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 # ─── S3: cloudsync backup bucket ──────────────────────────────────────────────
 
 resource "aws_s3_bucket" "cloudsync" {
