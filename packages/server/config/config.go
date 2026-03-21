@@ -43,6 +43,10 @@ type Config struct {
 	ReleaseStage string // CABOOSE_ENV
 	// UIOrigin is the allowed CORS origin for the standalone UI.
 	UIOrigin string // MCP_UI_ORIGIN (default: https://ui.mcp.chrismarasco.io)
+	// Discord OAuth2 — for user authentication via Discord login
+	DiscordOAuthClientID     string // DISCORD_OAUTH_CLIENT_ID
+	DiscordOAuthClientSecret string // DISCORD_OAUTH_CLIENT_SECRET
+	DiscordOAuthRedirectURI  string // DISCORD_OAUTH_REDIRECT_URI
 }
 
 func Load() *Config {
@@ -81,31 +85,34 @@ func Load() *Config {
 	}
 
 	return &Config{
-		ClaudeDir:          claudeDir,
-		GitHubToken:        githubToken,
-		GPGKeyID:           os.Getenv("GPG_KEY_ID"),
-		SlackToken:         os.Getenv("SLACK_TOKEN"),
-		DiscordToken:       os.Getenv("DISCORD_TOKEN"),
-		BambuIP:            os.Getenv("BAMBU_IP"),
-		BambuAccessCode:    os.Getenv("BAMBU_ACCESS_CODE"),
-		BambuSerial:        os.Getenv("BAMBU_SERIAL"),
-		BambuBedTemp:       bedTemp,
-		BambuNozzleTemp:    nozzleTemp,
-		GreptileAPIKey:     os.Getenv("GREPTILE_API_KEY"),
-		GreptileRepo:       greptileRepo,
-		PostgresURL:        os.Getenv("POSTGRES_URL"),
-		MongoURL:           os.Getenv("MONGO_URL"),
-		N8nWebhookURL:      os.Getenv("N8N_WEBHOOK_URL"),
-		N8nAPIKey:          os.Getenv("N8N_API_KEY"),
-		AnthropicAPIKey:    os.Getenv("ANTHROPIC_API_KEY"),
-		DiscordWebhookURL:  os.Getenv("DISCORD_WEBHOOK_URL"),
-		DiscordBotChannels: os.Getenv("DISCORD_BOT_CHANNELS"),
-		SlackAppToken:      os.Getenv("SLACK_APP_TOKEN"),
-		SlackBotChannels:   os.Getenv("SLACK_BOT_CHANNELS"),
-		ElevenLabsAPIKey:   os.Getenv("ELEVENLABS_API_KEY"),
-		ElevenLabsVoiceID:  os.Getenv("ELEVENLABS_VOICE_ID"),
-		ReleaseStage:       releaseStage(),
-		UIOrigin:           uiOrigin(),
+		ClaudeDir:               claudeDir,
+		GitHubToken:             githubToken,
+		GPGKeyID:                os.Getenv("GPG_KEY_ID"),
+		SlackToken:              os.Getenv("SLACK_TOKEN"),
+		DiscordToken:            os.Getenv("DISCORD_TOKEN"),
+		BambuIP:                 os.Getenv("BAMBU_IP"),
+		BambuAccessCode:         os.Getenv("BAMBU_ACCESS_CODE"),
+		BambuSerial:             os.Getenv("BAMBU_SERIAL"),
+		BambuBedTemp:            bedTemp,
+		BambuNozzleTemp:         nozzleTemp,
+		GreptileAPIKey:          os.Getenv("GREPTILE_API_KEY"),
+		GreptileRepo:            greptileRepo,
+		PostgresURL:             os.Getenv("POSTGRES_URL"),
+		MongoURL:                os.Getenv("MONGO_URL"),
+		N8nWebhookURL:           os.Getenv("N8N_WEBHOOK_URL"),
+		N8nAPIKey:               os.Getenv("N8N_API_KEY"),
+		AnthropicAPIKey:         os.Getenv("ANTHROPIC_API_KEY"),
+		DiscordWebhookURL:       os.Getenv("DISCORD_WEBHOOK_URL"),
+		DiscordBotChannels:      os.Getenv("DISCORD_BOT_CHANNELS"),
+		SlackAppToken:           os.Getenv("SLACK_APP_TOKEN"),
+		SlackBotChannels:        os.Getenv("SLACK_BOT_CHANNELS"),
+		ElevenLabsAPIKey:        os.Getenv("ELEVENLABS_API_KEY"),
+		ElevenLabsVoiceID:       os.Getenv("ELEVENLABS_VOICE_ID"),
+		ReleaseStage:            releaseStage(),
+		UIOrigin:                uiOrigin(),
+		DiscordOAuthClientID:    os.Getenv("DISCORD_OAUTH_CLIENT_ID"),
+		DiscordOAuthClientSecret: os.Getenv("DISCORD_OAUTH_CLIENT_SECRET"),
+		DiscordOAuthRedirectURI: os.Getenv("DISCORD_OAUTH_REDIRECT_URI"),
 	}
 }
 

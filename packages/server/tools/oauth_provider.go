@@ -229,3 +229,321 @@ func (p *GoogleCalendarProvider) AuthErrorMessage(cfg *config.Config) string {
 			"Then call: calendar_auth_complete(code=\"<paste code here>\")",
 		authURL)
 }
+
+// ---- DiscordOAuthProvider ----
+
+// DiscordOAuthProvider implements OAuthProvider for Discord OAuth2.
+// It is a zero-value-safe, stateless struct; safe for concurrent use.
+type DiscordOAuthProvider struct{}
+
+var discordOAuthProvider = &DiscordOAuthProvider{}
+
+// GetDiscordOAuthProvider returns the singleton Discord OAuth provider.
+func GetDiscordOAuthProvider() OAuthProvider {
+	return discordOAuthProvider
+}
+
+// Discord OAuth2 endpoints
+const (
+	discordAuthURL  = "https://discord.com/api/oauth2/authorize"
+	discordTokenURL = "https://discord.com/api/oauth2/token"
+	discordUserURL  = "https://discord.com/api/users/@me"
+)
+
+// DiscordToken represents a Discord OAuth2 token.
+type discordToken struct {
+	AccessToken  string    `json:"access_token"`
+	RefreshToken string    `json:"refresh_token"`
+	ExpiresIn    int       `json:"expires_in"`
+	TokenType    string    `json:"token_type"`
+	Scope        string    `json:"scope"`
+	Expiry       time.Time `json:"-"`
+}
+
+// DiscordUser represents the user info returned by Discord API.
+type DiscordUser struct {
+	ID            string `json:"id"`
+	Username      string `json:"username"`
+	Discriminator string `json:"discriminator"`
+	Avatar        string `json:"avatar"`
+	Email         string `json:"email"`
+}
+
+func (p *DiscordOAuthProvider) Name() string {
+	return "discord_oauth"
+}
+
+func (p *DiscordOAuthProvider) RequiredJWTScopes() []string {
+	// Discord OAuth doesn't require pre-authorized scopes in JWT
+	// The token itself carries the scopes granted by the user
+	return []string{}
+}
+
+func (p *DiscordOAuthProvider) TokenPath(claudeDir, jti string) string {
+	if jti != "" {
+		return filepath.Join(claudeDir, "discord", "oauth-token-"+jti+".json")
+	}
+	return filepath.Join(claudeDir, "discord", "oauth-token.json")
+}
+
+func (p *DiscordOAuthProvider) HasToken(ctx context.Context, cfg *config.Config) bool {
+	claims := GetAuthClaims(ctx)
+	jti := ""
+	if claims != nil {
+		jti = claims.JTI
+	}
+	_, err := os.Stat(p.TokenPath(cfg.ClaudeDir, jti))
+	return err == nil
+}
+
+func (p *DiscordOAuthProvider) GetAuthURL(cfg *config.Config, state string) (string, error) {
+	if cfg.DiscordOAuthClientID == "" {
+		return "", fmt.Errorf("Discord OAuth not configured: set DISCORD_OAUTH_CLIENT_ID")
+	}
+	if cfg.DiscordOAuthRedirectURI == "" {
+		return "", fmt.Errorf("Discord OAuth not configured: set DISCORD_OAUTH_REDIRECT_URI")
+	}
+
+	params := url.Values{
+		"client_id":     {cfg.DiscordOAuthClientID},
+		"redirect_uri":  {cfg.DiscordOAuthRedirectURI},
+		"response_type": {"code"},
+		"scope":         {"identify email"},
+	}
+	if state != "" {
+		params.Set("state", state)
+	}
+	return discordAuthURL + "?" + params.Encode(), nil
+}
+
+func (p *DiscordOAuthProvider) ExchangeCode(ctx context.Context, cfg *config.Config, code string) error {
+	if cfg.DiscordOAuthClientID == "" || cfg.DiscordOAuthClientSecret == "" {
+		return fmt.Errorf("Discord OAuth not configured: missing client ID or secret")
+	}
+
+	data := url.Values{
+		"client_id":     {cfg.DiscordOAuthClientID},
+		"client_secret": {cfg.DiscordOAuthClientSecret},
+		"grant_type":    {"authorization_code"},
+		"code":          {code},
+		"redirect_uri":  {cfg.DiscordOAuthRedirectURI},
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, discordTokenURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return fmt.Errorf("building token request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return fmt.Errorf("token exchange failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var tokenResp struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		ExpiresIn    int    `json:"expires_in"`
+		TokenType    string `json:"token_type"`
+		Scope        string `json:"scope"`
+		Error        string `json:"error"`
+		ErrorDesc    string `json:"error_description"`
+	}
+
+	body, err := readResponseBody(resp)
+	if err != nil {
+		return fmt.Errorf("reading token response: %w", err)
+	}
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("invalid OAuth error response (HTTP %d): %s", resp.StatusCode, string(body))
+	}
+
+	if err := jsonUnmarshal(body, &tokenResp); err != nil {
+		return fmt.Errorf("invalid response from Discord")
+	}
+
+	if tokenResp.Error != "" {
+		return fmt.Errorf("auth error: %s — %s", tokenResp.Error, tokenResp.ErrorDesc)
+	}
+
+	token := discordToken{
+		AccessToken:  tokenResp.AccessToken,
+		RefreshToken: tokenResp.RefreshToken,
+		ExpiresIn:    tokenResp.ExpiresIn,
+		TokenType:    tokenResp.TokenType,
+		Scope:        tokenResp.Scope,
+		Expiry:       time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second),
+	}
+
+	if err := saveDiscordToken(ctx, cfg, token); err != nil {
+		return fmt.Errorf("failed to save token: %w", err)
+	}
+
+	return nil
+}
+
+func (p *DiscordOAuthProvider) GetClient(ctx context.Context, cfg *config.Config) (*http.Client, error) {
+	tok, err := loadDiscordToken(ctx, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("%s", p.AuthErrorMessage(cfg))
+	}
+
+	// Check if refresh needed (30-second window before expiry)
+	if time.Now().After(tok.Expiry.Add(-30 * time.Second)) {
+		// If no refresh token, we can't refresh — return auth error immediately
+		if tok.RefreshToken == "" {
+			return nil, fmt.Errorf("%s", p.AuthErrorMessage(cfg))
+		}
+
+		tok, err = refreshDiscordToken(ctx, cfg, tok)
+		if err != nil {
+			return nil, fmt.Errorf("%s", p.AuthErrorMessage(cfg))
+		}
+	}
+
+	return &http.Client{Transport: &discordBearerTransport{token: tok.AccessToken}}, nil
+}
+
+func (p *DiscordOAuthProvider) AuthErrorMessage(cfg *config.Config) string {
+	authURL, err := p.GetAuthURL(cfg, "")
+	if err != nil {
+		return fmt.Sprintf("Discord OAuth not configured. Set DISCORD_OAUTH_CLIENT_ID, DISCORD_OAUTH_CLIENT_SECRET, and DISCORD_OAUTH_REDIRECT_URI.")
+	}
+	return fmt.Sprintf(
+		"Discord not authorized.\n\nVisit this URL to authorize:\n\n%s",
+		authURL)
+}
+
+// ---- Discord token storage helpers ----
+
+func saveDiscordToken(ctx context.Context, cfg *config.Config, tok discordToken) error {
+	claims := GetAuthClaims(ctx)
+	jti := ""
+	if claims != nil {
+		jti = claims.JTI
+	}
+
+	path := discordOAuthProvider.TokenPath(cfg.ClaudeDir, jti)
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+
+	data, err := json.Marshal(tok)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, data, 0o600)
+}
+
+func loadDiscordToken(ctx context.Context, cfg *config.Config) (discordToken, error) {
+	claims := GetAuthClaims(ctx)
+	jti := ""
+	if claims != nil {
+		jti = claims.JTI
+	}
+
+	path := discordOAuthProvider.TokenPath(cfg.ClaudeDir, jti)
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return discordToken{}, err
+	}
+
+	var tok discordToken
+	if err := json.Unmarshal(data, &tok); err != nil {
+		return discordToken{}, err
+	}
+	return tok, nil
+}
+
+func refreshDiscordToken(ctx context.Context, cfg *config.Config, tok discordToken) (discordToken, error) {
+	if cfg.DiscordOAuthClientID == "" || cfg.DiscordOAuthClientSecret == "" {
+		return discordToken{}, fmt.Errorf("Discord OAuth not configured")
+	}
+
+	data := url.Values{
+		"client_id":     {cfg.DiscordOAuthClientID},
+		"client_secret": {cfg.DiscordOAuthClientSecret},
+		"grant_type":    {"refresh_token"},
+		"refresh_token": {tok.RefreshToken},
+	}
+
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, discordTokenURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return discordToken{}, fmt.Errorf("building refresh request: %w", err)
+	}
+	httpReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := http.DefaultClient.Do(httpReq)
+	if err != nil {
+		return discordToken{}, fmt.Errorf("refresh failed: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var tokenResp struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+		ExpiresIn    int    `json:"expires_in"`
+		TokenType    string `json:"token_type"`
+		Error        string `json:"error"`
+	}
+
+	body, err := readResponseBody(resp)
+	if err != nil {
+		return discordToken{}, fmt.Errorf("reading refresh response: %w", err)
+	}
+
+	if err := jsonUnmarshal(body, &tokenResp); err != nil {
+		return discordToken{}, fmt.Errorf("invalid refresh response from Discord")
+	}
+
+	if tokenResp.Error != "" {
+		return discordToken{}, fmt.Errorf("refresh error: %s", tokenResp.Error)
+	}
+
+	newTok := discordToken{
+		AccessToken:  tokenResp.AccessToken,
+		RefreshToken: tokenResp.RefreshToken,
+		ExpiresIn:    tokenResp.ExpiresIn,
+		TokenType:    tokenResp.TokenType,
+		Expiry:       time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second),
+	}
+
+	if err := saveDiscordToken(ctx, cfg, newTok); err != nil {
+		return discordToken{}, fmt.Errorf("failed to save refreshed token: %w", err)
+	}
+
+	return newTok, nil
+}
+
+// discordBearerTransport is an http.RoundTripper that adds Discord bearer auth.
+type discordBearerTransport struct {
+	token string
+}
+
+func (t *discordBearerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Set("Authorization", "Bearer "+t.token)
+	return http.DefaultTransport.RoundTrip(req)
+}
+
+// GetDiscordUser fetches the authenticated user's profile from Discord API.
+func GetDiscordUser(ctx context.Context, cfg *config.Config) (*DiscordUser, error) {
+	client, err := discordOAuthProvider.GetClient(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.Get(discordUserURL)
+	if err != nil {
+		return nil, fmt.Errorf("fetching user info: %w", err)
+	}
+	defer resp.Body.Close()
+
+	var user DiscordUser
+	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+		return nil, fmt.Errorf("decoding user info: %w", err)
+	}
+
+	return &user, nil
+}

@@ -450,6 +450,10 @@ func RegisterAuth(s *server.MCPServer, cfg *config.Config) {
 		mcp.WithString("platform", mcp.Required(), mcp.Description("Platform: discord, slack, or google")),
 		mcp.WithString("platform_id", mcp.Required(), mcp.Description("Platform user ID or email")),
 	), authUnlinkIdentityHandler(cfg))
+
+	s.AddTool(mcp.NewTool("discord_oauth_login",
+		mcp.WithDescription("Generate a Discord OAuth login URL. Direct the user to this URL to authenticate and receive a JWT token linked to their Discord identity."),
+	), discordOAuthLoginHandler(cfg))
 }
 
 func authCreateTokenHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -763,4 +767,101 @@ func mcpBaseURL() string {
 		return v
 	}
 	return "http://localhost:8080"
+}
+
+// LinkDiscordIdentity links a Discord user ID to an existing or new JWT token.
+// If the Discord user is already linked to a token, returns that token.
+// Otherwise, creates a new token for the Discord user.
+//
+// Returns a TokenResponse with the JWT string and metadata.
+type TokenResponse struct {
+	JWT       string    `json:"jwt"`
+	JTI       string    `json:"jti"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+func LinkDiscordIdentity(cfg *config.Config, jwtSecret []byte, discordID, username string) (*TokenResponse, error) {
+	if discordID == "" {
+		return nil, fmt.Errorf("Discord ID is required")
+	}
+
+	platformKey := "discord:" + discordID
+	identities := loadIdentities(cfg.ClaudeDir)
+
+	// Check if this Discord user is already linked to a token
+	if jti, ok := identities[platformKey]; ok {
+		// Load the token and verify it's not expired
+		tokens := loadIssuedTokens(cfg.ClaudeDir)
+		for _, tok := range tokens {
+			if tok.JTI == jti && !tok.Revoked && time.Now().Before(tok.ExpiresAt) {
+				// Token is valid, return it
+				jwt, err := issueJWT(jwtSecret, &tok)
+				if err != nil {
+					return nil, err
+				}
+				return &TokenResponse{
+					JWT:       jwt,
+					JTI:       tok.JTI,
+					ExpiresAt: tok.ExpiresAt,
+				}, nil
+			}
+		}
+		// Token was expired or revoked, remove the stale identity
+		delete(identities, platformKey)
+	}
+
+	// Create a new token for this Discord user
+	label := fmt.Sprintf("Discord %s", username)
+	issued, _, err := createIssuedToken(cfg.ClaudeDir, label, nil, nil, nil, nil, 30)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create token: %w", err)
+	}
+
+	// Link the Discord identity to the new token
+	identities[platformKey] = issued.JTI
+	if err := saveIdentities(cfg.ClaudeDir, identities); err != nil {
+		return nil, fmt.Errorf("failed to save identity: %w", err)
+	}
+
+	// Issue JWT
+	jwt, err := issueJWT(jwtSecret, issued)
+	if err != nil {
+		return nil, err
+	}
+
+	return &TokenResponse{
+		JWT:       jwt,
+		JTI:       issued.JTI,
+		ExpiresAt: issued.ExpiresAt,
+	}, nil
+}
+
+// discordOAuthLoginHandler returns the Discord OAuth login URL.
+// User navigates to this URL to start the OAuth flow.
+func discordOAuthLoginHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		if cfg.DiscordOAuthClientID == "" {
+			return mcp.NewToolResultError("Discord OAuth is not configured. Set DISCORD_OAUTH_CLIENT_ID and DISCORD_OAUTH_CLIENT_SECRET."), nil
+		}
+
+		// Build the OAuth start URL
+		baseURL := mcpBaseURL()
+		discordStartURL := fmt.Sprintf("%s/auth/discord/start", baseURL)
+
+		return mcp.NewToolResultText(fmt.Sprintf(`Discord OAuth Login URL
+
+To authenticate via Discord and receive a JWT token:
+
+1. Open this URL in your browser:
+   %s
+
+2. You will be redirected to Discord to authorize
+3. After authorization, you'll receive a JWT token
+4. Use that token as a Bearer token with any MCP client
+
+URL: %s
+
+Note: This URL is valid for 10 minutes. The state token is stored in an httpOnly cookie for CSRF protection.
+`, discordStartURL, discordStartURL)), nil
+	}
 }
