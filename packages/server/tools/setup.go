@@ -287,9 +287,9 @@ func mcpCmd(toolName string, args map[string]any) string {
 // Connect the Set nodes to Slack/Discord/email nodes as desired.
 func buildEventReceiverWorkflow() map[string]any {
 	nodes := []any{
-		n8nNode("wha-001", "Caboose Events", "n8n-nodes-base.webhook", 2, [2]int{250, 300}, map[string]any{
+		n8nNode("wha-001", "fafb Events", "n8n-nodes-base.webhook", 2, [2]int{250, 300}, map[string]any{
 			"httpMethod":   "POST",
-			"path":         "caboose-events",
+			"path":         "fafb-events",
 			"responseMode": "onReceived",
 		}),
 		n8nNode("wha-002", "Route by Event Type", "n8n-nodes-base.switch", 1, [2]int{500, 300}, map[string]any{
@@ -379,7 +379,7 @@ func buildEventReceiverWorkflow() map[string]any {
 		"connections": connections,
 		"active":      false,
 		"settings":    map[string]any{"executionOrder": "v1"},
-		"id":          "caboose-event-receiver-v1",
+		"id":          "fafb-event-receiver-v1",
 	}
 }
 
@@ -413,7 +413,7 @@ func buildDailyDigestWorkflow() map[string]any {
 		"connections": connections,
 		"active":      false,
 		"settings":    map[string]any{"executionOrder": "v1"},
-		"id":          "caboose-daily-digest-v1",
+		"id":          "fafb-daily-digest-v1",
 	}
 }
 
@@ -447,7 +447,7 @@ func buildNightlyScanWorkflow() map[string]any {
 		"connections": connections,
 		"active":      false,
 		"settings":    map[string]any{"executionOrder": "v1"},
-		"id":          "caboose-nightly-scan-v1",
+		"id":          "fafb-nightly-scan-v1",
 	}
 }
 

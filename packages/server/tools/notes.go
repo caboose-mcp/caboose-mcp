@@ -26,7 +26,7 @@ import (
 const (
 	driveAPIv3       = "https://www.googleapis.com/drive/v3"
 	driveUploadAPIv3 = "https://www.googleapis.com/upload/drive/v3"
-	driveNotesFile   = "caboose-notes.md"
+	driveNotesFile   = "fafb-notes.md"
 	driveMimePlain   = "text/plain"
 )
 
@@ -43,11 +43,11 @@ func RegisterNotes(s *server.MCPServer, cfg *config.Config) {
 	), noteListHandler(cfg))
 
 	s.AddTool(mcp.NewTool("notes_drive_backup",
-		mcp.WithDescription("Upload the local notes.md to Google Drive as 'caboose-notes.md'. Requires Google Calendar auth (calendar_auth_url)."),
+		mcp.WithDescription("Upload the local notes.md to Google Drive as 'fafb-notes.md'. Requires Google Calendar auth (calendar_auth_url)."),
 	), notesDriveBackupHandler(cfg))
 
 	s.AddTool(mcp.NewTool("notes_drive_restore",
-		mcp.WithDescription("Download 'caboose-notes.md' from Google Drive, overwriting the local notes.md."),
+		mcp.WithDescription("Download 'fafb-notes.md' from Google Drive, overwriting the local notes.md."),
 	), notesDriveRestoreHandler(cfg))
 }
 

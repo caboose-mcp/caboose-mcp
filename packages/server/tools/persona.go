@@ -36,7 +36,7 @@ type Persona struct {
 }
 
 var defaultPersona = Persona{
-	Name:      "caboose",
+	Name:      "fafb",
 	Tone:      "friendly",
 	Style:     "Direct, technically precise, occasional dry humour. Prefers code over prose. Skips preamble.",
 	Verbosity: "normal",
