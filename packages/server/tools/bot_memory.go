@@ -17,7 +17,7 @@ const maxHistoryTurns = 20
 
 // memoryTurn is a single message turn stored in history.
 type memoryTurn struct {
-	Role    string `json:"role"`    // "user" or "assistant"
+	Role    string `json:"role"` // "user" or "assistant"
 	Content string `json:"content"`
 }
 

@@ -26,9 +26,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/viewport"
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
 	"github.com/caboose-mcp/server/config"
@@ -83,7 +83,7 @@ func (s sourceItem) Title() string {
 	return icon + " " + s.name
 }
 func (s sourceItem) Description() string { return s.srcType + "  " + s.id }
-func (s sourceItem) FilterValue() string  { return s.name }
+func (s sourceItem) FilterValue() string { return s.name }
 
 type pendingItem struct {
 	id       string
@@ -102,7 +102,7 @@ func (p pendingItem) Title() string {
 	return color.Render("["+p.status+"]") + " " + p.title
 }
 func (p pendingItem) Description() string { return p.category + "  id=" + p.id }
-func (p pendingItem) FilterValue() string  { return p.title }
+func (p pendingItem) FilterValue() string { return p.title }
 
 type learningItem struct {
 	language string
@@ -120,7 +120,7 @@ func (l learningItem) Title() string {
 	return fmt.Sprintf("%s  %d/%d (%d%%)", l.language, l.score, l.total, pct)
 }
 func (l learningItem) Description() string { return l.mode + "  last: " + l.lastSeen }
-func (l learningItem) FilterValue() string  { return l.language }
+func (l learningItem) FilterValue() string { return l.language }
 
 // ---- model ----
 
@@ -130,8 +130,8 @@ type model struct {
 	height      int
 	activePanel panelID
 
-	lists    [panelCount]list.Model
-	detail   viewport.Model
+	lists         [panelCount]list.Model
+	detail        viewport.Model
 	detailContent string
 
 	statusMsg string

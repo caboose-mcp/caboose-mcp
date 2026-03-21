@@ -41,15 +41,15 @@ import (
 
 // sandboxMeta is stored as /tmp/caboose-sandbox-<id>/.sandbox.json
 type sandboxMeta struct {
-	ID        string    `json:"id"`
-	Label     string    `json:"label"`
-	SourceDir string    `json:"source_dir"`
-	SandboxDir string   `json:"sandbox_dir"`
-	Command   string    `json:"command"`
-	CreatedAt time.Time `json:"created_at"`
-	Ran       bool      `json:"ran"`
-	ExitCode  int       `json:"exit_code"`
-	Output    string    `json:"output"`
+	ID         string    `json:"id"`
+	Label      string    `json:"label"`
+	SourceDir  string    `json:"source_dir"`
+	SandboxDir string    `json:"sandbox_dir"`
+	Command    string    `json:"command"`
+	CreatedAt  time.Time `json:"created_at"`
+	Ran        bool      `json:"ran"`
+	ExitCode   int       `json:"exit_code"`
+	Output     string    `json:"output"`
 }
 
 const sandboxPrefix = "caboose-sandbox-"

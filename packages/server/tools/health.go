@@ -66,13 +66,13 @@ func (p painter) col(code, s string) string {
 	return code + s + ansiReset
 }
 
-func (p painter) dim(s string) string  { return p.col(ansiDim, s) }
-func (p painter) green(s string) string { return p.col(ansiGreen, s) }
-func (p painter) red(s string) string   { return p.col(ansiRed, s) }
+func (p painter) dim(s string) string    { return p.col(ansiDim, s) }
+func (p painter) green(s string) string  { return p.col(ansiGreen, s) }
+func (p painter) red(s string) string    { return p.col(ansiRed, s) }
 func (p painter) yellow(s string) string { return p.col(ansiYellow, s) }
-func (p painter) cyan(s string) string  { return p.col(ansiCyan, s) }
-func (p painter) gray(s string) string  { return p.col(ansiGray, s) }
-func (p painter) white(s string) string { return p.col(ansiWhite, s) }
+func (p painter) cyan(s string) string   { return p.col(ansiCyan, s) }
+func (p painter) gray(s string) string   { return p.col(ansiGray, s) }
+func (p painter) white(s string) string  { return p.col(ansiWhite, s) }
 
 func (p painter) bar(pct, width int) string {
 	filled := (pct * width) / 100

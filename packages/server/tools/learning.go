@@ -31,24 +31,24 @@ import (
 )
 
 type LearningSession struct {
-	ID          string    `json:"id"`
-	Language    string    `json:"language"`     // "python", "rust", "japanese", "spanish", etc.
-	LanguageType string   `json:"language_type"` // "programming" or "spoken"
-	Mode        string    `json:"mode"`          // vocab | grammar | code_challenge | conversation | quiz
-	Level       string    `json:"level"`         // beginner | intermediate | advanced
-	StartedAt   time.Time `json:"started_at"`
-	LastActive  time.Time `json:"last_active"`
-	Score       int       `json:"score"`
-	TotalAsked  int       `json:"total_asked"`
-	History     []Exchange `json:"history"`
+	ID           string     `json:"id"`
+	Language     string     `json:"language"`      // "python", "rust", "japanese", "spanish", etc.
+	LanguageType string     `json:"language_type"` // "programming" or "spoken"
+	Mode         string     `json:"mode"`          // vocab | grammar | code_challenge | conversation | quiz
+	Level        string     `json:"level"`         // beginner | intermediate | advanced
+	StartedAt    time.Time  `json:"started_at"`
+	LastActive   time.Time  `json:"last_active"`
+	Score        int        `json:"score"`
+	TotalAsked   int        `json:"total_asked"`
+	History      []Exchange `json:"history"`
 }
 
 type Exchange struct {
-	At        time.Time `json:"at"`
-	Prompt    string    `json:"prompt"`
-	Answer    string    `json:"answer"`
-	Correct   bool      `json:"correct"`
-	Feedback  string    `json:"feedback"`
+	At       time.Time `json:"at"`
+	Prompt   string    `json:"prompt"`
+	Answer   string    `json:"answer"`
+	Correct  bool      `json:"correct"`
+	Feedback string    `json:"feedback"`
 }
 
 type LearningSchedule struct {

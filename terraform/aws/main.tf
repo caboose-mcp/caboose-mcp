@@ -672,7 +672,7 @@ resource "aws_apigatewayv2_integration" "slack_api" {
   api_id                 = aws_apigatewayv2_api.cors_proxy.id
   integration_type       = "HTTP_PROXY"
   integration_method     = "POST"
-  integration_uri        = "https://slack.com/api/{proxy+}"
+  integration_uri        = "https://slack.com/api/{proxy}"
   payload_format_version = "1.0"
 }
 
@@ -687,7 +687,7 @@ resource "aws_apigatewayv2_integration" "discord_api" {
   api_id                 = aws_apigatewayv2_api.cors_proxy.id
   integration_type       = "HTTP_PROXY"
   integration_method     = "POST"
-  integration_uri        = "https://discord.com/api/v10/{proxy+}"
+  integration_uri        = "https://discord.com/api/v10/{proxy}"
   payload_format_version = "1.0"
 }
 
@@ -702,7 +702,7 @@ resource "aws_apigatewayv2_integration" "google_apis" {
   api_id                 = aws_apigatewayv2_api.cors_proxy.id
   integration_type       = "HTTP_PROXY"
   integration_method     = "GET"
-  integration_uri        = "https://www.googleapis.com/{proxy+}"
+  integration_uri        = "https://www.googleapis.com/{proxy}"
   payload_format_version = "1.0"
 }
 
@@ -717,7 +717,7 @@ resource "aws_apigatewayv2_integration" "greptile_api" {
   api_id                 = aws_apigatewayv2_api.cors_proxy.id
   integration_type       = "HTTP_PROXY"
   integration_method     = "POST"
-  integration_uri        = "https://api.greptile.com/{proxy+}"
+  integration_uri        = "https://api.greptile.com/{proxy}"
   payload_format_version = "1.0"
 }
 
@@ -732,7 +732,7 @@ resource "aws_apigatewayv2_integration" "elevenlabs_api" {
   api_id                 = aws_apigatewayv2_api.cors_proxy.id
   integration_type       = "HTTP_PROXY"
   integration_method     = "POST"
-  integration_uri        = "https://api.elevenlabs.io/{proxy+}"
+  integration_uri        = "https://api.elevenlabs.io/{proxy}"
   payload_format_version = "1.0"
 }
 
@@ -747,7 +747,7 @@ resource "aws_apigatewayv2_integration" "github_api" {
   api_id                 = aws_apigatewayv2_api.cors_proxy.id
   integration_type       = "HTTP_PROXY"
   integration_method     = "POST"
-  integration_uri        = "https://api.github.com/{proxy+}"
+  integration_uri        = "https://api.github.com/{proxy}"
   payload_format_version = "1.0"
 }
 

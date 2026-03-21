@@ -120,20 +120,20 @@ func notesDriveBackupHandler(cfg *config.Config) func(context.Context, mcp.CallT
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Google Drive backup unavailable: %v", err)), nil
 		}
-	fileID, err := driveFindFile(client, driveNotesFile)
-	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Drive lookup unavailable: %v", err)), nil
-	}
-	if fileID == "" {
-		if err := driveCreateFile(client, driveNotesFile, data); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Drive upload unavailable: %v", err)), nil
+		fileID, err := driveFindFile(client, driveNotesFile)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Drive lookup unavailable: %v", err)), nil
 		}
-	} else {
-		if err := driveUpdateFile(client, fileID, data); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Drive update unavailable: %v", err)), nil
+		if fileID == "" {
+			if err := driveCreateFile(client, driveNotesFile, data); err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("Drive upload unavailable: %v", err)), nil
+			}
+		} else {
+			if err := driveUpdateFile(client, fileID, data); err != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("Drive update unavailable: %v", err)), nil
+			}
 		}
-	}
-	return mcp.NewToolResultText(fmt.Sprintf("Notes backed up to Google Drive as %q (%d bytes).", driveNotesFile, len(data))), nil
+		return mcp.NewToolResultText(fmt.Sprintf("Notes backed up to Google Drive as %q (%d bytes).", driveNotesFile, len(data))), nil
 	}
 }
 
@@ -143,17 +143,17 @@ func notesDriveRestoreHandler(cfg *config.Config) func(context.Context, mcp.Call
 		if err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Google Drive restore unavailable: %v", err)), nil
 		}
-	fileID, err := driveFindFile(client, driveNotesFile)
-	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Drive lookup unavailable: %v", err)), nil
-	}
-	if fileID == "" {
-		return mcp.NewToolResultText(fmt.Sprintf("No %q found on Drive. Run notes_drive_backup first.", driveNotesFile)), nil
-	}
-	data, err := driveDownloadFileByID(client, fileID)
-	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Drive download unavailable: %v", err)), nil
-	}
+		fileID, err := driveFindFile(client, driveNotesFile)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Drive lookup unavailable: %v", err)), nil
+		}
+		if fileID == "" {
+			return mcp.NewToolResultText(fmt.Sprintf("No %q found on Drive. Run notes_drive_backup first.", driveNotesFile)), nil
+		}
+		data, err := driveDownloadFileByID(client, fileID)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Drive download unavailable: %v", err)), nil
+		}
 		if err := os.WriteFile(notesPath(cfg), data, 0600); err != nil {
 			return mcp.NewToolResultError(err.Error()), nil
 		}

@@ -268,8 +268,10 @@ func buildMobileTools(cfg *config.Config) []botTool {
 	return []botTool{
 		// ── Calendar ──────────────────────────────────────────────────────────
 		{
-			def:     tool("calendar_today", "Show today's calendar events.", map[string]any{}, nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,calendarTodayHandler(cfg), args) },
+			def: tool("calendar_today", "Show today's calendar events.", map[string]any{}, nil),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, calendarTodayHandler(cfg), args)
+			},
 		},
 		{
 			def: tool("calendar_list", "List calendar events for a date range.",
@@ -277,7 +279,9 @@ func buildMobileTools(cfg *config.Config) []botTool {
 					"start": prop("string", "Start date YYYY-MM-DD (default today)"),
 					"end":   prop("string", "End date YYYY-MM-DD (default today)"),
 				}, nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,calendarListHandler(cfg), args) },
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, calendarListHandler(cfg), args)
+			},
 		},
 		{
 			def: tool("calendar_create", "Create a calendar event.",
@@ -287,31 +291,41 @@ func buildMobileTools(cfg *config.Config) []botTool {
 					"end":      prop("string", "End datetime RFC3339"),
 					"location": prop("string", "Optional location"),
 				}, []string{"title", "start", "end"}),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,calendarCreateHandler(cfg), args) },
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, calendarCreateHandler(cfg), args)
+			},
 		},
 		{
 			def: tool("calendar_delete", "Delete a calendar event by ID.",
 				map[string]any{"event_id": prop("string", "Event ID to delete")},
 				[]string{"event_id"}),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,calendarDeleteHandler(cfg), args) },
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, calendarDeleteHandler(cfg), args)
+			},
 		},
 
 		// ── Learning ──────────────────────────────────────────────────────────
 		{
-			def:     tool("learn_status", "Show current learning schedule and streak.", map[string]any{}, nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,learnStatusHandler(cfg), args) },
+			def: tool("learn_status", "Show current learning schedule and streak.", map[string]any{}, nil),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, learnStatusHandler(cfg), args)
+			},
 		},
 		{
 			def: tool("learn_start", "Start a new learning session.",
 				map[string]any{"language": prop("string", "Language to learn (e.g. 'Spanish', 'Go')")},
 				[]string{"language"}),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,learnStartHandler(cfg), args) },
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, learnStartHandler(cfg), args)
+			},
 		},
 		{
 			def: tool("learn_exercise", "Get the next exercise in the active session.",
 				map[string]any{"session_id": prop("string", "Session ID from learn_start")},
 				[]string{"session_id"}),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,learnExerciseHandler(cfg), args) },
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, learnExerciseHandler(cfg), args)
+			},
 		},
 		{
 			def: tool("learn_submit", "Submit an answer for the current exercise.",
@@ -319,11 +333,15 @@ func buildMobileTools(cfg *config.Config) []botTool {
 					"session_id": prop("string", "Session ID"),
 					"answer":     prop("string", "Your answer"),
 				}, []string{"session_id", "answer"}),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,learnSubmitHandler(cfg), args) },
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, learnSubmitHandler(cfg), args)
+			},
 		},
 		{
-			def:     tool("learn_schedule", "Show or update the learning schedule.", map[string]any{}, nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,learnScheduleHandler(cfg), args) },
+			def: tool("learn_schedule", "Show or update the learning schedule.", map[string]any{}, nil),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, learnScheduleHandler(cfg), args)
+			},
 		},
 
 		// ── Focus ─────────────────────────────────────────────────────────────
@@ -333,21 +351,29 @@ func buildMobileTools(cfg *config.Config) []botTool {
 					"goal":     prop("string", "What you're focusing on"),
 					"duration": prop("number", "Duration in minutes (default 25)"),
 				}, []string{"goal"}),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,focusStartHandler(cfg), args) },
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, focusStartHandler(cfg), args)
+			},
 		},
 		{
-			def:     tool("focus_status", "Check the active focus session.", map[string]any{}, nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,focusStatusHandler(cfg), args) },
+			def: tool("focus_status", "Check the active focus session.", map[string]any{}, nil),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, focusStatusHandler(cfg), args)
+			},
 		},
 		{
 			def: tool("focus_park", "Park a thought so it doesn't break focus.",
 				map[string]any{"thought": prop("string", "The thought or task to park")},
 				[]string{"thought"}),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,focusParkHandler(cfg), args) },
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, focusParkHandler(cfg), args)
+			},
 		},
 		{
-			def:     tool("focus_end", "End the active focus session.", map[string]any{}, nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,focusEndHandler(cfg), args) },
+			def: tool("focus_end", "End the active focus session.", map[string]any{}, nil),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, focusEndHandler(cfg), args)
+			},
 		},
 
 		// ── Notes ─────────────────────────────────────────────────────────────
@@ -355,39 +381,53 @@ func buildMobileTools(cfg *config.Config) []botTool {
 			def: tool("note_add", "Add a quick note.",
 				map[string]any{"content": prop("string", "Note content")},
 				[]string{"content"}),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,noteAddHandler(cfg), args) },
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, noteAddHandler(cfg), args)
+			},
 		},
 		{
 			def: tool("note_list", "List recent notes.",
 				map[string]any{"days": prop("number", "How many days back to look (default 7)")},
 				nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,noteListHandler(cfg), args) },
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, noteListHandler(cfg), args)
+			},
 		},
 
 		// ── Health ────────────────────────────────────────────────────────────
 		{
-			def:     tool("health_report", "Show system health (CPU, memory, disk, Docker, services).", map[string]any{}, nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,healthReportHandler(cfg), args) },
+			def: tool("health_report", "Show system health (CPU, memory, disk, Docker, services).", map[string]any{}, nil),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, healthReportHandler(cfg), args)
+			},
 		},
 
 		// ── Bambu Printer ─────────────────────────────────────────────────────
 		{
-			def:     tool("bambu_status", "Check the 3D printer status.", map[string]any{}, nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,bambuStatusHandler(cfg), args) },
+			def: tool("bambu_status", "Check the 3D printer status.", map[string]any{}, nil),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, bambuStatusHandler(cfg), args)
+			},
 		},
 		{
-			def:     tool("bambu_stop", "Stop the active print job.", map[string]any{}, nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,bambuStopHandler(cfg), args) },
+			def: tool("bambu_stop", "Stop the active print job.", map[string]any{}, nil),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, bambuStopHandler(cfg), args)
+			},
 		},
 
 		// ── Fun ───────────────────────────────────────────────────────────────
 		{
-			def:     tool("joke", "Tell a programming joke.", map[string]any{}, nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,jokeHandler(cfg), args) },
+			def: tool("joke", "Tell a programming joke.", map[string]any{}, nil),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, jokeHandler(cfg), args)
+			},
 		},
 		{
-			def:     tool("dad_joke", "Tell a dad joke.", map[string]any{}, nil),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,dadJokeHandler(cfg), args) },
+			def: tool("dad_joke", "Tell a dad joke.", map[string]any{}, nil),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, dadJokeHandler(cfg), args)
+			},
 		},
 
 		// ── Sources ───────────────────────────────────────────────────────────
@@ -395,7 +435,9 @@ func buildMobileTools(cfg *config.Config) []botTool {
 			def: tool("source_digest", "Get a digest summary of tracked sources.",
 				map[string]any{"name": prop("string", "Source name (or 'all')")},
 				[]string{"name"}),
-			execute: func(ctx context.Context, args map[string]any) (string, error) { return invokeHandler(ctx,sourceDigestHandler(cfg), args) },
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, sourceDigestHandler(cfg), args)
+			},
 		},
 	}
 }

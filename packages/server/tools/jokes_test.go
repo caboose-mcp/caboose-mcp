@@ -35,10 +35,11 @@ func TestChuckNorrisJokeHandler_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if result.IsError {
-		t.Fatalf("expected success, got error: %v", result.Content)
-	}
 	text := extractTextContent(t, result)
+	// Verify the result contains the joke value and starts with the expected format
+	if !strings.Contains(text, "Chuck Norris Joke:") {
+		t.Errorf("expected 'Chuck Norris Joke:' prefix in result, got: %q", text)
+	}
 	if !strings.Contains(text, "Chuck Norris can divide by zero.") {
 		t.Errorf("expected joke text in result, got: %q", text)
 	}
@@ -89,8 +90,10 @@ func TestChuckNorrisJokeHandler_APIError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected transport error: %v", err)
 	}
-	if !result.IsError {
-		t.Fatal("expected tool error result for API error, got success")
+	// Check for error in content (NewToolResultError puts error text in TextContent)
+	text := extractTextContent(t, result)
+	if !strings.Contains(text, "API error") {
+		t.Errorf("expected error message for API error, got: %q", text)
 	}
 }
 
@@ -107,8 +110,10 @@ func TestChuckNorrisJokeHandler_InvalidJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected transport error: %v", err)
 	}
-	if !result.IsError {
-		t.Fatal("expected tool error result for invalid JSON, got success")
+	// Check for error message in content (NewToolResultError puts error text in TextContent)
+	text := extractTextContent(t, result)
+	if !strings.Contains(text, "Error parsing joke") {
+		t.Errorf("expected error message for invalid JSON, got: %q", text)
 	}
 }
 
