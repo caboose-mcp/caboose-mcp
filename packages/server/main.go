@@ -201,6 +201,7 @@ func registerHostedTools(s *server.MCPServer, cfg *config.Config) {
 	tools.RegisterAuth(s, cfg)
 	tools.RegisterSources(s, cfg)
 	tools.RegisterRepo(s, cfg) // Phase 3: Repository management tools (repo create, test, approve, deploy)
+	tools.RegisterGamma(s, cfg) // Phase 4: Gamma presentation generation
 	registerCommonTools(s, cfg)
 }
 
