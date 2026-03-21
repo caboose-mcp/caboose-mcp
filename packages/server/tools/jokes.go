@@ -100,6 +100,7 @@ type ChuckNorrisJoke struct {
 
 // newChuckNorrisJokeHandler returns a handler for the chuck_norris_joke tool.
 // Uses CORS proxy if available (CHUCK_NORRIS_PROXY env var), falls back to direct API for local dev.
+// baseURL is used for testing purposes; if non-empty, it overrides the default API URL.
 func newChuckNorrisJokeHandler(cfg *config.Config, httpClient *http.Client, baseURL string) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	if httpClient == nil {
 		httpClient = &http.Client{Timeout: 10 * time.Second}
@@ -107,13 +108,17 @@ func newChuckNorrisJokeHandler(cfg *config.Config, httpClient *http.Client, base
 
 	// Default API endpoint
 	directAPIURL := "https://api.chucknorris.io"
+	// If baseURL is provided (for testing), use it instead of default
+	if baseURL != "" {
+		directAPIURL = baseURL
+	}
 
 	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		category := req.GetString("category", "")
 
 		// Determine which API endpoint to use: proxy or direct
 		// CHUCK_NORRIS_PROXY will be set when deployed on AWS with CORS proxy
-		// For local dev, it won't be set and we'll use the direct API
+		// For local dev, it won't be set and we'll use the direct API (or test mock)
 		var apiURL string
 		if proxyURL := os.Getenv("CHUCK_NORRIS_PROXY"); proxyURL != "" {
 			apiURL = proxyURL + "/random"
