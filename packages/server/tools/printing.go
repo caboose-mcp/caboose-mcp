@@ -23,6 +23,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -102,27 +103,10 @@ func bambuMQTTClient(cfg *config.Config) (mqtt.Client, error) {
 	opts.SetUsername("bblp")
 	opts.SetPassword(cfg.BambuAccessCode)
 
-	// Configure TLS for self-signed certificates
-	// Bambu printers use self-signed certs; we skip hostname verification but still validate the cert
-	tlsConfig := &tls.Config{
-		InsecureSkipVerify: false,
-		MinVersion:         tls.VersionTLS12,
+	tlsConfig, err := bambuTLSConfig(cfg)
+	if err != nil {
+		return nil, err
 	}
-
-	// Try to load custom CA certificate if present (for certificate pinning)
-	caCertPath := filepath.Join(cfg.ClaudeDir, "bambu-ca.crt")
-	if certData, err := os.ReadFile(caCertPath); err == nil {
-		caCertPool := x509.NewCertPool()
-		if !caCertPool.AppendCertsFromPEM(certData) {
-			return nil, fmt.Errorf("failed to parse Bambu CA certificate at %s", caCertPath)
-		}
-		tlsConfig.RootCAs = caCertPool
-	} else {
-		// If no custom cert, accept any certificate (necessary for Bambu's self-signed cert)
-		// This is only acceptable for local LAN connections within trusted networks
-		tlsConfig.InsecureSkipVerify = true
-	}
-
 	opts.SetTLSConfig(tlsConfig)
 	opts.SetConnectTimeout(10 * time.Second)
 	client := mqtt.NewClient(opts)
@@ -130,6 +114,84 @@ func bambuMQTTClient(cfg *config.Config) (mqtt.Client, error) {
 		return nil, token.Error()
 	}
 	return client, nil
+}
+
+// bambuTLSConfig returns a TLS config for Bambu MQTT connections.
+//
+// If a custom CA cert exists at ~/.claude/bambu-ca.crt, it is used for
+// certificate pinning: the server certificate is verified against that CA
+// (chain validation without hostname/IP SAN check, since Bambu printers
+// present self-signed certs served by IP address).
+//
+// If no CA cert file is found (os.IsNotExist), insecure mode is allowed
+// only for private/loopback addresses (LAN-local use). Any other error
+// reading the CA cert file is returned immediately.
+func bambuTLSConfig(cfg *config.Config) (*tls.Config, error) {
+	caCertPath := filepath.Join(cfg.ClaudeDir, "bambu-ca.crt")
+	certData, err := os.ReadFile(caCertPath)
+	if err == nil {
+		// Custom CA cert found: pin to it and verify the chain without hostname check.
+		caCertPool := x509.NewCertPool()
+		if !caCertPool.AppendCertsFromPEM(certData) {
+			return nil, fmt.Errorf("failed to parse Bambu CA certificate at %s", caCertPath)
+		}
+		return &tls.Config{
+			// InsecureSkipVerify disables Go's built-in hostname/SAN check;
+			// VerifyPeerCertificate below performs chain validation against our pinned CA.
+			InsecureSkipVerify:    true, //nolint:gosec
+			MinVersion:            tls.VersionTLS12,
+			VerifyPeerCertificate: verifyAgainstPool(caCertPool),
+		}, nil
+	}
+
+	if !os.IsNotExist(err) {
+		// Unexpected error (permission denied, I/O error, etc.) — fail explicitly.
+		return nil, fmt.Errorf("reading Bambu CA certificate at %s: %w", caCertPath, err)
+	}
+
+	// No CA cert file present. Only allow insecure TLS for private/loopback addresses.
+	// Note: BAMBU_IP must be a numeric IP address (not a hostname); net.ParseIP does not
+	// resolve DNS names.
+	ip := net.ParseIP(cfg.BambuIP)
+	if ip == nil || (!ip.IsPrivate() && !ip.IsLoopback()) {
+		return nil, fmt.Errorf(
+			"BAMBU_IP %q must be a private or loopback IP address (not a hostname); provide a CA certificate at %s for non-LAN connections",
+			cfg.BambuIP, caCertPath,
+		)
+	}
+	return &tls.Config{
+		InsecureSkipVerify: true, //nolint:gosec // acceptable for local LAN use only
+		MinVersion:         tls.VersionTLS12,
+	}, nil
+}
+
+// verifyAgainstPool returns a VerifyPeerCertificate function that validates
+// the server's certificate chain against pool without checking hostname/IP SANs.
+func verifyAgainstPool(pool *x509.CertPool) func([][]byte, [][]*x509.Certificate) error {
+	return func(rawCerts [][]byte, _ [][]*x509.Certificate) error {
+		if len(rawCerts) == 0 {
+			return fmt.Errorf("no certificates presented by server")
+		}
+		certs := make([]*x509.Certificate, len(rawCerts))
+		for i, asn1Data := range rawCerts {
+			cert, err := x509.ParseCertificate(asn1Data)
+			if err != nil {
+				return fmt.Errorf("parsing server certificate: %w", err)
+			}
+			certs[i] = cert
+		}
+		intermediates := x509.NewCertPool()
+		for _, cert := range certs[1:] {
+			intermediates.AddCert(cert)
+		}
+		if _, err := certs[0].Verify(x509.VerifyOptions{
+			Roots:         pool,
+			Intermediates: intermediates,
+		}); err != nil {
+			return fmt.Errorf("certificate chain validation failed: %w", err)
+		}
+		return nil
+	}
 }
 
 func bambuStatusHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {

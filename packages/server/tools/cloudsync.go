@@ -279,7 +279,9 @@ func restoreBundle(cfg *config.Config, plaintext []byte, dryRun bool) (string, e
 		}
 		envPath := filepath.Join(filepath.Dir(cfg.ClaudeDir), ".env")
 		if !dryRun {
-			os.WriteFile(envPath, []byte(strings.Join(lines, "\n")+"\n"), 0600)
+			if err := os.WriteFile(envPath, []byte(strings.Join(lines, "\n")+"\n"), 0600); err != nil {
+				return "", fmt.Errorf("writing .env: %w", err)
+			}
 		}
 		restored = append(restored, fmt.Sprintf(".env (%d vars)", len(bundle.EnvVars)))
 	}
@@ -287,11 +289,15 @@ func restoreBundle(cfg *config.Config, plaintext []byte, dryRun bool) (string, e
 	// Write sources
 	if len(bundle.Sources) > 0 {
 		if !dryRun {
-			os.MkdirAll(sourcesDir(cfg), 0755)
+			if err := os.MkdirAll(sourcesDir(cfg), 0755); err != nil {
+				return "", fmt.Errorf("creating sources directory: %w", err)
+			}
 			for _, raw := range bundle.Sources {
 				var src Source
 				if err := json.Unmarshal(raw, &src); err == nil && src.ID != "" {
-					os.WriteFile(filepath.Join(sourcesDir(cfg), src.ID+".json"), raw, 0644)
+					if err := os.WriteFile(filepath.Join(sourcesDir(cfg), src.ID+".json"), raw, 0644); err != nil {
+						return "", fmt.Errorf("writing source %s: %w", src.ID, err)
+					}
 				}
 			}
 		}
@@ -301,7 +307,9 @@ func restoreBundle(cfg *config.Config, plaintext []byte, dryRun bool) (string, e
 	// Write allowlist
 	if bundle.Allowlist != nil {
 		if !dryRun {
-			os.WriteFile(filepath.Join(cfg.ClaudeDir, "selfimprove-allowlist.json"), bundle.Allowlist, 0644)
+			if err := os.WriteFile(filepath.Join(cfg.ClaudeDir, "selfimprove-allowlist.json"), bundle.Allowlist, 0644); err != nil {
+				return "", fmt.Errorf("writing selfimprove-allowlist.json: %w", err)
+			}
 		}
 		restored = append(restored, "selfimprove-allowlist.json")
 	}
@@ -309,8 +317,12 @@ func restoreBundle(cfg *config.Config, plaintext []byte, dryRun bool) (string, e
 	// Write schedule
 	if bundle.Schedule != nil {
 		if !dryRun {
-			os.MkdirAll(filepath.Join(cfg.ClaudeDir, "learning"), 0755)
-			os.WriteFile(filepath.Join(cfg.ClaudeDir, "learning", "schedule.json"), bundle.Schedule, 0644)
+			if err := os.MkdirAll(filepath.Join(cfg.ClaudeDir, "learning"), 0755); err != nil {
+				return "", fmt.Errorf("creating learning directory: %w", err)
+			}
+			if err := os.WriteFile(filepath.Join(cfg.ClaudeDir, "learning", "schedule.json"), bundle.Schedule, 0644); err != nil {
+				return "", fmt.Errorf("writing learning/schedule.json: %w", err)
+			}
 		}
 		restored = append(restored, "learning/schedule.json")
 	}
