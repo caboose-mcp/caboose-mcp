@@ -2,18 +2,23 @@ package tools
 
 // jokes — random joke dispensary for programming, dad jokes, and Chuck Norris facts.
 //
-// All jokes are hardcoded (offline) — no external API calls.
+// joke and dad_joke use hardcoded local lists (offline).
+// chuck_norris_joke calls api.chucknorris.io via CORS proxy (when hosted) or direct API (when local).
 //
 // Tools:
-//   joke            — tell a random programming or nerdy joke
-//   dad_joke        — tell a random dad joke (groaning is mandatory)
-//   chuck_norris_joke — tell a random Chuck Norris joke
+//   joke            — tell a random programming or nerdy joke (hardcoded)
+//   dad_joke        — tell a random dad joke (hardcoded, groaning is mandatory)
+//   chuck_norris_joke — fetch a random Chuck Norris joke from api.chucknorris.io (via proxy or direct)
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"math/rand"
 	"net/http"
+	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -78,47 +83,71 @@ func dadJokeHandler(cfg *config.Config) func(context.Context, mcp.CallToolReques
 	}
 }
 
+// ChuckNorrisJoke represents the API response from Chuck Norris API.
+type ChuckNorrisJoke struct {
+	Value      string   `json:"value"`
+	ID         string   `json:"id"`
+	URL        string   `json:"url"`
+	Categories []string `json:"categories"`
+}
+
 // newChuckNorrisJokeHandler returns a handler for the chuck_norris_joke tool.
-// httpClient and baseURL parameters are unused but kept for backward compatibility with testing.
+// Uses CORS proxy if available (CHUCK_NORRIS_PROXY env var), falls back to direct API for local dev.
 func newChuckNorrisJokeHandler(cfg *config.Config, httpClient *http.Client, baseURL string) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Hardcoded Chuck Norris jokes (no external API call)
-	chuckNorrisJokes := map[string][]string{
-		"dev":        {"Chuck Norris doesn't code in cycles, he codes in strikes.", "Chuck Norris finished World of Warcraft.", "All programming languages were created by Chuck Norris. All other languages are just rip-offs."},
-		"career":     {"Chuck Norris never gets a job because it would be a waste of his talents.", "Chuck Norris is the only person who doesn't need a job."},
-		"celebrity":  {"Chuck Norris is not a celebrity. Celebrities are not Chuck Norris.", "The only celebrity Chuck Norris respects is himself."},
-		"explicit":   {"Chuck Norris does not need the internet because Chuck Norris is the internet.", "They say money can't buy happiness. But it can buy a Chuck Norris action figure. Instant happiness."},
+	if httpClient == nil {
+		httpClient = &http.Client{Timeout: 10 * time.Second}
 	}
 
-	defaultJokes := []string{
-		"Chuck Norris does not need to type-cast. The Chuck-Norris Compiler (CNC) sees through things. Always.",
-		"When a bug sees Chuck Norris, it flees screaming in terror, and the compiler catches it.",
-		"Chuck Norris doesn't pair program.",
-		"Every SQL statement that Chuck Norris codes has an implicit 'COMMIT' in its end.",
-		"Chuck Norris rewrote the Google search engine from scratch.",
-		"Chuck Norris solved the halting problem.",
-		"Chuck Norris instantiates abstract classes.",
-		"The only pattern Chuck Norris knows is God Object.",
-		"Chuck Norris doesn't need the internet because Chuck Norris is the internet.",
-		"Chuck Norris breaks RSA 128-bit encrypted codes in milliseconds.",
-	}
+	// Default API endpoint
+	directAPIURL := "https://api.chucknorris.io"
 
 	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 		category := req.GetString("category", "")
 
-		// Select jokes based on category
-		jokes := defaultJokes
-		if category != "" {
-			if categoryJokes, ok := chuckNorrisJokes[strings.ToLower(category)]; ok {
-				jokes = categoryJokes
-			}
+		// Determine which API endpoint to use: proxy or direct
+		// CHUCK_NORRIS_PROXY will be set when deployed on AWS with CORS proxy
+		// For local dev, it won't be set and we'll use the direct API
+		var apiURL string
+		if proxyURL := os.Getenv("CHUCK_NORRIS_PROXY"); proxyURL != "" {
+			apiURL = proxyURL + "/random"
+		} else {
+			apiURL = directAPIURL + "/jokes/random"
 		}
 
-		r := rand.New(rand.NewSource(time.Now().UnixNano()))
-		selectedJoke := jokes[r.Intn(len(jokes))]
-
-		result := fmt.Sprintf("Chuck Norris Joke:\n\n%s", selectedJoke)
 		if category != "" {
-			result = fmt.Sprintf("Chuck Norris Joke (%s):\n\n%s", category, selectedJoke)
+			apiURL += "?category=" + url.QueryEscape(category)
+		}
+
+		// Make the HTTP request
+		httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Error building request: %v", err)), nil
+		}
+
+		resp, err := httpClient.Do(httpReq)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Error fetching joke: %v", err)), nil
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			body, _ := io.ReadAll(resp.Body)
+			return mcp.NewToolResultError(fmt.Sprintf("API error (status %d): %s", resp.StatusCode, string(body))), nil
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Error reading response: %v", err)), nil
+		}
+
+		var joke ChuckNorrisJoke
+		if err := json.Unmarshal(body, &joke); err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Error parsing joke: %v", err)), nil
+		}
+
+		result := fmt.Sprintf("Chuck Norris Joke:\n\n%s", joke.Value)
+		if len(joke.Categories) > 0 {
+			result = fmt.Sprintf("Chuck Norris Joke (%s):\n\n%s", strings.Join(joke.Categories, ", "), joke.Value)
 		}
 
 		return mcp.NewToolResultText(result), nil

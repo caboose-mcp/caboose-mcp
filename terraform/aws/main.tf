@@ -496,7 +496,14 @@ resource "aws_ecs_task_definition" "bots" {
     environment = [
       { name = "SLACK_BOT_CHANNELS",   value = var.slack_bot_channels },
       { name = "DISCORD_BOT_CHANNELS", value = var.discord_bot_channels },
-      { name = "CHUCK_NORRIS_PROXY",   value = aws_apigatewayv2_stage.cors_proxy.invoke_url },
+      { name = "CORS_PROXY_URL",       value = aws_apigatewayv2_stage.cors_proxy.invoke_url },
+      { name = "CHUCK_NORRIS_PROXY",   value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/jokes" },
+      { name = "SLACK_API_PROXY",      value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/slack/api" },
+      { name = "DISCORD_API_PROXY",    value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/discord/api/v10" },
+      { name = "GOOGLE_API_PROXY",     value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/google" },
+      { name = "GREPTILE_API_PROXY",   value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/greptile" },
+      { name = "ELEVENLABS_PROXY",     value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/elevenlabs" },
+      { name = "GITHUB_API_PROXY",     value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/github" },
     ]
   }])
 
@@ -537,7 +544,14 @@ resource "aws_ecs_task_definition" "serve" {
     ]
 
     environment = [
-      { name = "CHUCK_NORRIS_PROXY",   value = aws_apigatewayv2_stage.cors_proxy.invoke_url },
+      { name = "CORS_PROXY_URL",       value = aws_apigatewayv2_stage.cors_proxy.invoke_url },
+      { name = "CHUCK_NORRIS_PROXY",   value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/jokes" },
+      { name = "SLACK_API_PROXY",      value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/slack/api" },
+      { name = "DISCORD_API_PROXY",    value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/discord/api/v10" },
+      { name = "GOOGLE_API_PROXY",     value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/google" },
+      { name = "GREPTILE_API_PROXY",   value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/greptile" },
+      { name = "ELEVENLABS_PROXY",     value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/elevenlabs" },
+      { name = "GITHUB_API_PROXY",     value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/github" },
     ]
   }])
 
@@ -630,8 +644,100 @@ resource "aws_apigatewayv2_stage" "cors_proxy" {
   tags = local.common_tags
 }
 
+# ─── Additional CORS Proxies ──────────────────────────────────────────────────
+
+# Slack API CORS Proxy
+resource "aws_apigatewayv2_integration" "slack_api" {
+  api_id                 = aws_apigatewayv2_api.cors_proxy.id
+  integration_type       = "HTTP_PROXY"
+  integration_method     = "POST"
+  integration_uri        = "https://slack.com/api/{proxy+}"
+  payload_format_version = "1.0"
+}
+
+resource "aws_apigatewayv2_route" "slack_api" {
+  api_id    = aws_apigatewayv2_api.cors_proxy.id
+  route_key = "POST /slack/api/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.slack_api.id}"
+}
+
+# Discord API CORS Proxy
+resource "aws_apigatewayv2_integration" "discord_api" {
+  api_id                 = aws_apigatewayv2_api.cors_proxy.id
+  integration_type       = "HTTP_PROXY"
+  integration_method     = "POST"
+  integration_uri        = "https://discord.com/api/v10/{proxy+}"
+  payload_format_version = "1.0"
+}
+
+resource "aws_apigatewayv2_route" "discord_api" {
+  api_id    = aws_apigatewayv2_api.cors_proxy.id
+  route_key = "POST /discord/api/v10/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.discord_api.id}"
+}
+
+# Google APIs CORS Proxy
+resource "aws_apigatewayv2_integration" "google_apis" {
+  api_id                 = aws_apigatewayv2_api.cors_proxy.id
+  integration_type       = "HTTP_PROXY"
+  integration_method     = "GET"
+  integration_uri        = "https://www.googleapis.com/{proxy+}"
+  payload_format_version = "1.0"
+}
+
+resource "aws_apigatewayv2_route" "google_apis" {
+  api_id    = aws_apigatewayv2_api.cors_proxy.id
+  route_key = "GET /google/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.google_apis.id}"
+}
+
+# Greptile API CORS Proxy
+resource "aws_apigatewayv2_integration" "greptile_api" {
+  api_id                 = aws_apigatewayv2_api.cors_proxy.id
+  integration_type       = "HTTP_PROXY"
+  integration_method     = "POST"
+  integration_uri        = "https://api.greptile.com/{proxy+}"
+  payload_format_version = "1.0"
+}
+
+resource "aws_apigatewayv2_route" "greptile_api" {
+  api_id    = aws_apigatewayv2_api.cors_proxy.id
+  route_key = "POST /greptile/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.greptile_api.id}"
+}
+
+# ElevenLabs TTS API CORS Proxy
+resource "aws_apigatewayv2_integration" "elevenlabs_api" {
+  api_id                 = aws_apigatewayv2_api.cors_proxy.id
+  integration_type       = "HTTP_PROXY"
+  integration_method     = "POST"
+  integration_uri        = "https://api.elevenlabs.io/{proxy+}"
+  payload_format_version = "1.0"
+}
+
+resource "aws_apigatewayv2_route" "elevenlabs_api" {
+  api_id    = aws_apigatewayv2_api.cors_proxy.id
+  route_key = "POST /elevenlabs/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.elevenlabs_api.id}"
+}
+
+# GitHub API CORS Proxy
+resource "aws_apigatewayv2_integration" "github_api" {
+  api_id                 = aws_apigatewayv2_api.cors_proxy.id
+  integration_type       = "HTTP_PROXY"
+  integration_method     = "POST"
+  integration_uri        = "https://api.github.com/{proxy+}"
+  payload_format_version = "1.0"
+}
+
+resource "aws_apigatewayv2_route" "github_api" {
+  api_id    = aws_apigatewayv2_api.cors_proxy.id
+  route_key = "POST /github/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.github_api.id}"
+}
+
 # Output the CORS proxy URL for environment variables
 output "cors_proxy_endpoint" {
-  description = "CORS proxy endpoint for Chuck Norris API"
+  description = "CORS proxy endpoint for all external APIs"
   value       = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}"
 }
