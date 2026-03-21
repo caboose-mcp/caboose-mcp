@@ -12,6 +12,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -134,7 +135,15 @@ func agentLoop(ctx context.Context, client anthropic.Client, systemPrompt, userM
 		var err error
 		for attempt, delay := range []time.Duration{0, 100 * time.Millisecond, 400 * time.Millisecond, 1600 * time.Millisecond} {
 			if delay > 0 {
-				time.Sleep(delay)
+				timer := time.NewTimer(delay)
+				select {
+				case <-ctx.Done():
+					if !timer.Stop() {
+						<-timer.C
+					}
+					return "", ctx.Err()
+				case <-timer.C:
+				}
 			}
 			resp, err = client.Messages.New(ctx, anthropic.MessageNewParams{
 				Model:     anthropic.ModelClaudeHaiku4_5_20251001,
@@ -415,29 +424,24 @@ func buildDevTools(cfg *config.Config) []botTool {
 }
 
 // isTransient checks if an error is transient (retryable) vs permanent.
-// Returns true for HTTP 429, 500, 503, and context deadline errors.
+// Returns true for HTTP 429, 500, 503, and context deadline/cancel errors.
 func isTransient(err error) bool {
 	if err == nil {
 		return false
 	}
 
-	// Check for context deadline/timeout
-	if err == context.DeadlineExceeded {
+	// Check for context timeout/cancellation via errors.Is (handles wrapped errors)
+	if errors.Is(err, context.DeadlineExceeded) || errors.Is(err, context.Canceled) {
 		return true
 	}
 
-	// Check for HTTP status codes in the error message
-	// The Anthropic SDK wraps errors with HTTP status information
-	errStr := err.Error()
-	switch {
-	case strings.Contains(errStr, "429"):
-		return true // Rate limit
-	case strings.Contains(errStr, "500"):
-		return true // Internal server error
-	case strings.Contains(errStr, "503"):
-		return true // Service unavailable
-	case strings.Contains(errStr, "deadline"):
-		return true // Context deadline exceeded
+	// Check for Anthropic SDK API errors with retryable HTTP status codes
+	var apiErr *anthropic.Error
+	if errors.As(err, &apiErr) {
+		switch apiErr.StatusCode {
+		case 429, 500, 503:
+			return true
+		}
 	}
 
 	return false

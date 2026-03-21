@@ -74,7 +74,9 @@ func (q *botQueues) enqueue(job dispatchJob) bool {
 // drain is a long-running goroutine that processes jobs for a single user,
 // one at a time. Exits when the channel is closed (user becomes inactive).
 func (q *botQueues) drain(userKey string) {
-	ch := q.queues[userKey]
+	q.mu.Lock()
+	ch := q.queues[userKey] // capture channel while holding the lock
+	q.mu.Unlock()
 	for job := range ch {
 		// Execute the job with the shared dispatch logic
 		dispatchMessage(job.ctx, job.cfg, job.msg, job.sender, job.provider)
@@ -103,7 +105,14 @@ func dispatchMessage(ctx context.Context, cfg *config.Config, msg IncomingMessag
 	}
 
 	// Send the reply (may chunk or create thread for long replies)
-	sendReply(ctx, sender, msg, reply)
+	sentIDs := sendReply(ctx, sender, msg, reply)
+
+	// Cache the full reply keyed by message ID (e.g. for Discord 🔊 reactions)
+	if cacher, ok := sender.(MessageCacher); ok {
+		for _, id := range sentIDs {
+			cacher.CacheReply(id, reply)
+		}
+	}
 
 	// Synthesize audio if the reply warrants it
 	if ShouldSpeak(reply) {
@@ -141,15 +150,19 @@ func keepTyping(ctx context.Context, sender PlatformSender, channelID string) co
 // - Short replies (< limit-200 chars): send inline
 // - Long replies: try to create a thread with summary in main channel
 // - Fallback if threading unsupported: chunk into multiple messages
-func sendReply(ctx context.Context, sender PlatformSender, msg IncomingMessage, reply string) {
+// Returns the message IDs of all messages sent (for caching purposes).
+func sendReply(ctx context.Context, sender PlatformSender, msg IncomingMessage, reply string) []string {
 	limit := sender.MaxMessageLen()
+	var sentIDs []string
 
 	// Short reply: send inline in one message
 	if len(reply) <= limit-200 {
-		if _, err := sender.SendText(msg.ChannelID, reply); err != nil {
+		if id, err := sender.SendText(msg.ChannelID, reply); err != nil {
 			log.Printf("failed to send reply: %v", err)
+		} else {
+			sentIDs = append(sentIDs, id)
 		}
-		return
+		return sentIDs
 	}
 
 	// Long reply: try to open a thread on the original message
@@ -158,31 +171,41 @@ func sendReply(ctx context.Context, sender PlatformSender, msg IncomingMessage, 
 	if threadErr != nil || threadID == "" {
 		// Threading unsupported or failed: fall back to chunking in main channel
 		for _, chunk := range splitMessage(reply, limit) {
-			if _, err := sender.SendText(msg.ChannelID, chunk); err != nil {
+			if id, err := sender.SendText(msg.ChannelID, chunk); err != nil {
 				log.Printf("failed to send reply chunk: %v", err)
+			} else {
+				sentIDs = append(sentIDs, id)
 			}
 		}
-		return
+		return sentIDs
 	}
 
 	// Threading supported: send summary in main channel, full reply in thread
 	summary := truncateText(reply, 200)
 	summaryMsg := summary + " 📜 *Full response in thread ↓*"
-	if _, err := sender.SendText(msg.ChannelID, summaryMsg); err != nil {
+	if id, err := sender.SendText(msg.ChannelID, summaryMsg); err != nil {
 		log.Printf("failed to send summary: %v", err)
+	} else {
+		sentIDs = append(sentIDs, id)
 	}
 
-	// Send full reply chunked in thread
+	// Send full reply chunked in thread (platform-aware: Discord uses threadID as channel, Slack uses thread_ts)
 	for _, chunk := range splitMessage(reply, limit) {
-		if _, err := sender.SendText(threadID, chunk); err != nil {
+		if id, err := sender.SendTextInThread(msg.ChannelID, threadID, chunk); err != nil {
 			log.Printf("failed to send reply in thread: %v", err)
+		} else {
+			sentIDs = append(sentIDs, id)
 		}
 	}
 
 	// Send completion marker in thread
-	if _, err := sender.SendText(threadID, "🗡️ *Done.*"); err != nil {
+	if id, err := sender.SendTextInThread(msg.ChannelID, threadID, "🗡️ *Done.*"); err != nil {
 		log.Printf("failed to send done marker: %v", err)
+	} else {
+		sentIDs = append(sentIDs, id)
 	}
+
+	return sentIDs
 }
 
 // formatBotError formats an error message for display to the user.

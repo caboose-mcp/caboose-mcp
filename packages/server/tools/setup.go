@@ -20,7 +20,7 @@ import (
 
 func RegisterSetup(s *server.MCPServer, cfg *config.Config) {
 	s.AddTool(mcp.NewTool("setup_bot_configure",
-		mcp.WithDescription("Guided interactive setup for Discord or Slack bot integration. Validates tokens and generates .env configuration."),
+		mcp.WithDescription("Guided interactive setup for Discord or Slack bot integration. Generates .env configuration templates and setup instructions."),
 		mcp.WithString("platform", mcp.Required(), mcp.Description("Platform to configure: 'discord', 'slack', or 'both'")),
 	), setupBotConfigureHandler(cfg))
 	s.AddTool(mcp.NewTool("setup_github_mcp_info",
@@ -643,7 +643,7 @@ STATUS: ✅ Ready to configure
 		}
 
 		if instructions == "" {
-			return mcp.NewToolResultText("❌ Platform must be 'discord', 'slack', or 'both'"), nil
+			return mcp.NewToolResultError("❌ Platform must be 'discord', 'slack', or 'both'"), nil
 		}
 
 		envTemplate := `

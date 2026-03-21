@@ -64,9 +64,24 @@ func (s SlackSender) MaxMessageLen() int {
 }
 
 func (s SlackSender) StartThread(channelID, messageID, name string) (string, error) {
-	// Slack threads are anchored by the message timestamp.
-	// Return the message ID (ts) as the thread ID for reply purposes.
+	// Slack threads are anchored by message timestamp (thread_ts), not a separate channel.
+	// The PlatformSender abstraction treats threadID as a channel for SendText, which is
+	// invalid for Slack. Return the message timestamp here so SendTextInThread can use it
+	// as thread_ts when posting replies.
 	return messageID, nil
+}
+
+// SendTextInThread posts a message into a Slack thread.
+// In Slack, threads require posting to the same channelID with a thread_ts option.
+func (s SlackSender) SendTextInThread(channelID, threadTS, text string) (string, error) {
+	_, ts, err := s.api.PostMessage(channelID,
+		slack.MsgOptionText(text, false),
+		slack.MsgOptionTS(threadTS),
+	)
+	if err != nil {
+		return "", err
+	}
+	return ts, nil
 }
 
 // RunSlackBot starts the Slack Socket Mode bot and blocks until a fatal error.
@@ -123,19 +138,58 @@ func RunSlackBot(cfg *config.Config) error {
 }
 
 func handleSlackMessage(cfg *config.Config, api *slack.Client, sender SlackSender, provider SlackProvider, allowedChannels map[string]bool, event slackevents.EventsAPIEvent) {
-	ev, ok := event.InnerEvent.Data.(*slackevents.MessageEvent)
-	if !ok {
+	var msg IncomingMessage
+	var ok bool
+	var channelForBusy string
+
+	switch ev := event.InnerEvent.Data.(type) {
+	case *slackevents.MessageEvent:
+		msg, ok = parseSlackMessage(ev, allowedChannels)
+		channelForBusy = ev.Channel
+	case *slackevents.AppMentionEvent:
+		msg, ok = parseSlackAppMention(ev)
+		channelForBusy = ev.Channel
+	default:
 		return
 	}
 
-	msg, ok := parseSlackMessage(ev, allowedChannels)
 	if !ok {
 		return
 	}
 
 	if !EnqueueBotMessage(context.Background(), cfg, msg, sender, provider) {
-		api.PostMessage(ev.Channel, slack.MsgOptionText("⚔️ I'm mid-battle — try again in a moment.", false))
+		api.PostMessage(channelForBusy, slack.MsgOptionText("⚔️ I'm mid-battle — try again in a moment.", false))
 	}
+}
+
+// parseSlackAppMention extracts and validates an IncomingMessage from a Slack app_mention event.
+// App mention events fire when someone @-mentions the bot in a channel.
+func parseSlackAppMention(ev *slackevents.AppMentionEvent) (IncomingMessage, bool) {
+	if ev.BotID != "" {
+		return IncomingMessage{}, false
+	}
+
+	// Strip the @mention prefix (e.g. "<@U012AB3CD> ")
+	text := strings.TrimSpace(ev.Text)
+	// Remove any <@USERID> mention tokens from the start of the message
+	for strings.HasPrefix(text, "<@") {
+		end := strings.Index(text, ">")
+		if end < 0 {
+			break
+		}
+		text = strings.TrimSpace(text[end+1:])
+	}
+	if text == "" {
+		return IncomingMessage{}, false
+	}
+
+	return IncomingMessage{
+		UserKey:           "slack:" + ev.User,
+		ChannelID:         ev.Channel,
+		OriginalMessageID: ev.TimeStamp,
+		Content:           text,
+		IsDM:              false, // app_mention only fires in channels
+	}, true
 }
 
 // parseSlackMessage extracts and validates an IncomingMessage from a Slack event.

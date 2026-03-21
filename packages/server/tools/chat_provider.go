@@ -1,5 +1,11 @@
 package tools
 
+// MessageCacher is an optional interface that PlatformSender implementations may satisfy
+// to cache the full bot reply keyed by message ID (e.g. for on-demand TTS via reactions).
+type MessageCacher interface {
+	CacheReply(msgID, fullReply string)
+}
+
 // IncomingMessage is a platform-normalized inbound message.
 // Used by dispatchMessage to orchestrate bot responses across platforms.
 type IncomingMessage struct {
@@ -15,6 +21,10 @@ type IncomingMessage struct {
 type PlatformSender interface {
 	// SendText posts a text message to a channel and returns the message ID.
 	SendText(channelID, text string) (messageID string, err error)
+	// SendTextInThread posts a text message into an existing thread.
+	// For Discord, threadID is the thread channel ID (threads are channels).
+	// For Slack, channelID is the parent channel and threadID is the thread_ts timestamp.
+	SendTextInThread(channelID, threadID, text string) (messageID string, err error)
 	// SendAudio posts an audio file (MP3) to a channel.
 	SendAudio(channelID string, audio []byte) error
 	// SendTyping shows a typing indicator; platforms may implement as no-op if unsupported.
@@ -49,7 +59,7 @@ type DiscordProvider struct {
 	sender PlatformSender
 }
 
-func (d DiscordProvider) Name() string { return "discord" }
+func (d DiscordProvider) Name() string           { return "discord" }
 func (d DiscordProvider) Sender() PlatformSender { return d.sender }
 func (d DiscordProvider) FormatText(text string) string {
 	// Discord renders most standard markdown natively.
@@ -76,7 +86,7 @@ type SlackProvider struct {
 	sender PlatformSender
 }
 
-func (s SlackProvider) Name() string { return "slack" }
+func (s SlackProvider) Name() string           { return "slack" }
 func (s SlackProvider) Sender() PlatformSender { return s.sender }
 func (s SlackProvider) FormatText(text string) string {
 	// Convert Discord/standard markdown → Slack mrkdwn
