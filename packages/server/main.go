@@ -200,6 +200,7 @@ func registerHostedTools(s *server.MCPServer, cfg *config.Config) {
 	tools.RegisterAudit(s, cfg)
 	tools.RegisterAuth(s, cfg)
 	tools.RegisterSources(s, cfg)
+	tools.RegisterRepo(s, cfg) // Phase 3: Repository management tools (repo create, test, approve, deploy)
 	registerCommonTools(s, cfg)
 }
 
