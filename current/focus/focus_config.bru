@@ -1,0 +1,31 @@
+meta {
+  name: focus_config
+  type: http
+  seq: 58
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 58,
+    "method": "tools/call",
+    "params": {
+      "name": "focus_config",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  View or update focus mode defaults.
+}

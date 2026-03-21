@@ -1,0 +1,31 @@
+meta {
+  name: cloudsync_env_set
+  type: http
+  seq: 41
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 41,
+    "method": "tools/call",
+    "params": {
+      "name": "cloudsync_env_set",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Add or update an environment variable in the cloud sync bundle. These will be written to .env on pull.
+}

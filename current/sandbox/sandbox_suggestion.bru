@@ -1,0 +1,31 @@
+meta {
+  name: sandbox_suggestion
+  type: http
+  seq: 88
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 88,
+    "method": "tools/call",
+    "params": {
+      "name": "sandbox_suggestion",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Preview a pending improvement suggestion in a sandbox before approving it. Clones the suggestion's directory and runs its apply_cmd, then shows the diff.
+}

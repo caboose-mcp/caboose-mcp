@@ -1,0 +1,31 @@
+meta {
+  name: sandbox_clean
+  type: http
+  seq: 84
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 84,
+    "method": "tools/call",
+    "params": {
+      "name": "sandbox_clean",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Delete one sandbox by ID, or all sandboxes older than a given age.
+}

@@ -1,0 +1,31 @@
+meta {
+  name: focus_end
+  type: http
+  seq: 59
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 59,
+    "method": "tools/call",
+    "params": {
+      "name": "focus_end",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  End the focus session. Returns a summary: goal, duration, parked items. Clears the active session.
+}

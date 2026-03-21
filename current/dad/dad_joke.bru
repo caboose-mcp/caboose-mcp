@@ -1,0 +1,31 @@
+meta {
+  name: dad_joke
+  type: http
+  seq: 46
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 46,
+    "method": "tools/call",
+    "params": {
+      "name": "dad_joke",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Tell a random dad joke. Groaning is mandatory.
+}

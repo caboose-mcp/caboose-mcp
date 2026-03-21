@@ -1,0 +1,31 @@
+meta {
+  name: agent_persona
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 4,
+    "method": "tools/call",
+    "params": {
+      "name": "agent_persona",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Read, update, or reset the agent's persona config (name, tone, communication style, verbosity, interests, social traits). Stored in CLAUDE_DIR/persona.json. Claude reads this file on startup to tune how it presents itself.
+}

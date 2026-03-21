@@ -1,0 +1,31 @@
+meta {
+  name: si_tech_digest
+  type: http
+  seq: 105
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 105,
+    "method": "tools/call",
+    "params": {
+      "name": "si_tech_digest",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Generate a tech digest for a directory and optionally post to Slack/Discord.
+}

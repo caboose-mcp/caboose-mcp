@@ -1,0 +1,31 @@
+meta {
+  name: chezmoi_forget
+  type: http
+  seq: 29
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 29,
+    "method": "tools/call",
+    "params": {
+      "name": "chezmoi_forget",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Stop managing a file with chezmoi. Removes it from the source state but leaves the target file intact.
+}

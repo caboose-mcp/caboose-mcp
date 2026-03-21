@@ -1,0 +1,31 @@
+meta {
+  name: note_list
+  type: http
+  seq: 79
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 79,
+    "method": "tools/call",
+    "params": {
+      "name": "note_list",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  List recent notes from CLAUDE_DIR/notes.md.
+}

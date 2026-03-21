@@ -1,0 +1,31 @@
+meta {
+  name: source_remove
+  type: http
+  seq: 114
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 114,
+    "method": "tools/call",
+    "params": {
+      "name": "source_remove",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Remove a watched source by ID.
+}

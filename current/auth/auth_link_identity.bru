@@ -1,0 +1,31 @@
+meta {
+  name: auth_link_identity
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 10,
+    "method": "tools/call",
+    "params": {
+      "name": "auth_link_identity",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Link a Discord, Slack, or Google identity to a JWT token for SSO. Once linked, messages from that user automatically use this token's tool ACL.
+}

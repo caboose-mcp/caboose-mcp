@@ -1,0 +1,31 @@
+meta {
+  name: chezmoi_managed
+  type: http
+  seq: 32
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 32,
+    "method": "tools/call",
+    "params": {
+      "name": "chezmoi_managed",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  List all files managed by chezmoi.
+}

@@ -1,0 +1,31 @@
+meta {
+  name: focus_start
+  type: http
+  seq: 61
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 61,
+    "method": "tools/call",
+    "params": {
+      "name": "focus_start",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Start a focus session with a declared goal. Suppresses background noise (digests, learning nudges). Optionally set a timer.
+}

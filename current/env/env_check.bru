@@ -1,0 +1,31 @@
+meta {
+  name: env_check
+  type: http
+  seq: 55
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 55,
+    "method": "tools/call",
+    "params": {
+      "name": "env_check",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Check which dev tools are installed and show their versions. Returns a formatted report with ✅ installed / ❌ missing status and install commands for missing tools.
+}

@@ -1,0 +1,31 @@
+meta {
+  name: audit_pending
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 8,
+    "method": "tools/call",
+    "params": {
+      "name": "audit_pending",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  List tool executions that are waiting for approval (gated and not yet approved or denied).
+}

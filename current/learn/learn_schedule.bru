@@ -1,0 +1,31 @@
+meta {
+  name: learn_schedule
+  type: http
+  seq: 71
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 71,
+    "method": "tools/call",
+    "params": {
+      "name": "learn_schedule",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  View or update the daily learning schedule.
+}

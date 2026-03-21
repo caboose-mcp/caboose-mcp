@@ -1,0 +1,31 @@
+meta {
+  name: calendar_auth_complete
+  type: http
+  seq: 19
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 19,
+    "method": "tools/call",
+    "params": {
+      "name": "calendar_auth_complete",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Complete Google Calendar OAuth2 setup by exchanging the authorization code for a token.
+}

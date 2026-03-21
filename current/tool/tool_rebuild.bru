@@ -1,0 +1,31 @@
+meta {
+  name: tool_rebuild
+  type: http
+  seq: 116
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 116,
+    "method": "tools/call",
+    "params": {
+      "name": "tool_rebuild",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Rebuild the caboose-mcp binary (go build -o caboose-mcp .). Returns compiler output.
+}

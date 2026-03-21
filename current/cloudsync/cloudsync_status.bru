@@ -1,0 +1,31 @@
+meta {
+  name: cloudsync_status
+  type: http
+  seq: 45
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 45,
+    "method": "tools/call",
+    "params": {
+      "name": "cloudsync_status",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Show current cloud sync configuration and last push/pull times.
+}

@@ -1,0 +1,31 @@
+meta {
+  name: claude_write_file
+  type: http
+  seq: 39
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 39,
+    "method": "tools/call",
+    "params": {
+      "name": "claude_write_file",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Write or overwrite a file under the Claude config directory. Path is relative to CLAUDE_DIR.
+}

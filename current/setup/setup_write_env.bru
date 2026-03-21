@@ -1,0 +1,31 @@
+meta {
+  name: setup_write_env
+  type: http
+  seq: 96
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 96,
+    "method": "tools/call",
+    "params": {
+      "name": "setup_write_env",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Write a .env file with the provided key=value pairs to a given path.
+}

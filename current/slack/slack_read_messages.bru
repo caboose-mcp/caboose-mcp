@@ -1,0 +1,31 @@
+meta {
+  name: slack_read_messages
+  type: http
+  seq: 108
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 108,
+    "method": "tools/call",
+    "params": {
+      "name": "slack_read_messages",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Read recent messages from a Slack channel.
+}

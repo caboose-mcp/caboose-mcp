@@ -1,0 +1,31 @@
+meta {
+  name: tool_list
+  type: http
+  seq: 115
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 115,
+    "method": "tools/call",
+    "params": {
+      "name": "tool_list",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  List tool source files and the MCP tools each one registers.
+}

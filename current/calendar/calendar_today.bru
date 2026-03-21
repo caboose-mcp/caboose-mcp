@@ -1,0 +1,31 @@
+meta {
+  name: calendar_today
+  type: http
+  seq: 24
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 24,
+    "method": "tools/call",
+    "params": {
+      "name": "calendar_today",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Return today's date, day of week, week number, and days until common events.
+}

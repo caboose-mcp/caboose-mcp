@@ -1,0 +1,31 @@
+meta {
+  name: auth_unlink_identity
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 14,
+    "method": "tools/call",
+    "params": {
+      "name": "auth_unlink_identity",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Remove an identity → token link.
+}

@@ -1,0 +1,183 @@
+#!/usr/bin/env node
+
+/**
+ * Generate Bruno collection from MCP server
+ * Usage: makebruno [output-dir] [mcp-server-url]
+ *
+ * Examples:
+ *   ./scripts/makebruno                                    # Uses http://localhost:8080
+ *   ./scripts/makebruno ./my-collection                    # Custom output dir
+ *   ./scripts/makebruno ./my-collection https://mcp.example.io/mcp  # Custom URL
+ *   MCP_SERVER_URL=https://mcp.example.io/mcp ./scripts/makebruno   # Via env var
+ */
+
+import fs from 'fs';
+import path from 'path';
+import http from 'http';
+import https from 'https';
+
+const outDir = process.argv[2] || './bruno';
+const mcpServerUrl = process.argv[3] || process.env.MCP_SERVER_URL || 'http://localhost:8080';
+
+async function fetchJSON(url, body) {
+  return new Promise((resolve, reject) => {
+    const urlObj = new URL(url);
+    const isHttps = urlObj.protocol === 'https:';
+    const client = isHttps ? https : http;
+
+    const options = {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    };
+
+    const req = client.request(urlObj, options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch (e) {
+          reject(new Error(`Invalid JSON: ${data}`));
+        }
+      });
+    });
+
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+}
+
+function ensureDir(dir) {
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+}
+
+function generateBruFile(name, desc, counter) {
+  const sanitizedDesc = desc.replace(/"/g, '\\"');
+  return `meta {
+  name: ${name}
+  type: http
+  seq: ${counter}
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": ${counter},
+    "method": "tools/call",
+    "params": {
+      "name": "${name}",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  ${sanitizedDesc}
+}
+`;
+}
+
+async function main() {
+  console.log(`Fetching tools from ${mcpServerUrl}...`);
+
+  try {
+    const response = await fetchJSON(
+      mcpServerUrl.endsWith('/mcp') ? mcpServerUrl : `${mcpServerUrl}/mcp`,
+      JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/list',
+        params: {},
+      })
+    );
+
+    if (response.error) {
+      console.error('Error from MCP server:', response.error);
+      process.exit(1);
+    }
+
+    const tools = response.result?.tools || [];
+    console.log(`Found ${tools.length} tools\n`);
+
+    ensureDir(outDir);
+
+    const categories = new Set();
+    let counter = 0;
+
+    for (const tool of tools) {
+      counter++;
+      const { name, description } = tool;
+      const category = name.split('_')[0];
+      const categoryDir = path.join(outDir, category);
+
+      ensureDir(categoryDir);
+      categories.add(category);
+
+      const bruFile = path.join(categoryDir, `${name}.bru`);
+      fs.writeFileSync(bruFile, generateBruFile(name, description || 'No description', counter));
+      console.log(`✓ ${category}/${name}.bru`);
+    }
+
+    // Create folder.bru files
+    for (const category of categories) {
+      const folderFile = path.join(outDir, category, 'folder.bru');
+      fs.writeFileSync(folderFile, `meta {
+  name: ${category}
+  type: http
+}
+`);
+    }
+
+    // Create environments
+    ensureDir(path.join(outDir, 'environments'));
+
+    fs.writeFileSync(path.join(outDir, 'environments', 'local.bru'), `vars {
+  baseUrl: http://localhost:8080
+  authToken: your-mcp-auth-token-here
+}
+`);
+
+    fs.writeFileSync(path.join(outDir, 'environments', 'production.bru'), `vars {
+  baseUrl: https://mcp.chrismarasco.io
+  authToken: your-mcp-auth-token-here
+}
+`);
+
+    // Create bruno.json
+    fs.writeFileSync(path.join(outDir, 'bruno.json'), JSON.stringify({
+      version: '1',
+      name: 'caboose-mcp',
+      type: 'collection',
+    }, null, 2));
+
+    console.log(`\n✅ Done!\n`);
+    console.log(`📁 ${path.resolve(outDir)}`);
+    console.log(`\nOpen in Bruno → Open Collection → ${path.resolve(outDir)}`);
+  } catch (error) {
+    console.error('\n❌ Error:', error.message);
+    console.error(`\nMake sure MCP server is running at ${mcpServerUrl}`);
+    console.error('\nOr specify a custom URL:');
+    console.error(`  ./scripts/makebruno ./collection https://mcp.chrismarasco.io/mcp`);
+    console.error(`\nOr via environment variable:`);
+    console.error(`  MCP_SERVER_URL=https://mcp.chrismarasco.io/mcp ./scripts/makebruno`);
+    process.exit(1);
+  }
+}
+
+main();

@@ -1,0 +1,31 @@
+meta {
+  name: si_git_diff
+  type: http
+  seq: 99
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 99,
+    "method": "tools/call",
+    "params": {
+      "name": "si_git_diff",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Show git diff for a repo directory (staged+unstaged, or vs a branch).
+}

@@ -1,0 +1,31 @@
+meta {
+  name: github_list_repos
+  type: http
+  seq: 64
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 64,
+    "method": "tools/call",
+    "params": {
+      "name": "github_list_repos",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  List GitHub repositories for an owner using the gh CLI.
+}

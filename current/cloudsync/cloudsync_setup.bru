@@ -1,0 +1,31 @@
+meta {
+  name: cloudsync_setup
+  type: http
+  seq: 44
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 44,
+    "method": "tools/call",
+    "params": {
+      "name": "cloudsync_setup",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  First-time cloud sync setup. Provisions storage (creates S3 bucket or GitHub Gist) and writes sync state. Requires gh CLI (for gist) or aws CLI (for s3).
+}

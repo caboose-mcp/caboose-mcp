@@ -1,0 +1,31 @@
+meta {
+  name: si_suggest
+  type: http
+  seq: 104
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 104,
+    "method": "tools/call",
+    "params": {
+      "name": "si_suggest",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Create a pending improvement suggestion that can be reviewed and approved.
+}

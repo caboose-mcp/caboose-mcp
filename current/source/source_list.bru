@@ -1,0 +1,31 @@
+meta {
+  name: source_list
+  type: http
+  seq: 113
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 113,
+    "method": "tools/call",
+    "params": {
+      "name": "source_list",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  List watched sources.
+}

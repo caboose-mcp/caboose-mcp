@@ -1,0 +1,31 @@
+meta {
+  name: focus_park
+  type: http
+  seq: 60
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 60,
+    "method": "tools/call",
+    "params": {
+      "name": "focus_park",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Park a distraction or tangent without acting on it. The note is saved to your parking lot so your brain can let go of it. You stay focused on your current goal.
+}

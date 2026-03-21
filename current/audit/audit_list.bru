@@ -1,0 +1,31 @@
+meta {
+  name: audit_list
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 7,
+    "method": "tools/call",
+    "params": {
+      "name": "audit_list",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Show the audit log of recent tool executions. Use this to see what commands and tools have been run, like a transparent activity feed.
+}

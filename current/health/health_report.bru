@@ -1,0 +1,31 @@
+meta {
+  name: health_report
+  type: http
+  seq: 68
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 68,
+    "method": "tools/call",
+    "params": {
+      "name": "health_report",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Generate a system health report: CPU load, memory, disk, uptime, systemd services, and Docker. Returns ANSI-colored text by default (pipe through `cat` or set color=false for plain text). For a live updating view: `watch -c -n2 'claude --print health_report'`
+}

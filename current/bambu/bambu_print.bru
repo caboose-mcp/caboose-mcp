@@ -1,0 +1,31 @@
+meta {
+  name: bambu_print
+  type: http
+  seq: 15
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 15,
+    "method": "tools/call",
+    "params": {
+      "name": "bambu_print",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Start a print job on the Bambu A1 printer.
+}

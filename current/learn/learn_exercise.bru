@@ -1,0 +1,31 @@
+meta {
+  name: learn_exercise
+  type: http
+  seq: 70
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 70,
+    "method": "tools/call",
+    "params": {
+      "name": "learn_exercise",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Get context for the next exercise in an active session. Returns session state so the AI can generate the next appropriate challenge.
+}

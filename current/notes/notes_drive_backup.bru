@@ -1,0 +1,31 @@
+meta {
+  name: notes_drive_backup
+  type: http
+  seq: 80
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 80,
+    "method": "tools/call",
+    "params": {
+      "name": "notes_drive_backup",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Upload the local notes.md to Google Drive as 'caboose-notes.md'. Requires Google Calendar auth (calendar_auth_url).
+}

@@ -1,0 +1,31 @@
+meta {
+  name: calendar_delete
+  type: http
+  seq: 22
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 22,
+    "method": "tools/call",
+    "params": {
+      "name": "calendar_delete",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Delete a Google Calendar event by its ID (from calendar_list output).
+}

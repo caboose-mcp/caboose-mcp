@@ -26,7 +26,7 @@ func DadJokePublic(ctx context.Context, cfg *config.Config, req mcp.CallToolRequ
 	return dadJokeHandler(cfg)(ctx, req)
 }
 
-// ChuckNorrisJokePublic calls the chuck_norris_joke handler (local list, no external services).
+// ChuckNorrisJokePublic calls the chuck_norris_joke handler (via CORS proxy).
 func ChuckNorrisJokePublic(ctx context.Context, cfg *config.Config, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return newChuckNorrisJokeHandler(cfg, nil, "")(ctx, req)
 }

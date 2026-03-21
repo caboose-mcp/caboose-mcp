@@ -1,0 +1,31 @@
+meta {
+  name: cloudsync_pull
+  type: http
+  seq: 42
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 42,
+    "method": "tools/call",
+    "params": {
+      "name": "cloudsync_pull",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Download and decrypt the config bundle, restoring files to CLAUDE_DIR. Safe to run on a fresh machine after cloning.
+}

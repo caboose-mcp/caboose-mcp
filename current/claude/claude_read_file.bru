@@ -1,0 +1,31 @@
+meta {
+  name: claude_read_file
+  type: http
+  seq: 38
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 38,
+    "method": "tools/call",
+    "params": {
+      "name": "claude_read_file",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Read a file under the Claude config directory (~/.claude by default). Path is relative to CLAUDE_DIR.
+}

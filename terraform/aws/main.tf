@@ -496,6 +496,7 @@ resource "aws_ecs_task_definition" "bots" {
     environment = [
       { name = "SLACK_BOT_CHANNELS",   value = var.slack_bot_channels },
       { name = "DISCORD_BOT_CHANNELS", value = var.discord_bot_channels },
+      { name = "CHUCK_NORRIS_PROXY",   value = aws_apigatewayv2_stage.cors_proxy.invoke_url },
     ]
   }])
 
@@ -533,6 +534,10 @@ resource "aws_ecs_task_definition" "serve" {
 
     secrets = [
       { name = "ANTHROPIC_API_KEY", valueFrom = "${aws_secretsmanager_secret.env.arn}:ANTHROPIC_API_KEY::" },
+    ]
+
+    environment = [
+      { name = "CHUCK_NORRIS_PROXY",   value = aws_apigatewayv2_stage.cors_proxy.invoke_url },
     ]
   }])
 
@@ -579,4 +584,54 @@ resource "aws_ecs_service" "serve" {
   depends_on = [aws_lb_listener.http]
 
   tags = local.common_tags
+}
+
+# ─── CORS Proxy for api.chucknorris.io ────────────────────────────────────────
+
+# API Gateway for CORS proxy to Chuck Norris API
+resource "aws_apigatewayv2_api" "cors_proxy" {
+  name          = "caboose-cors-proxy"
+  protocol_type = "HTTP"
+
+  cors_configuration {
+    allow_origins     = ["*"]
+    allow_methods     = ["GET", "OPTIONS"]
+    allow_headers     = ["*"]
+    expose_headers    = ["*"]
+    max_age           = 300
+    allow_credentials = false
+  }
+
+  tags = local.common_tags
+}
+
+# Integration with Chuck Norris API
+resource "aws_apigatewayv2_integration" "chuck_norris_api" {
+  api_id                 = aws_apigatewayv2_api.cors_proxy.id
+  integration_type       = "HTTP_PROXY"
+  integration_method     = "GET"
+  integration_uri        = "https://api.chucknorris.io"
+  payload_format_version = "1.0"
+}
+
+# Route to /jokes/*
+resource "aws_apigatewayv2_route" "chuck_norris_jokes" {
+  api_id    = aws_apigatewayv2_api.cors_proxy.id
+  route_key = "GET /jokes/{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.chuck_norris_api.id}"
+}
+
+# Default stage
+resource "aws_apigatewayv2_stage" "cors_proxy" {
+  api_id      = aws_apigatewayv2_api.cors_proxy.id
+  name        = "$default"
+  auto_deploy = true
+
+  tags = local.common_tags
+}
+
+# Output the CORS proxy URL for environment variables
+output "cors_proxy_endpoint" {
+  description = "CORS proxy endpoint for Chuck Norris API"
+  value       = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}"
 }

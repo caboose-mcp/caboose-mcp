@@ -1,0 +1,31 @@
+meta {
+  name: env_fix
+  type: http
+  seq: 56
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 56,
+    "method": "tools/call",
+    "params": {
+      "name": "env_fix",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Install one or all missing dev tools. Runs the appropriate install command (apt-get / pip / npm). Gated by the audit system when gate mode is enabled.
+}

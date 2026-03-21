@@ -1,0 +1,31 @@
+meta {
+  name: sandbox_run
+  type: http
+  seq: 87
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 87,
+    "method": "tools/call",
+    "params": {
+      "name": "sandbox_run",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Clone a directory to a temp sandbox and run a command inside it. Returns a diff showing what the command changed, without touching the real directory.
+}

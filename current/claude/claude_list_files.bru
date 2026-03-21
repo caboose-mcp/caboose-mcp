@@ -1,0 +1,31 @@
+meta {
+  name: claude_list_files
+  type: http
+  seq: 37
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 37,
+    "method": "tools/call",
+    "params": {
+      "name": "claude_list_files",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  List files under CLAUDE_DIR, optionally within a subdirectory.
+}

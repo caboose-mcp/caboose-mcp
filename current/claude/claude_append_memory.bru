@@ -1,0 +1,31 @@
+meta {
+  name: claude_append_memory
+  type: http
+  seq: 36
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 36,
+    "method": "tools/call",
+    "params": {
+      "name": "claude_append_memory",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Append content to CLAUDE.md or a named memory file under CLAUDE_DIR.
+}

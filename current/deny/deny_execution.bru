@@ -1,0 +1,31 @@
+meta {
+  name: deny_execution
+  type: http
+  seq: 47
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 47,
+    "method": "tools/call",
+    "params": {
+      "name": "deny_execution",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Deny a gated tool execution. The pending entry is marked denied and discarded.
+}

@@ -1,0 +1,31 @@
+meta {
+  name: audit_config
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 6,
+    "method": "tools/call",
+    "params": {
+      "name": "audit_config",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  View or modify the audit gate configuration. Controls which tools require approval before executing.
+}

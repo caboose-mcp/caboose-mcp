@@ -1,0 +1,31 @@
+meta {
+  name: si_reject
+  type: http
+  seq: 101
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 101,
+    "method": "tools/call",
+    "params": {
+      "name": "si_reject",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Reject and discard a pending suggestion.
+}

@@ -1,0 +1,31 @@
+meta {
+  name: si_apply
+  type: http
+  seq: 97
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 97,
+    "method": "tools/call",
+    "params": {
+      "name": "si_apply",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Apply an approved suggestion by running its apply_cmd.
+}

@@ -1,0 +1,31 @@
+meta {
+  name: setup_github_mcp_info
+  type: http
+  seq: 93
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 93,
+    "method": "tools/call",
+    "params": {
+      "name": "setup_github_mcp_info",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Explains how to use GitHub's official MCP server alongside caboose-mcp, and when each approach is better.
+}

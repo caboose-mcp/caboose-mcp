@@ -1,0 +1,31 @@
+meta {
+  name: mermaid_generate
+  type: http
+  seq: 75
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 75,
+    "method": "tools/call",
+    "params": {
+      "name": "mermaid_generate",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Generate a Mermaid diagram. type: db_schema | docker | flowchart | sequence
+}

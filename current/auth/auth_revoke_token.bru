@@ -1,0 +1,31 @@
+meta {
+  name: auth_revoke_token
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 13,
+    "method": "tools/call",
+    "params": {
+      "name": "auth_revoke_token",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Revoke a JWT token by its JTI. Takes effect immediately on next request.
+}

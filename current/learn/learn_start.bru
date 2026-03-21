@@ -1,0 +1,31 @@
+meta {
+  name: learn_start
+  type: http
+  seq: 72
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 72,
+    "method": "tools/call",
+    "params": {
+      "name": "learn_start",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Start or resume a language learning session. Returns session context for the AI to use when generating exercises.
+}

@@ -1,0 +1,31 @@
+meta {
+  name: source_check
+  type: http
+  seq: 110
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 110,
+    "method": "tools/call",
+    "params": {
+      "name": "source_check",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Check one or all sources for new activity since last check. Returns a summary of updates.
+}

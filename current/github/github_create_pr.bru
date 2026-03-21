@@ -1,0 +1,31 @@
+meta {
+  name: github_create_pr
+  type: http
+  seq: 63
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 63,
+    "method": "tools/call",
+    "params": {
+      "name": "github_create_pr",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Create a GitHub pull request using the gh CLI.
+}

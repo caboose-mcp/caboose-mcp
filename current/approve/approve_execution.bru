@@ -1,0 +1,31 @@
+meta {
+  name: approve_execution
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 5,
+    "method": "tools/call",
+    "params": {
+      "name": "approve_execution",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Approve a gated tool execution. The tool will run immediately and its output returned.
+}

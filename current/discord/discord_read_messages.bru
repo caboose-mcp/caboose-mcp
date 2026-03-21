@@ -1,0 +1,31 @@
+meta {
+  name: discord_read_messages
+  type: http
+  seq: 50
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 50,
+    "method": "tools/call",
+    "params": {
+      "name": "discord_read_messages",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Read recent messages from a Discord channel.
+}

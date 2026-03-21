@@ -1,0 +1,31 @@
+meta {
+  name: chezmoi_apply
+  type: http
+  seq: 26
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 26,
+    "method": "tools/call",
+    "params": {
+      "name": "chezmoi_apply",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Apply chezmoi source state to the home directory.
+}

@@ -1,0 +1,31 @@
+meta {
+  name: cloudsync_push
+  type: http
+  seq: 43
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 43,
+    "method": "tools/call",
+    "params": {
+      "name": "cloudsync_push",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Encrypt the config bundle and upload it to the configured backend. Prompts for passphrase.
+}

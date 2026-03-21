@@ -1,0 +1,31 @@
+meta {
+  name: greptile_query
+  type: http
+  seq: 67
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 67,
+    "method": "tools/call",
+    "params": {
+      "name": "greptile_query",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Query a repository using the Greptile API for code search and Q&A.
+}

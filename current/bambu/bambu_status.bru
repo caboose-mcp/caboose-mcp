@@ -1,0 +1,31 @@
+meta {
+  name: bambu_status
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 16,
+    "method": "tools/call",
+    "params": {
+      "name": "bambu_status",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Get current status from a Bambu A1 printer over MQTT.
+}

@@ -1,0 +1,31 @@
+meta {
+  name: chezmoi_data
+  type: http
+  seq: 27
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 27,
+    "method": "tools/call",
+    "params": {
+      "name": "chezmoi_data",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Show all chezmoi template data variables (hostname, username, os, custom data, etc.).
+}

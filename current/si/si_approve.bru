@@ -1,0 +1,31 @@
+meta {
+  name: si_approve
+  type: http
+  seq: 98
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 98,
+    "method": "tools/call",
+    "params": {
+      "name": "si_approve",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Approve a pending suggestion (and optionally auto-apply it).
+}

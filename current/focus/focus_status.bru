@@ -1,0 +1,31 @@
+meta {
+  name: focus_status
+  type: http
+  seq: 62
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 62,
+    "method": "tools/call",
+    "params": {
+      "name": "focus_status",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Show the current focus session: goal, time remaining, and number of parked items.
+}

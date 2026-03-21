@@ -1,0 +1,31 @@
+meta {
+  name: calendar_auth_url
+  type: http
+  seq: 20
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 20,
+    "method": "tools/call",
+    "params": {
+      "name": "calendar_auth_url",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Generate the Google Calendar OAuth2 consent URL. Visit it in a browser, then paste the code into calendar_auth_complete.
+}

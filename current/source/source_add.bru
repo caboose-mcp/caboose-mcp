@@ -1,0 +1,31 @@
+meta {
+  name: source_add
+  type: http
+  seq: 109
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 109,
+    "method": "tools/call",
+    "params": {
+      "name": "source_add",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Add a source to watch. Types: github_repo, github_user, rss, url, npm, pypi
+}

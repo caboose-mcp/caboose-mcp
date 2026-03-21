@@ -1,0 +1,31 @@
+meta {
+  name: github_search_code
+  type: http
+  seq: 65
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 65,
+    "method": "tools/call",
+    "params": {
+      "name": "github_search_code",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Search GitHub code using the gh CLI.
+}

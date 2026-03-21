@@ -1,0 +1,31 @@
+meta {
+  name: cloudsync_env_list
+  type: http
+  seq: 40
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 40,
+    "method": "tools/call",
+    "params": {
+      "name": "cloudsync_env_list",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  List env var keys stored in the sync bundle. Values are redacted for safety.
+}

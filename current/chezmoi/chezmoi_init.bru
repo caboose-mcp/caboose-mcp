@@ -1,0 +1,31 @@
+meta {
+  name: chezmoi_init
+  type: http
+  seq: 31
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 31,
+    "method": "tools/call",
+    "params": {
+      "name": "chezmoi_init",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Initialise chezmoi, optionally cloning dotfiles from a git repo.
+}

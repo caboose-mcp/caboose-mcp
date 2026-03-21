@@ -1,0 +1,31 @@
+meta {
+  name: chezmoi_update
+  type: http
+  seq: 34
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 34,
+    "method": "tools/call",
+    "params": {
+      "name": "chezmoi_update",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Pull the latest changes from the chezmoi source repo and apply them.
+}

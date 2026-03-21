@@ -1,0 +1,31 @@
+meta {
+  name: discord_list_channels
+  type: http
+  seq: 48
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 48,
+    "method": "tools/call",
+    "params": {
+      "name": "discord_list_channels",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  List channels in a Discord guild.
+}

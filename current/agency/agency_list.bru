@@ -1,0 +1,31 @@
+meta {
+  name: agency_list
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 3,
+    "method": "tools/call",
+    "params": {
+      "name": "agency_list",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  List all loaded agent persona specs from ~/.claude/agents/. Each spec represents a domain-expert persona (Backend Engineer, Product Manager, etc.) used for context-aware tool hints.
+}

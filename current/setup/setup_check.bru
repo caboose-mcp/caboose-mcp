@@ -1,0 +1,31 @@
+meta {
+  name: setup_check
+  type: http
+  seq: 92
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 92,
+    "method": "tools/call",
+    "params": {
+      "name": "setup_check",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Check the current caboose-mcp configuration and report which features are enabled, disabled, or misconfigured.
+}

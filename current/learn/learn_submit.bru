@@ -1,0 +1,31 @@
+meta {
+  name: learn_submit
+  type: http
+  seq: 74
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 74,
+    "method": "tools/call",
+    "params": {
+      "name": "learn_submit",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Record an answer and feedback for the current exercise.
+}

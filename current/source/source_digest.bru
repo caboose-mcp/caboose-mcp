@@ -1,0 +1,31 @@
+meta {
+  name: source_digest
+  type: http
+  seq: 111
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 111,
+    "method": "tools/call",
+    "params": {
+      "name": "source_digest",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Check all sources and post a digest of updates to Slack and/or Discord.
+}

@@ -1,0 +1,31 @@
+meta {
+  name: chezmoi_add
+  type: http
+  seq: 25
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 25,
+    "method": "tools/call",
+    "params": {
+      "name": "chezmoi_add",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Add a file or directory to chezmoi management (copies it into the source state).
+}

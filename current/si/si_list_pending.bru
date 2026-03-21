@@ -1,0 +1,31 @@
+meta {
+  name: si_list_pending
+  type: http
+  seq: 100
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 100,
+    "method": "tools/call",
+    "params": {
+      "name": "si_list_pending",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  List pending improvement suggestions awaiting approval.
+}

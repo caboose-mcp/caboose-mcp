@@ -1,0 +1,31 @@
+meta {
+  name: si_scan_dir
+  type: http
+  seq: 103
+}
+
+post {
+  url: {{baseUrl}}/mcp
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{authToken}}
+}
+
+body:json {
+  {
+    "jsonrpc": "2.0",
+    "id": 103,
+    "method": "tools/call",
+    "params": {
+      "name": "si_scan_dir",
+      "arguments": {}
+    }
+  }
+}
+
+docs {
+  Scan a directory for tech stack, code quality hints, and outdated dependencies.
+}
