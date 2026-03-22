@@ -28,11 +28,10 @@ type sandboxResponse struct {
 // sandboxAllowlist defines the tools that are callable without authentication.
 // These tools are read-only with CORS support via AWS API Gateway proxy.
 var sandboxAllowlist = map[string]bool{
-	"calendar_today":    true,
-	"joke":              true,
-	"dad_joke":          true,
-	"chuck_norris_joke": true,
-	"mermaid_generate":  true,
+	"calendar_today":   true,
+	"joke":             true,
+	"dad_joke":         true,
+	"mermaid_generate": true,
 }
 
 // ---- Simple in-memory rate limiter ----
@@ -143,8 +142,6 @@ func executeSandboxTool(ctx context.Context, cfg *config.Config, toolName string
 		result, err = jokeForSandbox(ctx, cfg, req)
 	case "dad_joke":
 		result, err = dadJokeForSandbox(ctx, cfg, req)
-	case "chuck_norris_joke":
-		result, err = chuckNorrisJokeForSandbox(ctx, cfg, req)
 	case "mermaid_generate":
 		result, err = mermaidForSandbox(ctx, cfg, req)
 	default:
@@ -169,10 +166,6 @@ func jokeForSandbox(ctx context.Context, cfg *config.Config, req mcp.CallToolReq
 
 func dadJokeForSandbox(ctx context.Context, cfg *config.Config, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return tools.DadJokePublic(ctx, cfg, req)
-}
-
-func chuckNorrisJokeForSandbox(ctx context.Context, cfg *config.Config, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return tools.ChuckNorrisJokePublic(ctx, cfg, req)
 }
 
 func mermaidForSandbox(ctx context.Context, cfg *config.Config, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {

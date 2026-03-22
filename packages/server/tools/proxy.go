@@ -9,7 +9,7 @@ import (
 // This allows both hosted (with CORS proxy) and local development (direct API) to work.
 //
 // Parameters:
-//   - apiName: name of the API (e.g., "slack", "discord", "chuck_norris")
+//   - apiName: name of the API (e.g., "slack", "discord")
 //   - directURL: the direct API endpoint (e.g., "https://slack.com/api")
 //
 // Returns the appropriate URL to use for requests.

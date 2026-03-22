@@ -1,27 +1,18 @@
 package tools
 
-// jokes — random joke dispensary for programming, dad jokes, and Chuck Norris facts.
+// jokes — random joke dispensary for programming and dad jokes.
 //
-// joke and dad_joke use hardcoded local lists (offline).
-// chuck_norris_joke calls api.chucknorris.io via CORS proxy (when hosted) or direct API (when local).
+// joke and dad_joke use hardcoded local lists (offline, no external dependencies).
 //
 // Tools:
-//   joke            — tell a random programming or nerdy joke (hardcoded)
-//   dad_joke        — tell a random dad joke (hardcoded, groaning is mandatory)
-//   chuck_norris_joke — fetch a random Chuck Norris joke from api.chucknorris.io (via proxy or direct)
+//   joke     — tell a random programming or nerdy joke (hardcoded)
+//   dad_joke — tell a random dad joke (hardcoded, groaning is mandatory)
 
 import (
 	"context"
 	"crypto/rand"
-	"encoding/json"
 	"fmt"
-	"io"
 	"math/big"
-	"net/http"
-	"net/url"
-	"os"
-	"strings"
-	"time"
 
 	"github.com/caboose-mcp/server/config"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -36,11 +27,6 @@ func RegisterJokes(s *server.MCPServer, cfg *config.Config) {
 	s.AddTool(mcp.NewTool("dad_joke",
 		mcp.WithDescription("Tell a random dad joke. Groaning is mandatory."),
 	), dadJokeHandler(cfg))
-
-	s.AddTool(mcp.NewTool("chuck_norris_joke",
-		mcp.WithDescription("Fetch a random Chuck Norris joke from the api.chucknorris.io API"),
-		mcp.WithString("category", mcp.Description("Optional category of joke (e.g. 'career', 'celebrity', 'explicit'). If not specified, returns a random joke.")),
-	), newChuckNorrisJokeHandler(cfg, nil, ""))
 }
 
 func jokeHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -90,78 +76,3 @@ func dadJokeHandler(cfg *config.Config) func(context.Context, mcp.CallToolReques
 	}
 }
 
-// ChuckNorrisJoke represents the API response from Chuck Norris API.
-type ChuckNorrisJoke struct {
-	Value      string   `json:"value"`
-	ID         string   `json:"id"`
-	URL        string   `json:"url"`
-	Categories []string `json:"categories"`
-}
-
-// newChuckNorrisJokeHandler returns a handler for the chuck_norris_joke tool.
-// Uses CORS proxy if available (CHUCK_NORRIS_PROXY env var), falls back to direct API for local dev.
-// baseURL is used for testing purposes; if non-empty, it overrides the default API URL.
-func newChuckNorrisJokeHandler(cfg *config.Config, httpClient *http.Client, baseURL string) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	if httpClient == nil {
-		httpClient = &http.Client{Timeout: 10 * time.Second}
-	}
-
-	// Default API endpoint
-	directAPIURL := "https://api.chucknorris.io"
-	// If baseURL is provided (for testing), use it instead of default
-	if baseURL != "" {
-		directAPIURL = baseURL
-	}
-
-	return func(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-		category := req.GetString("category", "")
-
-		// Determine which API endpoint to use: proxy or direct
-		// CHUCK_NORRIS_PROXY will be set when deployed on AWS with CORS proxy
-		// For local dev, it won't be set and we'll use the direct API (or test mock)
-		var apiURL string
-		if proxyURL := os.Getenv("CHUCK_NORRIS_PROXY"); proxyURL != "" {
-			apiURL = proxyURL + "/random"
-		} else {
-			apiURL = directAPIURL + "/jokes/random"
-		}
-
-		if category != "" {
-			apiURL += "?category=" + url.QueryEscape(category)
-		}
-
-		// Make the HTTP request
-		httpReq, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
-		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Error building request: %v", err)), nil
-		}
-
-		resp, err := httpClient.Do(httpReq)
-		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Error fetching joke: %v", err)), nil
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
-			return mcp.NewToolResultError(fmt.Sprintf("API error (status %d): %s", resp.StatusCode, string(body))), nil
-		}
-
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Error reading response: %v", err)), nil
-		}
-
-		var joke ChuckNorrisJoke
-		if err := json.Unmarshal(body, &joke); err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Error parsing joke: %v", err)), nil
-		}
-
-		result := fmt.Sprintf("Chuck Norris Joke:\n\n%s", joke.Value)
-		if len(joke.Categories) > 0 {
-			result = fmt.Sprintf("Chuck Norris Joke (%s):\n\n%s", strings.Join(joke.Categories, ", "), joke.Value)
-		}
-
-		return mcp.NewToolResultText(result), nil
-	}
-}
