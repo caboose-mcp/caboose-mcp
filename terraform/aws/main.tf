@@ -487,8 +487,8 @@ resource "aws_ecs_task_definition" "bots" {
   family                   = "fafb-bots"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = 256
-  memory                   = 512
+  cpu                      = 512
+  memory                   = 1024
   execution_role_arn       = aws_iam_role.ecs_exec.arn
   task_role_arn            = aws_iam_role.ecs_task.arn
 
@@ -536,8 +536,8 @@ resource "aws_ecs_task_definition" "serve" {
   family                   = "fafb-serve"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = 256
-  memory                   = 512
+  cpu                      = 512
+  memory                   = 1024
   execution_role_arn       = aws_iam_role.ecs_exec.arn
   task_role_arn            = aws_iam_role.ecs_task.arn
 
