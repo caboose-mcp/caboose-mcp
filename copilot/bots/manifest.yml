@@ -1,0 +1,46 @@
+# The manifest for the "bots" service.
+# Read the full specification for the "Backend Service" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/backend-service/
+
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
+name: bots
+type: Backend Service
+
+# Your service is reachable at "http://bots.${COPILOT_SERVICE_DISCOVERY_ENDPOINT}:8080" but is not public.
+
+# Configuration for your containers and service.
+image:
+  # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
+  build:
+    dockerfile: docker/Dockerfile
+    context: .
+
+# Override the default entrypoint to run the Discord bot
+command: ["--bots"]
+
+variables:
+  DISCORD_BOT_CHANNELS: "1483765553775640680"
+  GITHUB_ORGS: "caboose-mcp"
+
+secrets:
+  ANTHROPIC_API_KEY: /copilot/bots/ANTHROPIC_API_KEY
+  DISCORD_TOKEN: /copilot/bots/DISCORD_TOKEN
+  SLACK_TOKEN: /copilot/bots/SLACK_TOKEN
+  SLACK_APP_TOKEN: /copilot/bots/SLACK_APP_TOKEN
+
+cpu: 512       # Number of CPU units for the task.
+memory: 1024   # Amount of memory in MiB used by the task.
+count: 1       # Number of tasks that should be running in your service.
+exec: true     # Enable running commands in your container.
+network:
+  connect: false # Disable Service Connect (bot doesn't need internal service discovery).
+
+# storage:
+  # readonly_fs: true       # Limit to read-only access to mounted root filesystems.
+
+# You can override any of the values defined above by environment.
+#environments:
+#  test:
+#    count: 2               # Number of tasks to run for the "test" environment.
+#    deployment:            # The deployment strategy for the "test" environment.
+#       rolling: 'recreate' # Stops existing tasks before new ones are started for faster deployments.

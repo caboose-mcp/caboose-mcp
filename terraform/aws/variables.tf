@@ -51,3 +51,9 @@ variable "route53_zone_id" {
   type        = string
   default     = ""
 }
+
+variable "github_orgs" {
+  description = "Comma-separated GitHub org names for org health monitoring."
+  type        = string
+  default     = "caboose-mcp"
+}

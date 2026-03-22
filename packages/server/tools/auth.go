@@ -418,7 +418,8 @@ func RegisterAuth(s *server.MCPServer, cfg *config.Config) {
 	s.AddTool(mcp.NewTool("auth_create_token",
 		mcp.WithDescription("Create a JWT token with specific tool access. Returns a magic link valid for 15 minutes that can be exchanged for a JWT."),
 		mcp.WithString("label", mcp.Required(), mcp.Description("Friendly name for this token (e.g. 'vscode-alice')")),
-		mcp.WithString("tools", mcp.Description("Comma-separated tool names this token can access. Empty means all tools.")),
+		mcp.WithString("profile", mcp.Description("Named client profile: vscode, discord, or api. Expands to a predefined tool allowlist. Ignored if 'tools' is also set.")),
+		mcp.WithString("tools", mcp.Description("Comma-separated tool names this token can access. Empty with no profile means all tools.")),
 		mcp.WithString("google_scopes", mcp.Description("Comma-separated Google scopes ('calendar' = readonly, 'calendar.full' = full access)")),
 		mcp.WithString("discord_scopes", mcp.Description("Comma-separated Discord bot scopes ('discord' = 'discord_bot')")),
 		mcp.WithString("slack_scopes", mcp.Description("Comma-separated Slack bot scopes ('slack' = 'slack_bot')")),
@@ -454,6 +455,10 @@ func RegisterAuth(s *server.MCPServer, cfg *config.Config) {
 	s.AddTool(mcp.NewTool("discord_oauth_login",
 		mcp.WithDescription("Generate a Discord OAuth login URL. Direct the user to this URL to authenticate and receive a JWT token linked to their Discord identity."),
 	), discordOAuthLoginHandler(cfg))
+
+	s.AddTool(mcp.NewTool("auth_list_profiles",
+		mcp.WithDescription("List available client profiles and their tool allowlists. Profiles can be used with auth_create_token to automatically grant a predefined tool set."),
+	), authListProfilesHandler())
 }
 
 func authCreateTokenHandler(cfg *config.Config) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -468,6 +473,17 @@ func authCreateTokenHandler(cfg *config.Config) func(context.Context, mcp.CallTo
 		}
 
 		toolList := splitCSV(req.GetString("tools", ""))
+		// If no explicit tools list, try profile lookup
+		if len(toolList) == 0 {
+			profileName := req.GetString("profile", "")
+			if profileName != "" {
+				if profileTools, ok := ToolsForProfile(profileName); ok {
+					toolList = profileTools
+				} else {
+					return mcp.NewToolResultError(fmt.Sprintf("unknown profile %q; valid: vscode, discord, api", profileName)), nil
+				}
+			}
+		}
 		googleScopeList := expandGoogleScopes(splitCSV(req.GetString("google_scopes", "")))
 		discordScopeList := expandDiscordScopes(splitCSV(req.GetString("discord_scopes", "")))
 		slackScopeList := expandSlackScopes(splitCSV(req.GetString("slack_scopes", "")))
@@ -632,11 +648,19 @@ func authUnlinkIdentityHandler(cfg *config.Config) func(context.Context, mcp.Cal
 
 // CreateTokenCLI creates a token and prints the magic link to stdout.
 // Used by the auth:create CLI command in main.go.
-func CreateTokenCLI(cfg *config.Config, label, toolsStr, googleScopesStr, discordScopesStr, slackScopesStr string, expiresDays int) error {
+func CreateTokenCLI(cfg *config.Config, label, profile, toolsStr, googleScopesStr, discordScopesStr, slackScopesStr string, expiresDays int) error {
 	if expiresDays < 1 {
 		expiresDays = 30
 	}
 	toolList := splitCSV(toolsStr)
+	// If no explicit tools list, try profile lookup
+	if len(toolList) == 0 && profile != "" {
+		if profileTools, ok := ToolsForProfile(profile); ok {
+			toolList = profileTools
+		} else {
+			return fmt.Errorf("unknown profile %q; valid: vscode, discord, api", profile)
+		}
+	}
 	googleScopeList := expandGoogleScopes(splitCSV(googleScopesStr))
 	discordScopeList := expandDiscordScopes(splitCSV(discordScopesStr))
 	slackScopeList := expandSlackScopes(splitCSV(slackScopesStr))
@@ -863,5 +887,28 @@ URL: %s
 
 Note: This URL is valid for 10 minutes. The state token is stored in an httpOnly cookie for CSRF protection.
 `, discordStartURL, discordStartURL)), nil
+	}
+}
+
+func authListProfilesHandler() func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return func(_ context.Context, _ mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+		profiles := ListProfiles()
+		var sb strings.Builder
+		sb.WriteString("Available client profiles:\n\n")
+		for name, tools := range profiles {
+			sb.WriteString(fmt.Sprintf("**%s** (%d tools)\n", name, len(tools)))
+			for i, t := range tools {
+				if i > 0 && i%3 == 0 {
+					sb.WriteString("\n")
+				}
+				sb.WriteString(fmt.Sprintf("  • %s", t))
+				if i < len(tools)-1 {
+					sb.WriteString("\n")
+				}
+			}
+			sb.WriteString("\n\n")
+		}
+		sb.WriteString("Usage: auth_create_token(label=\"my-token\", profile=\"vscode\")\n")
+		return mcp.NewToolResultText(sb.String()), nil
 	}
 }
