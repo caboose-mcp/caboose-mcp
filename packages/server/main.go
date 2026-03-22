@@ -61,6 +61,7 @@ func main() {
 	case "auth:create":
 		fs := flag.NewFlagSet("auth:create", flag.ExitOnError)
 		label := fs.String("label", "", "Friendly name for the token (required)")
+		profileFlag := fs.String("profile", "", "Named client profile: vscode, discord, or api")
 		toolsFlag := fs.String("tools", "", "Comma-separated tool names (empty = all)")
 		scopes := fs.String("google-scopes", "", "Comma-separated Google scopes")
 		discordScopes := fs.String("discord-scopes", "", "Comma-separated Discord scopes")
@@ -68,10 +69,10 @@ func main() {
 		expires := fs.Int("expires", 30, "Days until token expires")
 		_ = fs.Parse(os.Args[2:])
 		if *label == "" {
-			fmt.Fprintln(os.Stderr, "usage: fafb auth:create --label <name> [--tools ...] [--google-scopes ...] [--discord-scopes ...] [--slack-scopes ...] [--expires N]")
+			fmt.Fprintln(os.Stderr, "usage: fafb auth:create --label <name> [--profile profile] [--tools ...] [--google-scopes ...] [--discord-scopes ...] [--slack-scopes ...] [--expires N]")
 			os.Exit(1)
 		}
-		if err := tools.CreateTokenCLI(cfg, *label, *toolsFlag, *scopes, *discordScopes, *slackScopes, *expires); err != nil {
+		if err := tools.CreateTokenCLI(cfg, *label, *profileFlag, *toolsFlag, *scopes, *discordScopes, *slackScopes, *expires); err != nil {
 			log.Fatal(err)
 		}
 

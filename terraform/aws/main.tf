@@ -515,6 +515,7 @@ resource "aws_ecs_task_definition" "bots" {
     ]
 
     environment = [
+      { name = "GITHUB_ORGS",          value = var.github_orgs },
       { name = "SLACK_BOT_CHANNELS",   value = var.slack_bot_channels },
       { name = "DISCORD_BOT_CHANNELS", value = var.discord_bot_channels },
       { name = "CORS_PROXY_URL",       value = aws_apigatewayv2_stage.cors_proxy.invoke_url },
