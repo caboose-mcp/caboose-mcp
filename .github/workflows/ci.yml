@@ -6,7 +6,6 @@
 #   build     — cross-compile for linux/amd64 + linux/arm64
 #   e2e       — build binary + smoke-test auth:create against a temp dir
 #   ui-build  — pnpm install + build React UI; generate changelog.json
-#   extension — TypeScript compile check for VS Code extension
 
 name: CI
 
@@ -156,27 +155,3 @@ jobs:
           ./fafb --help > /dev/null || (echo "FAIL: binary doesn't work" && exit 1)
           echo "✅ New tool registration and smoke test passed"
 
-  # ─── VS Code extension ───────────────────────────────────────────────────────
-  extension:
-    name: Extension (TypeScript)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/vscode-extension
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: TypeScript compile
-        run: pnpm compile

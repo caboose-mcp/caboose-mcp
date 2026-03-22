@@ -13,7 +13,6 @@ package tools
 //   health_report — CPU load, memory, disk, uptime, systemd services, Docker summary
 
 import (
-	"context"
 	"fmt"
 	"os/exec"
 	"strconv"
