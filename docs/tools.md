@@ -269,7 +269,6 @@
 |------|-------------|
 | `joke` | Tell a programming joke |
 | `dad_joke` | Tell a dad joke |
-| `chuck_norris_joke` | Fetch a random Chuck Norris joke from the API |
 
 ---
 

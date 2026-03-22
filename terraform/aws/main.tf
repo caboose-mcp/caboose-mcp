@@ -519,7 +519,6 @@ resource "aws_ecs_task_definition" "bots" {
       { name = "SLACK_BOT_CHANNELS",   value = var.slack_bot_channels },
       { name = "DISCORD_BOT_CHANNELS", value = var.discord_bot_channels },
       { name = "CORS_PROXY_URL",       value = aws_apigatewayv2_stage.cors_proxy.invoke_url },
-      { name = "CHUCK_NORRIS_PROXY",   value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/jokes" },
       { name = "SLACK_API_PROXY",      value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/slack/api" },
       { name = "DISCORD_API_PROXY",    value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/discord/api/v10" },
       { name = "GOOGLE_API_PROXY",     value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/google" },
@@ -567,7 +566,6 @@ resource "aws_ecs_task_definition" "serve" {
 
     environment = [
       { name = "CORS_PROXY_URL",       value = aws_apigatewayv2_stage.cors_proxy.invoke_url },
-      { name = "CHUCK_NORRIS_PROXY",   value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/jokes" },
       { name = "SLACK_API_PROXY",      value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/slack/api" },
       { name = "DISCORD_API_PROXY",    value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/discord/api/v10" },
       { name = "GOOGLE_API_PROXY",     value = "${aws_apigatewayv2_stage.cors_proxy.invoke_url}/google" },
@@ -639,22 +637,6 @@ resource "aws_apigatewayv2_api" "cors_proxy" {
   }
 
   tags = local.common_tags
-}
-
-# Integration with Chuck Norris API
-resource "aws_apigatewayv2_integration" "chuck_norris_api" {
-  api_id                 = aws_apigatewayv2_api.cors_proxy.id
-  integration_type       = "HTTP_PROXY"
-  integration_method     = "GET"
-  integration_uri        = "https://api.chucknorris.io"
-  payload_format_version = "1.0"
-}
-
-# Route to /jokes/*
-resource "aws_apigatewayv2_route" "chuck_norris_jokes" {
-  api_id    = aws_apigatewayv2_api.cors_proxy.id
-  route_key = "GET /jokes/{proxy+}"
-  target    = "integrations/${aws_apigatewayv2_integration.chuck_norris_api.id}"
 }
 
 # Default stage
