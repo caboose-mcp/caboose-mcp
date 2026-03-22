@@ -6,7 +6,6 @@
 #   build     — cross-compile for linux/amd64 + linux/arm64
 #   e2e       — build binary + smoke-test auth:create against a temp dir
 #   ui-build  — pnpm install + build React UI; generate changelog.json
-#   extension — TypeScript compile check for VS Code extension
 
 name: CI
 
