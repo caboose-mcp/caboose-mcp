@@ -7,6 +7,7 @@ package tools
 //   env_fix   — install one or all missing tools (gated by audit)
 
 import (
+	"context"
 	"fmt"
 	"os/exec"
 	"strings"
