@@ -205,6 +205,10 @@ func registerHostedTools(s *server.MCPServer, cfg *config.Config) {
 	tools.RegisterGamma(s, cfg) // Phase 4: Gamma presentation generation
 	tools.RegisterOrgHealth(s, cfg)   // org_health_status, org_health_refresh, org_health_next_pr
 	tools.RegisterOrgManager(s, cfg)  // org_list_repos, org_sync_status, org_pr_dashboard, org_pull_all, org_branch_cleanup
+	tools.RegisterOrgDepGraph(s, cfg) // dep_index, dep_graph, dep_search
+	tools.RegisterGitHubOrg(s, cfg)   // github_org_create_repo, github_org_create_team, github_org_add_team_repo, etc
+	tools.RegisterTerraformOps(s, cfg) // terraform_plan, terraform_apply, terraform_status
+	tools.RegisterCopilotReview(s, cfg) // copilot_request_review
 	registerCommonTools(s, cfg)
 }
 

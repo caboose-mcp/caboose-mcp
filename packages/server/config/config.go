@@ -49,6 +49,9 @@ type Config struct {
 	DiscordOAuthRedirectURI  string // DISCORD_OAUTH_REDIRECT_URI
 	// Org management — for health monitoring and directory scanning
 	GitHubOrgs []string // GITHUB_ORGS — comma-separated org names
+	// Terraform operations
+	TerraformDir string // TERRAFORM_DIR — path to terraform/aws directory
+	TofuBin      string // TOFU_BIN — terraform binary name (default: "tofu")
 }
 
 func Load() *Config {
@@ -96,6 +99,16 @@ func Load() *Config {
 		}
 	}
 
+	terraformDir := os.Getenv("TERRAFORM_DIR")
+	if terraformDir == "" {
+		terraformDir = filepath.Join(homeDir, "dev/fafb/terraform/aws")
+	}
+
+	tofuBin := os.Getenv("TOFU_BIN")
+	if tofuBin == "" {
+		tofuBin = "tofu"
+	}
+
 	return &Config{
 		ClaudeDir:               claudeDir,
 		GitHubToken:             githubToken,
@@ -126,6 +139,8 @@ func Load() *Config {
 		DiscordOAuthClientSecret: os.Getenv("DISCORD_OAUTH_CLIENT_SECRET"),
 		DiscordOAuthRedirectURI: os.Getenv("DISCORD_OAUTH_REDIRECT_URI"),
 		GitHubOrgs:              githubOrgs,
+		TerraformDir:            terraformDir,
+		TofuBin:                 tofuBin,
 	}
 }
 
