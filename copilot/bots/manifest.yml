@@ -14,6 +14,8 @@ image:
   build:
     dockerfile: docker/Dockerfile
     context: .
+  # Explicitly specify the ECR repository for the bots service
+  repository_name: fafb/bots
 
 # Override the default entrypoint to run the Discord bot
 command: ["--bots"]
