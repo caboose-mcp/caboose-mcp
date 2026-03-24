@@ -1,10 +1,8 @@
 package tools
 
 import (
-	"context"
 	"testing"
 
-	"github.com/caboose-mcp/server/config"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
