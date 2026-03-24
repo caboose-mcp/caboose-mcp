@@ -19,6 +19,7 @@ import (
 	"time"
 
 	anthropic "github.com/anthropics/anthropic-sdk-go"
+	"github.com/anthropics/anthropic-sdk-go/option"
 	"github.com/anthropics/anthropic-sdk-go/packages/param"
 	"github.com/caboose-mcp/server/config"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -79,7 +80,9 @@ func RunBotAgent(ctx context.Context, cfg *config.Config, provider ChatProvider,
 		ctx = WithAuthClaims(ctx, claims)
 	}
 
-	client := anthropic.NewClient()
+	client := anthropic.NewClient(
+		option.WithAPIKey(cfg.AnthropicAPIKey),
+	)
 	systemPrompt := fmt.Sprintf(botSystemPromptTemplate, provider.Name())
 
 	// Inject agency-agents context hint if a spec matches the user message
