@@ -68,33 +68,42 @@ jobs:
         working-directory: ui
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TOOL_COUNT: ${{ steps.extract.outputs.tool_count }}
+          COMMIT_SHA: ${{ github.sha }}
         run: |
           git config user.name "Claude Code Bot"
           git config user.email "claude-code@anthropic.com"
           BRANCH="chore/sync-tools-$(date +%s)"
           git checkout -b "$BRANCH"
           git add -A
-          git commit -m "chore: sync ${{ steps.extract.outputs.tool_count }} tools from caboose-mcp
+          cat > /tmp/commit_msg.txt << 'EOF'
+          chore: sync $TOOL_COUNT tools from caboose-mcp
 
-- Auto-generated from caboose-mcp tool definitions
-- Tool count: ${{ steps.extract.outputs.tool_count }}
-- Updated: $(date)
+          Auto-generated from caboose-mcp tool definitions
+          Tool count: $TOOL_COUNT
+          Updated: $(date)
 
-🤖 Automated sync"
+          🤖 Automated sync
+          EOF
+          git commit -F /tmp/commit_msg.txt
           git push origin "$BRANCH"
 
+          cat > /tmp/pr_body.txt << 'EOF'
+          Automatic tool synchronization from caboose-mcp
+
+          **Changes:**
+          - Tool count: $TOOL_COUNT
+          - Synced at: $(date)
+          - Source commit: $COMMIT_SHA
+
+          This PR was auto-generated. Once CI passes, it will auto-merge and trigger deployment.
+
+          🤖 Automated by Claude Code
+          EOF
+
           gh pr create \
-            --title "chore: Sync ${{ steps.extract.outputs.tool_count }} tools from caboose-mcp" \
-            --body "Automatic tool synchronization from caboose-mcp
-
-**Changes:**
-- Tool count: ${{ steps.extract.outputs.tool_count }}
-- Synced at: $(date)
-- Source commit: ${{ github.sha }}
-
-This PR was auto-generated. Once CI passes, it will auto-merge and trigger deployment.
-
-🤖 Automated by Claude Code" \
+            --title "chore: Sync $TOOL_COUNT tools from caboose-mcp" \
+            --body-file /tmp/pr_body.txt \
             --base main \
             --head "$BRANCH" \
             --label "auto-sync,tools"
