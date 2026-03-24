@@ -1,11 +1,11 @@
 # Tool Reference
 
-118 tools across three tiers:
-- **Hosted** (68 tools) — Cloud-safe, run on ECS (`--serve-hosted`)
+121 tools across three tiers:
+- **Hosted** (71 tools) — Cloud-safe, run on ECS (`--serve-hosted`)
 - **Local** (25 tools) — Require the Pi (`--serve-local`) for hardware/Docker access
 - **Common** (3 tools) — Available everywhere (jokes)
 
-**Combined** (all 118) — `--serve` / stdio modes.
+**Combined** (all 121) — `--serve` / stdio modes.
 
 ---
 
@@ -261,6 +261,19 @@
 | `greptile_index` | Trigger Greptile to index a repository |
 
 **Requires:** `GREPTILE_API_KEY`
+
+---
+
+### Org Dependency Graph
+| Tool | Description |
+|------|-------------|
+| `dep_index` | Scan all org repos, parse `go.mod` and `package.json`, build dependency cache |
+| `dep_graph` | Render dependency relationships as a Mermaid diagram (intra-org or with external deps) |
+| `dep_search` | Search the dependency cache for repos using a specific package/module |
+
+**Stores:** `~/.claude/dep-graph.json`
+
+**Requires:** `GITHUB_ORGS` env var (comma-separated org names) and `gh` CLI authenticated
 
 ---
 
