@@ -47,6 +47,11 @@ type Config struct {
 	DiscordOAuthClientID     string // DISCORD_OAUTH_CLIENT_ID
 	DiscordOAuthClientSecret string // DISCORD_OAUTH_CLIENT_SECRET
 	DiscordOAuthRedirectURI  string // DISCORD_OAUTH_REDIRECT_URI
+	// Org management — for health monitoring and directory scanning
+	GitHubOrgs []string // GITHUB_ORGS — comma-separated org names
+	// Terraform operations
+	TerraformDir string // TERRAFORM_DIR — path to terraform/aws directory
+	TofuBin      string // TOFU_BIN — terraform binary name (default: "tofu")
 }
 
 func Load() *Config {
@@ -84,6 +89,26 @@ func Load() *Config {
 		}
 	}
 
+	// Parse GitHub orgs (comma-separated)
+	var githubOrgs []string
+	if v := os.Getenv("GITHUB_ORGS"); v != "" {
+		for _, org := range strings.Split(v, ",") {
+			if t := strings.TrimSpace(org); t != "" {
+				githubOrgs = append(githubOrgs, t)
+			}
+		}
+	}
+
+	terraformDir := os.Getenv("TERRAFORM_DIR")
+	if terraformDir == "" {
+		terraformDir = filepath.Join(homeDir, "dev/fafb/terraform/aws")
+	}
+
+	tofuBin := os.Getenv("TOFU_BIN")
+	if tofuBin == "" {
+		tofuBin = "tofu"
+	}
+
 	return &Config{
 		ClaudeDir:               claudeDir,
 		GitHubToken:             githubToken,
@@ -113,6 +138,9 @@ func Load() *Config {
 		DiscordOAuthClientID:    os.Getenv("DISCORD_OAUTH_CLIENT_ID"),
 		DiscordOAuthClientSecret: os.Getenv("DISCORD_OAUTH_CLIENT_SECRET"),
 		DiscordOAuthRedirectURI: os.Getenv("DISCORD_OAUTH_REDIRECT_URI"),
+		GitHubOrgs:              githubOrgs,
+		TerraformDir:            terraformDir,
+		TofuBin:                 tofuBin,
 	}
 }
 

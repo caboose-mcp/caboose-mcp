@@ -30,6 +30,19 @@ You exist at the intersection of Westeros, Middle-earth, and the depths of the L
 
 You help your companion conquer their greatest foes: bugs are monsters, PRs are sieges, code reviews are councils of wisdom, refactors are heroic quests.
 
+**🏰 Infrastructure Architect Mode:**
+When your companion asks about GitHub org or AWS infrastructure changes:
+1. **terraform_plan**: Always call this FIRST to preview changes. Read the diff carefully.
+2. **copilot_request_review**: Submit the plan to Copilot for architectural review. Wait for feedback.
+3. **terraform_apply**: Only execute after your companion says "approve" or confirms the change.
+- NEVER apply terraform changes without explicit approval after Copilot review.
+- When user says 'approve', 'yes', or 'apply' after you've posted a plan → call terraform_apply with the plan ID.
+- Store plan IDs in memory so you can reference them later.
+
+**GitHub Org Operations:**
+- Always confirm before creating repos, teams, or modifying secrets.
+- Use github_org_* tools to manage caboose-mcp organization resources.
+
 You are speaking through **%s**. Format ALL responses for this platform:
 - **bold** for battle-critical info, command names, and emphasis
 - *italic* for lore, wisdom, and dramatic flair
@@ -404,6 +417,102 @@ func buildDevTools(cfg *config.Config) []botTool {
 				}, []string{"repo", "title", "head"}),
 			execute: func(ctx context.Context, args map[string]any) (string, error) {
 				return invokeHandler(ctx, githubCreatePRHandler(cfg), args)
+			},
+		},
+
+		// ── GitHub Org Management ────────────────────────────────────────────
+		{
+			def: tool("github_org_create_repo", "Create a private repository in the caboose-mcp GitHub organization.",
+				map[string]any{
+					"name":            prop("string", "Repository name (lowercase, hyphens OK)"),
+					"description":     prop("string", "Short description (optional)"),
+					"include_readme":  prop("boolean", "Include README.md (optional)"),
+				}, []string{"name"}),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, githubOrgCreateRepoHandler(cfg), args)
+			},
+		},
+		{
+			def: tool("github_org_create_team", "Create a team in the caboose-mcp GitHub organization.",
+				map[string]any{
+					"name":        prop("string", "Team name (e.g. 'backend', 'devops')"),
+					"description": prop("string", "Team description (optional)"),
+				}, []string{"name"}),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, githubOrgCreateTeamHandler(cfg), args)
+			},
+		},
+		{
+			def: tool("github_org_add_team_repo", "Add a repository to a team in caboose-mcp org.",
+				map[string]any{
+					"team_slug":   prop("string", "Team slug (lowercase, hyphens)"),
+					"repo_owner":  prop("string", "Repo owner (usually caboose-mcp)"),
+					"repo_name":   prop("string", "Repository name"),
+					"permission":  prop("string", "Permission level: pull, triage, push, admin (default: push)"),
+				}, []string{"team_slug", "repo_owner", "repo_name"}),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, githubOrgAddTeamRepoHandler(cfg), args)
+			},
+		},
+		{
+			def: tool("github_org_set_secret", "Set an organization secret in caboose-mcp.",
+				map[string]any{
+					"name":  prop("string", "Secret name (SCREAMING_SNAKE_CASE)"),
+					"value": prop("string", "Secret value"),
+				}, []string{"name", "value"}),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, githubOrgSetSecretHandler(cfg), args)
+			},
+		},
+		{
+			def: tool("github_org_create_webhook", "Create an organization webhook in caboose-mcp.",
+				map[string]any{
+					"url":    prop("string", "Webhook payload URL"),
+					"events": prop("string", "Comma-separated events: push,pull_request,release (default: push)"),
+					"active": prop("boolean", "Webhook enabled (default: true)"),
+				}, []string{"url"}),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, githubOrgCreateWebhookHandler(cfg), args)
+			},
+		},
+
+		// ── Terraform Infrastructure ──────────────────────────────────────────
+		{
+			def: tool("terraform_plan", "Generate a Terraform plan for proposed AWS infrastructure changes.",
+				map[string]any{
+					"description": prop("string", "What resource(s) to create/modify (e.g. 'S3 bucket for logs')"),
+					"hcl_patch":   prop("string", "HCL code snippet to add to main.tf (optional)"),
+				}, []string{"description"}),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, terraformPlanHandler(cfg), args)
+			},
+		},
+		{
+			def: tool("terraform_apply", "Apply a previously planned Terraform change (after approval).",
+				map[string]any{
+					"plan_id": prop("string", "Plan ID from terraform_plan output"),
+				}, []string{"plan_id"}),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, terraformApplyHandler(cfg), args)
+			},
+		},
+		{
+			def: tool("terraform_status", "Show current Terraform state summary (resources, counts).", map[string]any{}, nil),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, terraformStatusHandler(cfg), args)
+			},
+		},
+
+		// ── Copilot Architectural Review ──────────────────────────────────────
+		{
+			def: tool("copilot_request_review", "Create a draft PR with proposed changes and request Copilot review.",
+				map[string]any{
+					"title":       prop("string", "PR title (e.g. 'Terraform: Add S3 logging bucket')"),
+					"description": prop("string", "PR description including the proposed changes"),
+					"plan_id":     prop("string", "Terraform plan ID for tracking (optional)"),
+				}, []string{"title", "description"}),
+			execute: func(ctx context.Context, args map[string]any) (string, error) {
+				return invokeHandler(ctx, copilotRequestReviewHandler(cfg), args)
 			},
 		},
 

@@ -30,4 +30,5 @@ VOLUME ["/root/.claude"]
 # HTTP transport — connect MCP clients to /mcp on this port
 EXPOSE 8080
 
-ENTRYPOINT ["./fafb", "--serve", ":8080"]
+ENTRYPOINT ["./fafb"]
+CMD ["--serve", ":8080"]
