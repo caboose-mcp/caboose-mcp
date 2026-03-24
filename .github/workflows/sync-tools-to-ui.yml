@@ -76,7 +76,7 @@ jobs:
           BRANCH="chore/sync-tools-$(date +%s)"
           git checkout -b "$BRANCH"
           git add -A
-          cat > /tmp/commit_msg.txt << 'EOF'
+          cat > /tmp/commit_msg.txt << EOF
           chore: sync $TOOL_COUNT tools from caboose-mcp
 
           Auto-generated from caboose-mcp tool definitions
@@ -88,7 +88,7 @@ jobs:
           git commit -F /tmp/commit_msg.txt
           git push origin "$BRANCH"
 
-          cat > /tmp/pr_body.txt << 'EOF'
+          cat > /tmp/pr_body.txt << EOF
           Automatic tool synchronization from caboose-mcp
 
           **Changes:**
