@@ -43,10 +43,10 @@ type GammaSlide struct {
 }
 
 type GammaDeckRequest struct {
-	Title      string       `json:"title"`
-	Slides     []GammaSlide `json:"slides"`
-	Theme      string       `json:"theme"` // dark, light, brand
-	PublicKey  string       `json:"public_key,omitempty"`
+	Title     string       `json:"title"`
+	Slides    []GammaSlide `json:"slides"`
+	Theme     string       `json:"theme"` // dark, light, brand
+	PublicKey string       `json:"public_key,omitempty"`
 }
 
 // RegisterGamma registers Gamma presentation generation tools

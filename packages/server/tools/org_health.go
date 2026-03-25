@@ -34,11 +34,11 @@ type OrgHealthCache struct {
 }
 
 type OrgRepoHealth struct {
-	Org           string      `json:"org"`
-	Name          string      `json:"name"`
-	PRs           []PRHealth  `json:"prs"`
-	LastCIRun     *CIRun      `json:"last_ci_run,omitempty"`
-	StaleBranches []string    `json:"stale_branches,omitempty"`
+	Org           string     `json:"org"`
+	Name          string     `json:"name"`
+	PRs           []PRHealth `json:"prs"`
+	LastCIRun     *CIRun     `json:"last_ci_run,omitempty"`
+	StaleBranches []string   `json:"stale_branches,omitempty"`
 }
 
 type PRHealth struct {
@@ -253,9 +253,9 @@ func fetchOrgHealth(cfg *config.Config) (*OrgHealthCache, error) {
 			}
 
 			repoHealth := OrgRepoHealth{
-				Org:   org,
-				Name:  repoName,
-				PRs:   prs,
+				Org:  org,
+				Name: repoName,
+				PRs:  prs,
 			}
 
 			// Optionally fetch last CI run
@@ -339,17 +339,17 @@ func fetchRepoPRs(org, repo string) ([]PRHealth, error) {
 	}
 
 	var prData []struct {
-		Number             int    `json:"number"`
-		Title              string `json:"title"`
-		URL                string `json:"url"`
-		Author             struct{ Login string } `json:"author"`
-		CreatedAt          time.Time `json:"createdAt"`
-		StatusCheckRollup  []struct {
+		Number            int                    `json:"number"`
+		Title             string                 `json:"title"`
+		URL               string                 `json:"url"`
+		Author            struct{ Login string } `json:"author"`
+		CreatedAt         time.Time              `json:"createdAt"`
+		StatusCheckRollup []struct {
 			Status string `json:"status"`
 		} `json:"statusCheckRollup"`
 		Reviews []struct {
 			Author struct{ Login string } `json:"author"`
-			State  string `json:"state"`
+			State  string                 `json:"state"`
 		} `json:"reviews"`
 	}
 	if err := json.Unmarshal(out, &prData); err != nil {
@@ -414,11 +414,11 @@ func fetchLastCIRun(org, repo string) (*CIRun, error) {
 	}
 
 	var runs []struct {
-		Status       string    `json:"status"`
-		Conclusion   string    `json:"conclusion"`
-		HeadBranch   string    `json:"headBranch"`
-		DatabaseID   int64     `json:"databaseId"`
-		UpdatedAt    time.Time `json:"updatedAt"`
+		Status     string    `json:"status"`
+		Conclusion string    `json:"conclusion"`
+		HeadBranch string    `json:"headBranch"`
+		DatabaseID int64     `json:"databaseId"`
+		UpdatedAt  time.Time `json:"updatedAt"`
 	}
 	if err := json.Unmarshal(out, &runs); err != nil {
 		return nil, fmt.Errorf("failed to parse run list: %w", err)

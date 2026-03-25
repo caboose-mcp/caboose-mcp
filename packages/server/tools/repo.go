@@ -32,17 +32,17 @@ import (
 
 // PendingTool represents a draft tool awaiting approval
 type PendingTool struct {
-	Name        string            `json:"name"`
-	Description string            `json:"description"`
-	Category    string            `json:"category"`
-	Parameters  []ToolParameter   `json:"parameters"`
-	HandlerCode string            `json:"handler_code"`
-	Tier        string            `json:"tier"` // hosted, local, or both
-	Tags        []string          `json:"tags"`
-	CreatedBy   string            `json:"created_by"`
-	CreatedAt   time.Time         `json:"created_at"`
-	LastTestAt  time.Time         `json:"last_test_at"`
-	LastTestResult string         `json:"last_test_result"`
+	Name           string          `json:"name"`
+	Description    string          `json:"description"`
+	Category       string          `json:"category"`
+	Parameters     []ToolParameter `json:"parameters"`
+	HandlerCode    string          `json:"handler_code"`
+	Tier           string          `json:"tier"` // hosted, local, or both
+	Tags           []string        `json:"tags"`
+	CreatedBy      string          `json:"created_by"`
+	CreatedAt      time.Time       `json:"created_at"`
+	LastTestAt     time.Time       `json:"last_test_at"`
+	LastTestResult string          `json:"last_test_result"`
 }
 
 type ToolParameter struct {

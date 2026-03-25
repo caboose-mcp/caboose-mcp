@@ -29,7 +29,7 @@ type Config struct {
 	N8nWebhookURL string // N8N_WEBHOOK_URL
 	N8nAPIKey     string // N8N_API_KEY (optional, for header auth)
 	// Chat bot
-	AnthropicAPIKey    string // ANTHROPIC_API_KEY
+	OpenAIAPIKey       string // OPENAI_API_KEY
 	DiscordWebhookURL  string // DISCORD_WEBHOOK_URL — incoming webhook for outbound notifications
 	DiscordBotChannels string // DISCORD_BOT_CHANNELS — comma-separated channel IDs
 	SlackAppToken      string // SLACK_APP_TOKEN — xapp-... for Socket Mode
@@ -110,37 +110,37 @@ func Load() *Config {
 	}
 
 	return &Config{
-		ClaudeDir:               claudeDir,
-		GitHubToken:             githubToken,
-		GPGKeyID:                os.Getenv("GPG_KEY_ID"),
-		SlackToken:              os.Getenv("SLACK_TOKEN"),
-		DiscordToken:            os.Getenv("DISCORD_TOKEN"),
-		BambuIP:                 os.Getenv("BAMBU_IP"),
-		BambuAccessCode:         os.Getenv("BAMBU_ACCESS_CODE"),
-		BambuSerial:             os.Getenv("BAMBU_SERIAL"),
-		BambuBedTemp:            bedTemp,
-		BambuNozzleTemp:         nozzleTemp,
-		GreptileAPIKey:          os.Getenv("GREPTILE_API_KEY"),
-		GreptileRepo:            greptileRepo,
-		PostgresURL:             os.Getenv("POSTGRES_URL"),
-		MongoURL:                os.Getenv("MONGO_URL"),
-		N8nWebhookURL:           os.Getenv("N8N_WEBHOOK_URL"),
-		N8nAPIKey:               os.Getenv("N8N_API_KEY"),
-		AnthropicAPIKey:         os.Getenv("ANTHROPIC_API_KEY"),
-		DiscordWebhookURL:       os.Getenv("DISCORD_WEBHOOK_URL"),
-		DiscordBotChannels:      os.Getenv("DISCORD_BOT_CHANNELS"),
-		SlackAppToken:           os.Getenv("SLACK_APP_TOKEN"),
-		SlackBotChannels:        os.Getenv("SLACK_BOT_CHANNELS"),
-		ElevenLabsAPIKey:        os.Getenv("ELEVENLABS_API_KEY"),
-		ElevenLabsVoiceID:       os.Getenv("ELEVENLABS_VOICE_ID"),
-		ReleaseStage:            releaseStage(),
-		UIOrigin:                uiOrigin(),
-		DiscordOAuthClientID:    os.Getenv("DISCORD_OAUTH_CLIENT_ID"),
+		ClaudeDir:                claudeDir,
+		GitHubToken:              githubToken,
+		GPGKeyID:                 os.Getenv("GPG_KEY_ID"),
+		SlackToken:               os.Getenv("SLACK_TOKEN"),
+		DiscordToken:             os.Getenv("DISCORD_TOKEN"),
+		BambuIP:                  os.Getenv("BAMBU_IP"),
+		BambuAccessCode:          os.Getenv("BAMBU_ACCESS_CODE"),
+		BambuSerial:              os.Getenv("BAMBU_SERIAL"),
+		BambuBedTemp:             bedTemp,
+		BambuNozzleTemp:          nozzleTemp,
+		GreptileAPIKey:           os.Getenv("GREPTILE_API_KEY"),
+		GreptileRepo:             greptileRepo,
+		PostgresURL:              os.Getenv("POSTGRES_URL"),
+		MongoURL:                 os.Getenv("MONGO_URL"),
+		N8nWebhookURL:            os.Getenv("N8N_WEBHOOK_URL"),
+		N8nAPIKey:                os.Getenv("N8N_API_KEY"),
+		OpenAIAPIKey:             os.Getenv("OPENAI_API_KEY"),
+		DiscordWebhookURL:        os.Getenv("DISCORD_WEBHOOK_URL"),
+		DiscordBotChannels:       os.Getenv("DISCORD_BOT_CHANNELS"),
+		SlackAppToken:            os.Getenv("SLACK_APP_TOKEN"),
+		SlackBotChannels:         os.Getenv("SLACK_BOT_CHANNELS"),
+		ElevenLabsAPIKey:         os.Getenv("ELEVENLABS_API_KEY"),
+		ElevenLabsVoiceID:        os.Getenv("ELEVENLABS_VOICE_ID"),
+		ReleaseStage:             releaseStage(),
+		UIOrigin:                 uiOrigin(),
+		DiscordOAuthClientID:     os.Getenv("DISCORD_OAUTH_CLIENT_ID"),
 		DiscordOAuthClientSecret: os.Getenv("DISCORD_OAUTH_CLIENT_SECRET"),
-		DiscordOAuthRedirectURI: os.Getenv("DISCORD_OAUTH_REDIRECT_URI"),
-		GitHubOrgs:              githubOrgs,
-		TerraformDir:            terraformDir,
-		TofuBin:                 tofuBin,
+		DiscordOAuthRedirectURI:  os.Getenv("DISCORD_OAUTH_REDIRECT_URI"),
+		GitHubOrgs:               githubOrgs,
+		TerraformDir:             terraformDir,
+		TofuBin:                  tofuBin,
 	}
 }
 

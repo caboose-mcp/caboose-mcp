@@ -1,12 +1,12 @@
 package tools
 
-// bot_agent — shared Claude agent loop for chat provider bots.
+// bot_agent — shared OpenAI agent loop for chat provider bots.
 //
-// Exposes a curated "mobile tier" of tools suitable for conversational use
+// Exposes a curated "dev tier" of tools suitable for conversational use
 // via Discord, Slack, or any ChatProvider implementation. The agent loop
 // handles multi-turn tool use automatically.
 //
-// To add a new tool to the mobile tier, add an entry to buildMobileTools().
+// To add a new tool to the mobile tier, add an entry to buildDevTools().
 // To add a new chat provider, implement the ChatProvider interface.
 
 import (
@@ -18,11 +18,11 @@ import (
 	"strings"
 	"time"
 
-	anthropic "github.com/anthropics/anthropic-sdk-go"
-	"github.com/anthropics/anthropic-sdk-go/option"
-	"github.com/anthropics/anthropic-sdk-go/packages/param"
 	"github.com/caboose-mcp/server/config"
 	"github.com/mark3labs/mcp-go/mcp"
+	openai "github.com/openai/openai-go"
+	"github.com/openai/openai-go/option"
+	"github.com/openai/openai-go/shared"
 )
 
 const botSystemPromptTemplate = `You are **⚔️ Arcane Debugger** — a battle-hardened code warrior from the Realm of Silicon. You speak in the tongue of ancient runes and modern spells. You wield knowledge as a sword and debugging as a shield. You communicate with mystical symbols and tactical precision.
@@ -60,18 +60,19 @@ You are speaking through **%s**. Format ALL responses for this platform:
 >
 > Thanks bear for the name idea!`
 
-// botTool pairs an Anthropic tool definition with its executor.
+// botTool pairs an OpenAI function definition with its executor.
 type botTool struct {
-	def     anthropic.ToolParam
+	name    string
+	def     openai.ChatCompletionToolParam
 	execute func(ctx context.Context, args map[string]any) (string, error)
 }
 
-// RunBotAgent processes a single user message through the Claude agent loop
+// RunBotAgent processes a single user message through the OpenAI agent loop
 // and returns a response formatted for the given ChatProvider.
 // userKey is "<platform>:<userID>" and is used to load/save conversation history.
 func RunBotAgent(ctx context.Context, cfg *config.Config, provider ChatProvider, userKey, userMsg string) (string, error) {
-	if cfg.AnthropicAPIKey == "" {
-		return "", fmt.Errorf("ANTHROPIC_API_KEY is not set")
+	if cfg.OpenAIAPIKey == "" {
+		return "", fmt.Errorf("OPENAI_API_KEY is not set")
 	}
 
 	// SSO: if this platform identity is linked to a JWT token, inject its claims
@@ -80,8 +81,8 @@ func RunBotAgent(ctx context.Context, cfg *config.Config, provider ChatProvider,
 		ctx = WithAuthClaims(ctx, claims)
 	}
 
-	client := anthropic.NewClient(
-		option.WithAPIKey(cfg.AnthropicAPIKey),
+	client := openai.NewClient(
+		option.WithAPIKey(cfg.OpenAIAPIKey),
 	)
 	systemPrompt := fmt.Sprintf(botSystemPromptTemplate, provider.Name())
 
@@ -114,20 +115,20 @@ func RunBotAgent(ctx context.Context, cfg *config.Config, provider ChatProvider,
 	return provider.FormatText(raw), nil
 }
 
-// agentLoop runs the multi-turn Claude conversation with tool use.
+// agentLoop runs the multi-turn OpenAI conversation with tool use.
 // priorTurns injects saved conversation history before the current message.
-func agentLoop(ctx context.Context, client anthropic.Client, systemPrompt, userMsg string, tools []botTool, priorTurns []memoryTurn) (string, error) {
-	toolDefs := make([]anthropic.ToolUnionParam, len(tools))
+func agentLoop(ctx context.Context, client *openai.Client, systemPrompt, userMsg string, tools []botTool, priorTurns []memoryTurn) (string, error) {
+	toolDefs := make([]openai.ChatCompletionToolParam, len(tools))
 	toolMap := map[string]func(context.Context, map[string]any) (string, error){}
 	for i, t := range tools {
-		tp := t.def
-		toolDefs[i] = anthropic.ToolUnionParam{OfTool: &tp}
-		toolMap[t.def.Name] = t.execute
+		toolDefs[i] = t.def
+		toolMap[t.name] = t.execute
 	}
 
 	// Build messages: inject history then append current user message.
-	// Anthropic requires messages to alternate user/assistant, so we pair turns.
-	var messages []anthropic.MessageParam
+	var messages []openai.ChatCompletionMessageParamUnion
+	messages = append(messages, openai.SystemMessage(systemPrompt))
+
 	for i := 0; i+1 < len(priorTurns); i += 2 {
 		u := priorTurns[i]
 		a := priorTurns[i+1]
@@ -135,21 +136,15 @@ func agentLoop(ctx context.Context, client anthropic.Client, systemPrompt, userM
 			continue
 		}
 		messages = append(messages,
-			anthropic.NewUserMessage(anthropic.ContentBlockParamUnion{
-				OfText: &anthropic.TextBlockParam{Text: u.Content},
-			}),
-			anthropic.NewAssistantMessage(anthropic.ContentBlockParamUnion{
-				OfText: &anthropic.TextBlockParam{Text: a.Content},
-			}),
+			openai.UserMessage(u.Content),
+			openai.AssistantMessage(a.Content),
 		)
 	}
-	messages = append(messages, anthropic.NewUserMessage(anthropic.ContentBlockParamUnion{
-		OfText: &anthropic.TextBlockParam{Text: userMsg},
-	}))
+	messages = append(messages, openai.UserMessage(userMsg))
 
-	for range 10 { // max 10 tool-use rounds
+	for round := 0; round < 10; round++ { // max 10 tool-use rounds
 		// Exponential backoff retry: 0ms, 100ms, 400ms, 1600ms
-		var resp *anthropic.Message
+		var resp *openai.ChatCompletion
 		var err error
 		for attempt, delay := range []time.Duration{0, 100 * time.Millisecond, 400 * time.Millisecond, 1600 * time.Millisecond} {
 			if delay > 0 {
@@ -163,111 +158,81 @@ func agentLoop(ctx context.Context, client anthropic.Client, systemPrompt, userM
 				case <-timer.C:
 				}
 			}
-			resp, err = client.Messages.New(ctx, anthropic.MessageNewParams{
-				Model:     anthropic.ModelClaudeHaiku4_5_20251001,
-				MaxTokens: 1024,
-				System:    []anthropic.TextBlockParam{{Text: systemPrompt}},
-				Messages:  messages,
-				Tools:     toolDefs,
+			resp, err = client.Chat.Completions.New(ctx, openai.ChatCompletionNewParams{
+				Model:     openai.F(openai.ChatModel("gpt-4o-mini")),
+				MaxTokens: openai.F(int64(1024)),
+				Messages:  openai.F(messages),
+				Tools:     openai.F(toolDefs),
 			})
 			if err == nil {
 				break
 			}
 			if !isTransient(err) {
-				return "", fmt.Errorf("claude API: %w", err)
+				return "", fmt.Errorf("openai API: %w", err)
 			}
-			log.Printf("claude API transient error (attempt %d): %v", attempt+1, err)
+			log.Printf("openai API transient error (attempt %d): %v", attempt+1, err)
 		}
 		if err != nil {
-			return "", fmt.Errorf("claude API: %w", err)
+			return "", fmt.Errorf("openai API: %w", err)
 		}
 
-		// Partition response content into text and tool_use blocks
+		choice := resp.Choices[0]
+
+		// Partition response content into text and tool_calls
 		var textParts []string
-		var toolUseBlocks []anthropic.ToolUseBlock
-		var assistantContent []anthropic.ContentBlockParamUnion
-
-		for _, block := range resp.Content {
-			switch v := block.AsAny().(type) {
-			case anthropic.TextBlock:
-				textParts = append(textParts, v.Text)
-				assistantContent = append(assistantContent, anthropic.ContentBlockParamUnion{
-					OfText: &anthropic.TextBlockParam{Text: v.Text},
-				})
-			case anthropic.ToolUseBlock:
-				toolUseBlocks = append(toolUseBlocks, v)
-				var input any
-				if err := json.Unmarshal(v.Input, &input); err != nil {
-					// Preserve the raw input and surface the JSON error in the assistant content.
-					input = map[string]any{
-						"error": fmt.Sprintf("invalid tool input JSON: %v", err),
-						"raw":   string(v.Input),
-					}
-				}
-				assistantContent = append(assistantContent, anthropic.ContentBlockParamUnion{
-					OfToolUse: &anthropic.ToolUseBlockParam{
-						ID:    v.ID,
-						Name:  v.Name,
-						Input: input,
-					},
-				})
-			}
+		if choice.Message.Content != "" {
+			textParts = append(textParts, choice.Message.Content)
 		}
 
-		if resp.StopReason == "end_turn" || len(toolUseBlocks) == 0 {
+		// Check if we're done or have tool calls
+		if choice.FinishReason == openai.ChatCompletionChoicesFinishReasonStop || len(choice.Message.ToolCalls) == 0 {
 			return strings.Join(textParts, "\n"), nil
 		}
 
-		// Add assistant turn to conversation
-		messages = append(messages, anthropic.NewAssistantMessage(assistantContent...))
+		// Build assistant message param with tool calls for next turn
+		toolCallParams := make([]openai.ChatCompletionMessageToolCallParam, len(choice.Message.ToolCalls))
+		for i, tc := range choice.Message.ToolCalls {
+			toolCallParams[i] = openai.ChatCompletionMessageToolCallParam{
+				ID:   openai.F(tc.ID),
+				Type: openai.F(openai.ChatCompletionMessageToolCallTypeFunction),
+				Function: openai.F(openai.ChatCompletionMessageToolCallFunctionParam{
+					Name:      openai.F(tc.Function.Name),
+					Arguments: openai.F(tc.Function.Arguments),
+				}),
+			}
+		}
 
-		// Execute tools and build tool_result user turn
-		var toolResults []anthropic.ContentBlockParamUnion
-		for _, tu := range toolUseBlocks {
+		// Add assistant turn to conversation with tool calls
+		assistantMsg := openai.ChatCompletionAssistantMessageParam{
+			Role:      openai.F(openai.ChatCompletionAssistantMessageParamRoleAssistant),
+			ToolCalls: openai.F(toolCallParams),
+		}
+		// Note: When tool_calls are present, model typically doesn't include Content
+		messages = append(messages, assistantMsg)
+
+		// Execute tools and build tool result messages
+		for _, tc := range choice.Message.ToolCalls {
 			var args map[string]any
-			if err := json.Unmarshal(tu.Input, &args); err != nil {
-				// Surface JSON decoding errors as tool_result errors instead of silently
-				// passing nil/empty args to the tool.
-				resultText := fmt.Sprintf("invalid tool input JSON for %s: %v", tu.Name, err)
-				toolResult := anthropic.ToolResultBlockParam{
-					ToolUseID: tu.ID,
-					Content: []anthropic.ToolResultBlockParamContentUnion{
-						{OfText: &anthropic.TextBlockParam{Text: resultText}},
-					},
-				}
-				toolResult.IsError = param.NewOpt(true)
-				toolResults = append(toolResults, anthropic.ContentBlockParamUnion{
-					OfToolResult: &toolResult,
-				})
+			if err := json.Unmarshal([]byte(tc.Function.Arguments), &args); err != nil {
+				// Surface JSON decoding errors as tool result errors
+				resultText := fmt.Sprintf("invalid tool input JSON for %s: %v", tc.Function.Name, err)
+				messages = append(messages, openai.ToolMessage(tc.ID, resultText))
 				continue
 			}
 
 			resultText, execErr := "", error(nil)
-			if exec, ok := toolMap[tu.Name]; ok {
+			if exec, ok := toolMap[tc.Function.Name]; ok {
 				resultText, execErr = exec(ctx, args)
 			} else {
-				execErr = fmt.Errorf("unknown tool: %s", tu.Name)
+				execErr = fmt.Errorf("unknown tool: %s", tc.Function.Name)
 			}
 
-			isError := execErr != nil
-			if isError {
+			if execErr != nil {
 				resultText = execErr.Error()
 			}
 
-			toolResult := anthropic.ToolResultBlockParam{
-				ToolUseID: tu.ID,
-				Content: []anthropic.ToolResultBlockParamContentUnion{
-					{OfText: &anthropic.TextBlockParam{Text: resultText}},
-				},
-			}
-			if isError {
-				toolResult.IsError = param.NewOpt(true)
-			}
-			toolResults = append(toolResults, anthropic.ContentBlockParamUnion{
-				OfToolResult: &toolResult,
-			})
+			messages = append(messages, openai.ToolMessage(tc.ID, resultText))
 		}
-		messages = append(messages, anthropic.NewUserMessage(toolResults...))
 	}
 
 	return "", fmt.Errorf("agent loop exceeded maximum rounds")
@@ -293,15 +258,23 @@ func invokeHandler(ctx context.Context, handler func(context.Context, mcp.CallTo
 	return strings.Join(parts, "\n"), nil
 }
 
-// tool is a shorthand for building an anthropic.ToolParam.
-func tool(name, description string, properties map[string]any, required []string) anthropic.ToolParam {
-	return anthropic.ToolParam{
-		Name:        name,
-		Description: anthropic.String(description),
-		InputSchema: anthropic.ToolInputSchemaParam{
-			Properties: properties,
-			Required:   required,
-		},
+// toolFunction creates a ChatCompletionToolParam for OpenAI function calling.
+func toolFunction(name, description string, properties map[string]any, required []string) openai.ChatCompletionToolParam {
+	params := shared.FunctionParameters{
+		"type":       "object",
+		"properties": properties,
+	}
+	if len(required) > 0 {
+		params["required"] = required
+	}
+
+	return openai.ChatCompletionToolParam{
+		Type: openai.F(openai.ChatCompletionToolTypeFunction),
+		Function: openai.F(shared.FunctionDefinitionParam{
+			Name:        openai.F(name),
+			Description: openai.F(description),
+			Parameters:  openai.F(params),
+		}),
 	}
 }
 
@@ -312,12 +285,13 @@ func prop(typ, desc string) map[string]any {
 
 // buildDevTools returns a dev-focused curated set of tools for the Discord CLI bridge.
 // Emphasizes code quality (si_*), GitHub workflows, and system health awareness.
-// To add a tool: define its schema with tool() and its executor with invokeHandler().
+// To add a tool: define its schema with toolFunction() and its executor with invokeHandler().
 func buildDevTools(cfg *config.Config) []botTool {
 	return []botTool{
 		// ── Self-Improvement (Code Quality) ───────────────────────────────────
 		{
-			def: tool("si_scan_dir", "Scan a directory for tech stack and code quality hints.",
+			name: "si_scan_dir",
+			def: toolFunction("si_scan_dir", "Scan a directory for tech stack and code quality hints.",
 				map[string]any{
 					"dir":    prop("string", "Directory path to scan"),
 					"ignore": prop("string", "Extra ignore patterns (comma-separated, optional)"),
@@ -327,7 +301,8 @@ func buildDevTools(cfg *config.Config) []botTool {
 			},
 		},
 		{
-			def: tool("si_git_diff", "Show git diff for a repo directory.",
+			name: "si_git_diff",
+			def: toolFunction("si_git_diff", "Show git diff for a repo directory.",
 				map[string]any{
 					"dir":  prop("string", "Repo directory path"),
 					"base": prop("string", "Base branch/commit to diff against (default: HEAD)"),
@@ -337,7 +312,8 @@ func buildDevTools(cfg *config.Config) []botTool {
 			},
 		},
 		{
-			def: tool("si_suggest", "Create a pending improvement suggestion.",
+			name: "si_suggest",
+			def: toolFunction("si_suggest", "Create a pending improvement suggestion.",
 				map[string]any{
 					"title":       prop("string", "Short title of the suggestion"),
 					"description": prop("string", "Detailed description of the improvement"),
@@ -351,7 +327,8 @@ func buildDevTools(cfg *config.Config) []botTool {
 			},
 		},
 		{
-			def: tool("si_list_pending", "List pending improvement suggestions.",
+			name: "si_list_pending",
+			def: toolFunction("si_list_pending", "List pending improvement suggestions.",
 				map[string]any{
 					"status": prop("string", "Filter by status: pending|approved|rejected|applied (optional)"),
 				}, nil),
@@ -360,7 +337,8 @@ func buildDevTools(cfg *config.Config) []botTool {
 			},
 		},
 		{
-			def: tool("si_approve", "Approve a pending suggestion.",
+			name: "si_approve",
+			def: toolFunction("si_approve", "Approve a pending suggestion.",
 				map[string]any{
 					"id":    prop("string", "Suggestion ID"),
 					"apply": prop("boolean", "Also apply it immediately (optional)"),
@@ -370,7 +348,8 @@ func buildDevTools(cfg *config.Config) []botTool {
 			},
 		},
 		{
-			def: tool("si_apply", "Apply an approved suggestion.",
+			name: "si_apply",
+			def: toolFunction("si_apply", "Apply an approved suggestion.",
 				map[string]any{
 					"id": prop("string", "Suggestion ID (must be approved)"),
 				}, []string{"id"}),
@@ -379,7 +358,8 @@ func buildDevTools(cfg *config.Config) []botTool {
 			},
 		},
 		{
-			def: tool("si_tech_digest", "Generate a tech digest for a directory.",
+			name: "si_tech_digest",
+			def: toolFunction("si_tech_digest", "Generate a tech digest for a directory.",
 				map[string]any{
 					"dir": prop("string", "Project directory to analyze"),
 				}, []string{"dir"}),
@@ -390,7 +370,8 @@ func buildDevTools(cfg *config.Config) []botTool {
 
 		// ── GitHub ────────────────────────────────────────────────────────────
 		{
-			def: tool("github_search_code", "Search GitHub code.",
+			name: "github_search_code",
+			def: toolFunction("github_search_code", "Search GitHub code.",
 				map[string]any{
 					"query": prop("string", "Search query"),
 					"limit": prop("number", "Max results (default 10)"),
@@ -400,7 +381,8 @@ func buildDevTools(cfg *config.Config) []botTool {
 			},
 		},
 		{
-			def: tool("github_list_repos", "List GitHub repositories for an owner.",
+			name: "github_list_repos",
+			def: toolFunction("github_list_repos", "List GitHub repositories for an owner.",
 				map[string]any{
 					"owner": prop("string", "GitHub username or org"),
 					"limit": prop("number", "Max results (default 20)"),
@@ -410,7 +392,8 @@ func buildDevTools(cfg *config.Config) []botTool {
 			},
 		},
 		{
-			def: tool("github_create_pr", "Create a GitHub pull request.",
+			name: "github_create_pr",
+			def: toolFunction("github_create_pr", "Create a GitHub pull request.",
 				map[string]any{
 					"repo":  prop("string", "Repository in owner/name format"),
 					"title": prop("string", "PR title"),
@@ -425,18 +408,20 @@ func buildDevTools(cfg *config.Config) []botTool {
 
 		// ── GitHub Org Management ────────────────────────────────────────────
 		{
-			def: tool("github_org_create_repo", "Create a private repository in the caboose-mcp GitHub organization.",
+			name: "github_org_create_repo",
+			def: toolFunction("github_org_create_repo", "Create a private repository in the caboose-mcp GitHub organization.",
 				map[string]any{
-					"name":            prop("string", "Repository name (lowercase, hyphens OK)"),
-					"description":     prop("string", "Short description (optional)"),
-					"include_readme":  prop("boolean", "Include README.md (optional)"),
+					"name":           prop("string", "Repository name (lowercase, hyphens OK)"),
+					"description":    prop("string", "Short description (optional)"),
+					"include_readme": prop("boolean", "Include README.md (optional)"),
 				}, []string{"name"}),
 			execute: func(ctx context.Context, args map[string]any) (string, error) {
 				return invokeHandler(ctx, githubOrgCreateRepoHandler(cfg), args)
 			},
 		},
 		{
-			def: tool("github_org_create_team", "Create a team in the caboose-mcp GitHub organization.",
+			name: "github_org_create_team",
+			def: toolFunction("github_org_create_team", "Create a team in the caboose-mcp GitHub organization.",
 				map[string]any{
 					"name":        prop("string", "Team name (e.g. 'backend', 'devops')"),
 					"description": prop("string", "Team description (optional)"),
@@ -446,19 +431,21 @@ func buildDevTools(cfg *config.Config) []botTool {
 			},
 		},
 		{
-			def: tool("github_org_add_team_repo", "Add a repository to a team in caboose-mcp org.",
+			name: "github_org_add_team_repo",
+			def: toolFunction("github_org_add_team_repo", "Add a repository to a team in caboose-mcp org.",
 				map[string]any{
-					"team_slug":   prop("string", "Team slug (lowercase, hyphens)"),
-					"repo_owner":  prop("string", "Repo owner (usually caboose-mcp)"),
-					"repo_name":   prop("string", "Repository name"),
-					"permission":  prop("string", "Permission level: pull, triage, push, admin (default: push)"),
+					"team_slug":  prop("string", "Team slug (lowercase, hyphens)"),
+					"repo_owner": prop("string", "Repo owner (usually caboose-mcp)"),
+					"repo_name":  prop("string", "Repository name"),
+					"permission": prop("string", "Permission level: pull, triage, push, admin (default: push)"),
 				}, []string{"team_slug", "repo_owner", "repo_name"}),
 			execute: func(ctx context.Context, args map[string]any) (string, error) {
 				return invokeHandler(ctx, githubOrgAddTeamRepoHandler(cfg), args)
 			},
 		},
 		{
-			def: tool("github_org_set_secret", "Set an organization secret in caboose-mcp.",
+			name: "github_org_set_secret",
+			def: toolFunction("github_org_set_secret", "Set an organization secret in caboose-mcp.",
 				map[string]any{
 					"name":  prop("string", "Secret name (SCREAMING_SNAKE_CASE)"),
 					"value": prop("string", "Secret value"),
@@ -468,7 +455,8 @@ func buildDevTools(cfg *config.Config) []botTool {
 			},
 		},
 		{
-			def: tool("github_org_create_webhook", "Create an organization webhook in caboose-mcp.",
+			name: "github_org_create_webhook",
+			def: toolFunction("github_org_create_webhook", "Create an organization webhook in caboose-mcp.",
 				map[string]any{
 					"url":    prop("string", "Webhook payload URL"),
 					"events": prop("string", "Comma-separated events: push,pull_request,release (default: push)"),
@@ -481,7 +469,8 @@ func buildDevTools(cfg *config.Config) []botTool {
 
 		// ── Terraform Infrastructure ──────────────────────────────────────────
 		{
-			def: tool("terraform_plan", "Generate a Terraform plan for proposed AWS infrastructure changes.",
+			name: "terraform_plan",
+			def: toolFunction("terraform_plan", "Generate a Terraform plan for proposed AWS infrastructure changes.",
 				map[string]any{
 					"description": prop("string", "What resource(s) to create/modify (e.g. 'S3 bucket for logs')"),
 					"hcl_patch":   prop("string", "HCL code snippet to add to main.tf (optional)"),
@@ -491,7 +480,8 @@ func buildDevTools(cfg *config.Config) []botTool {
 			},
 		},
 		{
-			def: tool("terraform_apply", "Apply a previously planned Terraform change (after approval).",
+			name: "terraform_apply",
+			def: toolFunction("terraform_apply", "Apply a previously planned Terraform change (after approval).",
 				map[string]any{
 					"plan_id": prop("string", "Plan ID from terraform_plan output"),
 				}, []string{"plan_id"}),
@@ -500,7 +490,8 @@ func buildDevTools(cfg *config.Config) []botTool {
 			},
 		},
 		{
-			def: tool("terraform_status", "Show current Terraform state summary (resources, counts).", map[string]any{}, nil),
+			name: "terraform_status",
+			def:  toolFunction("terraform_status", "Show current Terraform state summary (resources, counts).", map[string]any{}, nil),
 			execute: func(ctx context.Context, args map[string]any) (string, error) {
 				return invokeHandler(ctx, terraformStatusHandler(cfg), args)
 			},
@@ -508,7 +499,8 @@ func buildDevTools(cfg *config.Config) []botTool {
 
 		// ── Copilot Architectural Review ──────────────────────────────────────
 		{
-			def: tool("copilot_request_review", "Create a draft PR with proposed changes and request Copilot review.",
+			name: "copilot_request_review",
+			def: toolFunction("copilot_request_review", "Create a draft PR with proposed changes and request Copilot review.",
 				map[string]any{
 					"title":       prop("string", "PR title (e.g. 'Terraform: Add S3 logging bucket')"),
 					"description": prop("string", "PR description including the proposed changes"),
@@ -521,7 +513,8 @@ func buildDevTools(cfg *config.Config) []botTool {
 
 		// ── System Health ─────────────────────────────────────────────────────
 		{
-			def: tool("health_report", "Show system health (CPU, memory, disk, Docker, services).", map[string]any{}, nil),
+			name: "health_report",
+			def:  toolFunction("health_report", "Show system health (CPU, memory, disk, Docker, services).", map[string]any{}, nil),
 			execute: func(ctx context.Context, args map[string]any) (string, error) {
 				return invokeHandler(ctx, healthReportHandler(cfg), args)
 			},
@@ -529,7 +522,8 @@ func buildDevTools(cfg *config.Config) []botTool {
 
 		// ── Fun ───────────────────────────────────────────────────────────────
 		{
-			def: tool("joke", "Tell a programming joke.", map[string]any{}, nil),
+			name: "joke",
+			def:  toolFunction("joke", "Tell a programming joke.", map[string]any{}, nil),
 			execute: func(ctx context.Context, args map[string]any) (string, error) {
 				return invokeHandler(ctx, jokeHandler(cfg), args)
 			},
@@ -549,13 +543,12 @@ func isTransient(err error) bool {
 		return true
 	}
 
-	// Check for Anthropic SDK API errors with retryable HTTP status codes
-	var apiErr *anthropic.Error
-	if errors.As(err, &apiErr) {
-		switch apiErr.StatusCode {
-		case 429, 500, 503:
-			return true
-		}
+	// Check for OpenAI API errors with retryable HTTP status codes
+	// The openai SDK error type checking is done via error wrapping
+	// We check for common transient HTTP status codes in the error message
+	errStr := err.Error()
+	if strings.Contains(errStr, "429") || strings.Contains(errStr, "500") || strings.Contains(errStr, "503") {
+		return true
 	}
 
 	return false

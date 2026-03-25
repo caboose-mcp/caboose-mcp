@@ -10,7 +10,7 @@ package tools
 //
 //	SLACK_TOKEN     — Bot OAuth token (xoxb-...)
 //	SLACK_APP_TOKEN — App-Level token (xapp-...) with connections:write scope
-//	ANTHROPIC_API_KEY — Claude API key
+//	OPENAI_API_KEY  — OpenAI API key
 //
 // Optional env vars:
 //
@@ -92,8 +92,8 @@ func RunSlackBot(cfg *config.Config) error {
 	if cfg.SlackAppToken == "" {
 		return fmt.Errorf("SLACK_APP_TOKEN is not set (xapp-... token required for Socket Mode)")
 	}
-	if cfg.AnthropicAPIKey == "" {
-		return fmt.Errorf("ANTHROPIC_API_KEY is not set")
+	if cfg.OpenAIAPIKey == "" {
+		return fmt.Errorf("OPENAI_API_KEY is not set")
 	}
 
 	allowedChannels := map[string]bool{}

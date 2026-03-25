@@ -77,10 +77,10 @@ func orgListReposHandler(cfg *config.Config) func(context.Context, mcp.CallToolR
 			}
 
 			var repos []struct {
-				Name              string `json:"name"`
-				IsArchived        bool   `json:"isArchived"`
-				DefaultBranchRef  string `json:"defaultBranchRef"`
-				IsPrivate         bool   `json:"isPrivate"`
+				Name             string `json:"name"`
+				IsArchived       bool   `json:"isArchived"`
+				DefaultBranchRef string `json:"defaultBranchRef"`
+				IsPrivate        bool   `json:"isPrivate"`
 			}
 			if err := parseJSON(out, &repos); err != nil {
 				result.WriteString(fmt.Sprintf("Failed to parse repos for %s: %v\n\n", org, err))

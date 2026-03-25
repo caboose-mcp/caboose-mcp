@@ -33,11 +33,11 @@ type DepGraphCache struct {
 
 // RepoDepInfo holds dependency information for a single repo
 type RepoDepInfo struct {
-	Name    string    `json:"name"`
-	URL     string    `json:"url"`
-	Org     string    `json:"org"`
-	Stack   []string  `json:"stack"` // e.g., ["Go", "Node.js"]
-	GoDeps  []GoDep   `json:"go_deps"`
+	Name     string    `json:"name"`
+	URL      string    `json:"url"`
+	Org      string    `json:"org"`
+	Stack    []string  `json:"stack"` // e.g., ["Go", "Node.js"]
+	GoDeps   []GoDep   `json:"go_deps"`
 	NodeDeps []NodeDep `json:"node_deps"`
 }
 
@@ -317,11 +317,11 @@ func indexOrgDeps(orgs []string) (*DepGraphCache, error) {
 			time.Sleep(200 * time.Millisecond)
 
 			repoInfo := RepoDepInfo{
-				Name:    repoName,
-				Org:     org,
-				URL:     fmt.Sprintf("https://github.com/%s/%s", org, repoName),
-				Stack:   []string{},
-				GoDeps:  []GoDep{},
+				Name:     repoName,
+				Org:      org,
+				URL:      fmt.Sprintf("https://github.com/%s/%s", org, repoName),
+				Stack:    []string{},
+				GoDeps:   []GoDep{},
 				NodeDeps: []NodeDep{},
 			}
 
@@ -427,11 +427,11 @@ func searchDeps(cache *DepGraphCache, query string) []map[string]interface{} {
 		for _, dep := range repo.GoDeps {
 			if strings.Contains(strings.ToLower(dep.Module), queryLower) {
 				results = append(results, map[string]interface{}{
-					"repo":    repo.Name,
-					"org":     repo.Org,
-					"package": dep.Module,
-					"version": dep.Version,
-					"type":    "go",
+					"repo":     repo.Name,
+					"org":      repo.Org,
+					"package":  dep.Module,
+					"version":  dep.Version,
+					"type":     "go",
 					"indirect": dep.IsIndirect,
 				})
 			}
@@ -454,4 +454,3 @@ func searchDeps(cache *DepGraphCache, query string) []map[string]interface{} {
 
 	return results
 }
-

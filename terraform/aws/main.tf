@@ -508,7 +508,7 @@ resource "aws_ecs_task_definition" "bots" {
     }
 
     secrets = [
-      { name = "ANTHROPIC_API_KEY", valueFrom = "${aws_secretsmanager_secret.env.arn}:ANTHROPIC_API_KEY::" },
+      { name = "OPENAI_API_KEY",    valueFrom = "${aws_secretsmanager_secret.env.arn}:OPENAI_API_KEY::" },
       { name = "SLACK_TOKEN",       valueFrom = "${aws_secretsmanager_secret.env.arn}:SLACK_TOKEN::" },
       { name = "SLACK_APP_TOKEN",   valueFrom = "${aws_secretsmanager_secret.env.arn}:SLACK_APP_TOKEN::" },
       { name = "DISCORD_TOKEN",     valueFrom = "${aws_secretsmanager_secret.env.arn}:DISCORD_TOKEN::" },
@@ -561,7 +561,7 @@ resource "aws_ecs_task_definition" "serve" {
     }
 
     secrets = [
-      { name = "ANTHROPIC_API_KEY", valueFrom = "${aws_secretsmanager_secret.env.arn}:ANTHROPIC_API_KEY::" },
+      { name = "OPENAI_API_KEY", valueFrom = "${aws_secretsmanager_secret.env.arn}:OPENAI_API_KEY::" },
     ]
 
     environment = [

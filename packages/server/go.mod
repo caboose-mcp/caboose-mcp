@@ -3,7 +3,6 @@ module github.com/caboose-mcp/server
 go 1.24.2
 
 require (
-	github.com/anthropics/anthropic-sdk-go v1.27.0
 	github.com/bwmarrin/discordgo v0.29.0
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
@@ -15,6 +14,7 @@ require (
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/joho/godotenv v1.5.1
 	github.com/mark3labs/mcp-go v0.45.0
+	github.com/openai/openai-go v0.1.0-alpha.52
 	github.com/slack-go/slack v0.15.0
 	go.mongodb.org/mongo-driver/v2 v2.5.0
 	golang.org/x/crypto v0.42.0

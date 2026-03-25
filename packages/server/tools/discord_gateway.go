@@ -8,7 +8,7 @@ package tools
 //
 // Required env vars:
 //   DISCORD_TOKEN        — bot token
-//   ANTHROPIC_API_KEY    — Claude API key
+//   OPENAI_API_KEY       — OpenAI API key
 //
 // Optional env vars:
 //   DISCORD_BOT_CHANNELS — comma-separated channel IDs to listen in
@@ -117,8 +117,8 @@ func RunDiscordBot(ctx context.Context, cfg *config.Config) error {
 	if cfg.DiscordToken == "" {
 		return fmt.Errorf("DISCORD_TOKEN is not set")
 	}
-	if cfg.AnthropicAPIKey == "" {
-		return fmt.Errorf("ANTHROPIC_API_KEY is not set")
+	if cfg.OpenAIAPIKey == "" {
+		return fmt.Errorf("OPENAI_API_KEY is not set")
 	}
 
 	// Build allowed channel set from config

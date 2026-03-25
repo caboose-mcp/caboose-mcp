@@ -75,4 +75,3 @@ func dadJokeHandler(cfg *config.Config) func(context.Context, mcp.CallToolReques
 		return mcp.NewToolResultText(jokes[n.Int64()]), nil
 	}
 }
-
