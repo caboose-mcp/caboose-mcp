@@ -112,22 +112,24 @@ func (s SlackProvider) FormatText(text string) string {
 //   - **bold** → *bold*  (Slack bold)
 //   - *italic* → _italic_ (Slack italic)
 //
-// It preserves list bullets like "* item" at the start of a line.
+// It preserves list bullets like "* item" at the start of a line and handles multi-byte
+// UTF-8 sequences (especially emojis) correctly to avoid corrupting special characters.
 func slackConvertMarkdown(text string) string {
 	result := ""
+	runes := []rune(text) // Convert to runes to handle multi-byte UTF-8 properly
 	i := 0
-	for i < len(text) {
+	for i < len(runes) {
 		// Bold: **...** → *...*
-		if i+2 <= len(text) && text[i:i+2] == "**" {
+		if i+2 <= len(runes) && runes[i] == '*' && runes[i+1] == '*' {
 			result += "*"
 			i += 2
 			continue
 		}
 
 		// Italic or bullet: *...* → _..._ , but keep "* " at start of line as a bullet.
-		if text[i] == '*' {
-			isLineStart := i == 0 || text[i-1] == '\n'
-			nextIsSpace := i+1 < len(text) && text[i+1] == ' '
+		if runes[i] == '*' {
+			isLineStart := i == 0 || runes[i-1] == '\n'
+			nextIsSpace := i+1 < len(runes) && runes[i+1] == ' '
 			if isLineStart && nextIsSpace {
 				// Preserve list bullet "* "
 				result += "*"
@@ -140,8 +142,8 @@ func slackConvertMarkdown(text string) string {
 			continue
 		}
 
-		// Default: copy character
-		result += string(text[i])
+		// Default: copy character (as rune to preserve multi-byte UTF-8)
+		result += string(runes[i])
 		i++
 	}
 	return result
