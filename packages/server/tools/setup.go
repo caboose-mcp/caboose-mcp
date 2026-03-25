@@ -567,7 +567,7 @@ STEP 5: Set Environment Variables
 
   DISCORD_TOKEN=MzA...
   DISCORD_BOT_CHANNELS=12345,67890      # optional (comma-separated channel IDs)
-  ANTHROPIC_API_KEY=sk-proj-...         # required for all platforms
+  OPENAI_API_KEY=sk-proj-...            # required for all platforms
 
 STEP 6: Test
   Run: fafb --bots
@@ -631,7 +631,7 @@ STEP 7: Set Environment Variables
   SLACK_TOKEN=xoxb-...
   SLACK_APP_TOKEN=xapp-...
   SLACK_BOT_CHANNELS=C123,C456         # optional (comma-separated channel IDs)
-  ANTHROPIC_API_KEY=sk-proj-...         # required for all platforms
+  OPENAI_API_KEY=sk-proj-...            # required for all platforms
 
 STEP 8: Test
   Run: fafb --bots
@@ -651,8 +651,8 @@ STATUS: ✅ Ready to configure
 
 Copy this to your .env file and fill in the values from the setup steps above:
 
-# Claude API (required)
-ANTHROPIC_API_KEY=sk-proj-...
+# OpenAI API (required)
+OPENAI_API_KEY=sk-proj-...
 
 # Discord (optional)
 DISCORD_TOKEN=MzA...
